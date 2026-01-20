@@ -26,6 +26,10 @@ def require_rbac(resource: str, action: str):
                 detail="Inactive user"
             )
         
+        # Superuser bypass
+        if current_user.is_superuser:
+            return current_user
+        
         # Check RBAC permission
         has_permission = await casbin_enforcer.check_rbac_permission_async(
             current_user.username,
@@ -61,6 +65,10 @@ def require_abac(resource: str, action: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Inactive user"
             )
+        
+        # Superuser bypass
+        if current_user.is_superuser:
+            return current_user
         
         # Build attributes from user
         attributes = {
@@ -106,6 +114,10 @@ def require_rebac(resource: str, action: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Inactive user"
             )
+        
+        # Superuser bypass
+        if current_user.is_superuser:
+            return current_user
         
         # Check ReBAC permission
         has_permission = await casbin_enforcer.check_rebac_permission_async(

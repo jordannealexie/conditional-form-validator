@@ -24,7 +24,7 @@ async def list_templates(
         if not bank:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank not found")
         bank_id = bank.id
-    if current_user.user_role != "admin" and current_user.bank_id:
+    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin" and current_user.bank_id:
         bank_id = current_user.bank_id
     if bank_id:
         templates = await FormTemplateRepository.get_all_by_bank(db, bank_id, active_only=True)
@@ -82,7 +82,7 @@ async def create_template(
     Admin users can create templates.
     """
     # Check if user is admin
-    if current_user.user_role != "admin":
+    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can create templates"
@@ -119,7 +119,7 @@ async def update_template(
 ) -> Any:
     """Update a form template. Admin only."""
     # Check if user is admin
-    if current_user.user_role != "admin":
+    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can update templates"
@@ -143,7 +143,7 @@ async def delete_template(
 ) -> Any:
     """Delete a form template. Admin only."""
     # Check if user is admin
-    if current_user.user_role != "admin":
+    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admin users can delete templates"

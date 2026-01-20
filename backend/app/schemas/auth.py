@@ -21,6 +21,7 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
     user_role: Optional[str] = "fieldman"
+    is_superuser: Optional[bool] = False
     bank_id: Optional[int] = None
     first_name: Optional[str] = Field(None, min_length=2, max_length=50)
     last_name: Optional[str] = Field(None, min_length=2, max_length=50)
@@ -37,6 +38,7 @@ class UserResponse(BaseModel):
     user_role: Optional[str] = None
     bank_id: Optional[int] = None
     active: bool
+    is_superuser: bool = False
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     full_name: Optional[str] = None
@@ -51,11 +53,16 @@ class UserResponse(BaseModel):
 
 
 class UserAdminUpdate(BaseModel):
-    """Schema for admin updating user (email, role, bank, active)"""
+    """Schema for admin updating user (email, role, bank, active, department, location)"""
     email: Optional[EmailStr] = None
     user_role: Optional[str] = None
     bank_id: Optional[int] = None
     active: Optional[bool] = None
+    department: Optional[str] = None
+    location: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    full_name: Optional[str] = None
 
 
 class RefreshRequest(BaseModel):

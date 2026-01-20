@@ -81,6 +81,8 @@ async function getRoleUserCount(roleId) {
 
 function createRoleRow(role, userCount = 0) {
     const tr = document.createElement('tr');
+    tr.id = `role-row-${role.id}`;
+    tr.dataset.roleId = role.id;
     const perms = role.permissions || [];
     const permText = Array.isArray(perms) ? perms.join(', ') : (typeof perms === 'string' ? perms : '—');
     const permShort = permText.length > 60 ? permText.slice(0, 57) + '…' : permText;
@@ -122,7 +124,8 @@ async function editRole(roleId) {
 
         const currentPerms = role.permissions || [];
         const content = `
-            <form id="editRoleForm" onsubmit="handleEditRole(event, ${roleId})">
+            <form id="editRoleForm" onsubmit="handleEditRole(event)">
+                <input type="hidden" name="roleId" value="${roleId}">
                 <div class="form-group"><label>Role Name *</label><input type="text" name="name" value="${escapeHtml(role.name || '')}" required></div>
                 <div class="form-group"><label>Description</label><textarea name="description" rows="3">${escapeHtml(role.description || '')}</textarea></div>
                 <div class="form-group">
@@ -133,7 +136,7 @@ async function editRole(roleId) {
         `;
         createModal('Edit Role', content, [
             { label: 'Cancel', type: 'secondary', onclick: 'closeModal()' },
-            { label: 'Save', type: 'primary', onclick: 'document.getElementById("editRoleForm").requestSubmit()' }
+            { label: 'Save', type: 'primary', onclick: "document.getElementById('editRoleForm').requestSubmit()" }
         ]);
         renderPermissionsGrid('editPermissionsGrid', currentPerms);
     } catch (e) {
@@ -141,23 +144,29 @@ async function editRole(roleId) {
     }
 }
 
-async function handleEditRole(ev, roleId) {
+async function handleEditRole(ev) {
     ev.preventDefault();
     const fd = new FormData(ev.target);
+    const roleId = parseInt(fd.get('roleId'));
+    if (!roleId) {
+        showToast('Invalid role id', 'error');
+        return;
+    }
     const perms = Array.from(document.querySelectorAll('#editPermissionsGrid input[name=perm]:checked')).map(c => c.value);
     const payload = {
-        name: fd.get('name'),
+        name: (fd.get('name') || '').trim(),
         description: fd.get('description'),
         permissions: perms
     };
+    if (!payload.name) {
+        showToast('Role name is required', 'error');
+        return;
+    }
     try {
-        await apiRequest(`/roles/${roleId}`, {
-            method: 'PUT',
-            body: payload
-        });
+        await apiUpdateRole(roleId, payload);
         showToast('Role updated successfully', 'success');
         closeModal();
-        loadRoles();
+        await loadRoles(); // Reload roles to show changes
     } catch (e) {
         showToast(e.message || 'Error updating role', 'error');
     }

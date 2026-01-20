@@ -288,45 +288,46 @@ a:hover {
 
 /* Buttons */
 .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 24px;
-    border-radius: var(--radius-button);
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    border: none;
-    transition: all 0.3s ease;
-    font-size: 16px;
+    transition: all 0.2s ease;
     text-decoration: none;
+    text-align: center;
 }
 
 .btn-primary {
     background: var(--accent-green);
     color: var(--white);
-    box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary:hover {
-    background: var(--medium-green);
+    background: #28a745;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     color: var(--white);
 }
 
 .btn-primary:active {
     transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-secondary {
-    background: var(--white);
-    color: var(--black);
-    border: 1px solid var(--dark-gray);
+    background: var(--gray-100);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
 }
 
 .btn-secondary:hover {
-    background: var(--off-white);
+    background: var(--gray-200);
     border-color: var(--accent-green);
+    transform: translateY(-1px);
 }
 
 .btn-outline {
@@ -338,6 +339,7 @@ a:hover {
 .btn-outline:hover {
     background: var(--accent-green);
     color: var(--white);
+    transform: translateY(-1px);
 }
 
 .btn-danger {
@@ -346,8 +348,10 @@ a:hover {
 }
 
 .btn-danger:hover {
-    background: #c0392b;
+    background: #c82333;
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    color: var(--white);
 }
 
 /* Inputs */
@@ -1992,4 +1996,53 @@ tbody tr:hover {
 .form-container .card {
     box-shadow: none;
     padding: 0;
+}
+
+/* Layout polish and spacing alignment */
+.content-section {
+    padding: var(--space-md);
+    background: var(--white);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-subtle);
+}
+
+.content-section .form-container,
+.content-section form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.form-row-2 {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.form-row-2 .form-group {
+    flex: 1;
+    min-width: 220px;
+}
+
+.table-container {
+    padding: var(--space-sm);
+}
+
+.table-actions {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.btn {
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.loading-spinner {
+    margin: var(--space-sm) 0;
 }

@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof requireAuth === 'function') requireAuth();
     loadUserInfo();
     loadBanks();
+    loadTemplates(); // Load existing templates
     setupMobileMenu();
 });
 
@@ -35,20 +36,22 @@ async function loadUserInfo() {
  * Load banks for template creation
  */
 async function loadBanks() {
-    // Pre-populate with required banks
-    const predefinedBanks = [
-        { id: 1, name: 'BDO' },
-        { id: 2, name: 'Maya' },
-        { id: 3, name: 'Security Bank' }
-    ];
-    banks = predefinedBanks;
-    populateBankSelect();
+    try {
+        const result = await apiGetBanks();
+        banks = Array.isArray(result) ? result : (result && result.data ? result.data : []);
+        populateBankSelect();
+    } catch (error) {
+        console.error('Error loading banks:', error);
+        showToast('Error loading banks. Using defaults.', 'warning');
+        banks = [{ id: 1, name: 'BDO' }, { id: 2, name: 'Maya' }, { id: 3, name: 'Security Bank' }];
+        populateBankSelect();
+    }
 }
 
 function populateBankSelect() {
     const select = document.getElementById('bankSelect');
     if (!select) return;
-    
+
     banks.forEach(bank => {
         const option = document.createElement('option');
         option.value = bank.id;
@@ -96,7 +99,7 @@ function handleDrop(event) {
 function addField(type) {
     const defaultLabel = type.charAt(0).toUpperCase() + type.slice(1) + ' Field';
     const fieldId = `field_${Date.now()}`;
-    
+
     const newField = {
         id: fieldId,
         type: type,
@@ -111,7 +114,7 @@ function addField(type) {
     fields.push(newField);
     renderCanvas();
     selectField(fieldId);
-    
+
     const emptyState = document.getElementById('emptyState');
     if (emptyState) emptyState.style.display = 'none';
 }
@@ -153,11 +156,11 @@ function renderCanvas() {
             selectField(field.id);
         };
 
-        const optionsDisplay = field.type === 'select' && field.options 
-            ? `<div style="font-size: 12px; color: var(--gray); margin-top: 4px;">Options: ${field.options.join(', ')}</div>` 
+        const optionsDisplay = field.type === 'select' && field.options
+            ? `<div style="font-size: 12px; color: var(--gray); margin-top: 4px;">Options: ${field.options.join(', ')}</div>`
             : '';
-        const showIfDisplay = field.show_if 
-            ? `<div style="font-size: 12px; color: var(--warning); margin-top: 4px;">⚡ Conditional</div>` 
+        const showIfDisplay = field.show_if
+            ? `<div style="font-size: 12px; color: var(--warning); margin-top: 4px;">⚡ Conditional</div>`
             : '';
 
         div.innerHTML = `
@@ -373,7 +376,7 @@ async function saveTemplate() {
 
     const bankSelect = document.getElementById('bankSelect');
     const bankId = bankSelect ? parseInt(bankSelect.value) : null;
-    
+
     if (!bankId) {
         showToast('Please select a bank', 'error');
         return;
@@ -381,7 +384,7 @@ async function saveTemplate() {
 
     const templateName = document.getElementById('templateName');
     const name = templateName ? templateName.value : prompt('Enter a name for this template:');
-    
+
     if (!name) {
         showToast('Template name is required', 'error');
         return;
@@ -403,32 +406,174 @@ async function saveTemplate() {
     };
 
     try {
-        showToast('Saving template...', 'info');
-        
-        const result = await apiRequest('/templates/', {
-            method: 'POST',
-            body: templateData
+        showToast(currentTemplate ? 'Updating template...' : 'Saving template...', 'info');
+
+        let url, method, body;
+
+        if (currentTemplate) {
+            // Update (PUT)
+            method = 'PUT';
+            url = `/templates/${currentTemplate.id}`;
+            body = {
+                name: name,
+                schema_json: schema,
+                fields: fields,
+                description: `Form template created with ${fields.length} fields`,
+                active: true
+            };
+        } else {
+            // Create (POST)
+            method = 'POST';
+            url = '/templates/';
+            body = {
+                bank_id: bankId,
+                name: name,
+                version: templateVersion,
+                schema_json: schema,
+                fields: fields,
+                description: `Form template created with ${fields.length} fields`,
+                active: true
+            };
+        }
+
+        const result = await apiRequest(url, {
+            method: method,
+            body: body
         });
 
-        showToast('Template saved successfully!', 'success');
-        
-        // Clear form after successful save
+        showToast(currentTemplate ? 'Template updated successfully!' : 'Template saved successfully!', 'success');
+
+        // Reset state
+        currentTemplate = null;
+        document.getElementById('editingStatus').style.display = 'none';
+
         fields = [];
         selectedFieldId = null;
         renderCanvas();
         renderProperties();
-        
+
         if (document.getElementById('emptyState')) {
             document.getElementById('emptyState').style.display = 'flex';
         }
-        
+
         // Reset form fields
         if (templateName) templateName.value = '';
         if (bankSelect) bankSelect.value = '';
-        
+        if (version) version.value = '1.0.0';
+
+        loadTemplates(); // Reload the list
+
     } catch (error) {
         console.error('Error saving template:', error);
         showToast(error.message || 'Failed to save template. Please try again.', 'error');
+    }
+}
+
+/**
+ * Template Management
+ */
+async function loadTemplates() {
+    try {
+        const result = await apiGetTemplates();
+        const list = Array.isArray(result) ? result : (result && result.data ? result.data : []);
+        renderTemplateList(list);
+    } catch (error) {
+        console.error('Error loading templates:', error);
+    }
+}
+
+function renderTemplateList(list) {
+    const tbody = document.getElementById('templateTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">No templates found</td></tr>';
+        return;
+    }
+
+    list.forEach(t => {
+        const tr = document.createElement('tr');
+        const bankName = t.bank ? t.bank.name : (banks.find(b => b.id === t.bank_id)?.name || 'Unknown');
+        tr.innerHTML = `
+            <td><strong>${escapeHtml(t.name)}</strong></td>
+            <td>${escapeHtml(t.version)}</td>
+            <td>${escapeHtml(bankName)}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editExistingTemplate(${t.id})">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteExistingTemplate(${t.id})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function toggleTemplateList() {
+    const section = document.getElementById('templateListSection');
+    const icon = document.getElementById('listToggleIcon');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+    } else {
+        section.style.display = 'none';
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    }
+}
+
+async function editExistingTemplate(id) {
+    try {
+        const t = await apiRequest(`/templates/${id}`);
+        currentTemplate = t; // Track we are editing
+
+        // Populate builder
+        fields = Array.isArray(t.fields) ? t.fields : [];
+        document.getElementById('templateName').value = t.name || '';
+        document.getElementById('templateVersion').value = t.version || '1.0.0';
+        document.getElementById('bankSelect').value = t.bank_id;
+
+        // Show status
+        document.getElementById('currentTemplateId').textContent = t.id;
+        document.getElementById('editingStatus').style.display = 'block';
+
+        renderCanvas();
+        renderProperties();
+
+        // Hide list if open
+        document.getElementById('templateListSection').style.display = 'none';
+        document.getElementById('listToggleIcon').classList.replace('fa-chevron-up', 'fa-chevron-down');
+
+        showToast(`Editing template: ${t.name}`, 'info');
+
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState && fields.length > 0) emptyState.style.display = 'none';
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+        showToast('Error loading template for edit', 'error');
+    }
+}
+
+function cancelEdit() {
+    currentTemplate = null;
+    document.getElementById('editingStatus').style.display = 'none';
+    fields = [];
+    selectedFieldId = null;
+    document.getElementById('templateName').value = '';
+    document.getElementById('bankSelect').value = '';
+    renderCanvas();
+    renderProperties();
+    if (document.getElementById('emptyState')) document.getElementById('emptyState').style.display = 'flex';
+    showToast('Edit cancelled', 'info');
+}
+
+async function deleteExistingTemplate(id) {
+    if (!confirm('Are you sure you want to delete this template?')) return;
+    try {
+        await apiRequest(`/templates/${id}`, { method: 'DELETE' });
+        showToast('Template deleted', 'success');
+        loadTemplates();
+    } catch (error) {
+        showToast('Error deleting template', 'error');
     }
 }
 

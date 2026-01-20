@@ -29,6 +29,7 @@ class User(Base):
     user_role = Column(String, nullable=True)  # Primary role name
     bank_id = Column(Integer, ForeignKey('banks.id'), nullable=True)
     active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
     
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
@@ -46,6 +47,7 @@ class User(Base):
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     bank = relationship("Bank", back_populates="bank_users")
     abac_attributes = relationship("UserAttribute", back_populates="user", cascade="all, delete-orphan")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     
 
 
@@ -74,7 +76,7 @@ class RefreshToken(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    user = relationship("User", backref="refresh_tokens")
+    user = relationship("User", back_populates="refresh_tokens")
 
 
 class ResourceRelationship(Base):

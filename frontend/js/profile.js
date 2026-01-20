@@ -37,13 +37,13 @@ async function loadProfileData() {
             document.getElementById('profile_email').value = user.email || '';
             document.getElementById('profile_first_name').value = user.first_name || '';
             document.getElementById('profile_last_name').value = user.last_name || '';
-            
+
             // Set department dropdown
             const deptSelect = document.getElementById('profile_department');
             if (user.department && deptSelect) {
                 deptSelect.value = user.department;
             }
-            
+
             // Set location dropdown
             const locSelect = document.getElementById('profile_location');
             if (user.location && locSelect) {
@@ -97,25 +97,25 @@ async function loadActivityLogs() {
 /**
  * Handle Profile Update
  */
-async function handleProfileUpdate(event) {
-    event.preventDefault();
-
-    const userData = {
-        email: document.getElementById('profile_email').value,
-        first_name: document.getElementById('profile_first_name').value,
-        last_name: document.getElementById('profile_last_name').value,
-        department: document.getElementById('profile_department').value,
-        location: document.getElementById('profile_location').value
+async function handleProfileUpdate(ev) {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+    const payload = {
+        first_name: fd.get('first_name') || null,
+        last_name: fd.get('last_name') || null,
+        email: fd.get('email'),
+        department: fd.get('department') || null,
+        location: fd.get('location') || null
     };
-
     try {
-        await apiRequest('/users/me', {
-            method: 'PATCH',
-            body: userData
-        });
+        const updated = await apiUpdateProfile(payload);
+        if (typeof updateSession === 'function' && updated) {
+            updateSession(updated);
+        }
         showToast('Profile updated successfully', 'success');
-    } catch (error) {
-        showToast(error.message || 'Error updating profile', 'error');
+        await loadProfileData(); // Reload profile to show changes
+    } catch (e) {
+        showToast(e.message || 'Error updating profile', 'error');
     }
 }
 
@@ -135,12 +135,9 @@ async function handlePasswordChange(event) {
     }
 
     try {
-        await apiRequest('/users/me/password', {
-            method: 'POST',
-            body: {
-                current_password: currentPass,
-                new_password: newPass
-            }
+        await apiChangePassword({
+            current_password: currentPass,
+            new_password: newPass
         });
         showToast('Password changed successfully', 'success');
         event.target.reset();

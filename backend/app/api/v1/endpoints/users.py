@@ -96,7 +96,12 @@ async def change_password_me(
     audit: AuditService = Depends(get_audit_service)
 ):
     """Change current user password"""
-    if not verify_password(pwd_in.current_password, current_user.hashed_password):
+    # Ensure we compare against the stored password hash
+    if not current_user.password_hash:
+        await audit.log("change_password", user_id=current_user.id, username=current_user.username, status="failure", details="Missing password hash on user")
+        raise HTTPException(status_code=500, detail="Password data unavailable")
+
+    if not verify_password(pwd_in.current_password, current_user.password_hash):
         await audit.log("change_password", user_id=current_user.id, username=current_user.username, status="failure", details="Incorrect current password")
         raise HTTPException(status_code=400, detail="Incorrect current password")
     
@@ -224,8 +229,7 @@ async def update_user_bank(
 @router.delete(
     "/{id}",
     summary="Delete user (admin only)",
-    description="Delete a user account. Admin only.",
-    response_model=CustomResponse[UserResponse]
+    description="Delete a user account. Admin only."
 )
 async def delete_user(
     id: int,
@@ -233,16 +237,17 @@ async def delete_user(
     user_service: UserService = Depends(get_user_service),
     current_user: User = Depends(authorize(allowed_roles=["admin"])),
     db: AsyncSession = Depends(get_db)
-) -> CustomResponse[UserResponse]:
+):
     target_user = await user_service.get(id)
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
     if soft_delete:
         deleted_user = await user_service.deactivate_user(id)
-        return create_response(data=UserResponse.model_validate(deleted_user))
+        return create_response(data=UserResponse.model_validate(deleted_user), message="User deactivated successfully")
     else:
         # Hard delete - permanently remove from database
+        username = target_user.username
         await db.delete(target_user)
         await db.commit()
-        return create_response(message=f"User {target_user.username} permanently deleted")
+        return create_response(data=None, message=f"User {username} permanently deleted")

@@ -93,11 +93,45 @@
                     </div>
                     <div class="form-group">
                         <label for="templateName">Template Name</label>
-                        <input type="text" id="templateName" class="form-input" placeholder="e.g., Credit Card Application">
+                        <input type="text" id="templateName" class="form-input"
+                            placeholder="e.g., Credit Card Application">
                     </div>
                     <div class="form-group">
                         <label for="templateVersion">Version</label>
                         <input type="text" id="templateVersion" class="form-input" value="1.0.0" placeholder="1.0.0">
+                    </div>
+                </div>
+                <div id="editingStatus" class="editing-status"
+                    style="display:none; margin-top:10px; padding:10px; background:var(--bg-accent); border-radius:4px; font-weight:bold;">
+                    Editing Template ID: <span id="currentTemplateId">None</span>
+                    <button class="btn btn-sm btn-secondary" style="float:right" onclick="cancelEdit()">Cancel
+                        Edit</button>
+                </div>
+            </div>
+
+            <!-- Existing Templates List -->
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-header"
+                    style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"
+                    onclick="toggleTemplateList()">
+                    <h3 style="margin:0"><i class="fas fa-list"></i> Existing Templates</h3>
+                    <i id="listToggleIcon" class="fas fa-chevron-down"></i>
+                </div>
+                <div id="templateListSection" style="display:none; margin-top:15px;">
+                    <div class="table-container" style="max-height: 400px; overflow-y:auto;">
+                        <table style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Version</th>
+                                    <th>Bank</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="templateTableBody">
+                                <!-- Loaded templates -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -158,7 +192,8 @@
                         </div>
                         <span class="field-count" id="fieldCount">0 fields</span>
                     </div>
-                    <div class="panel-content" id="canvasArea" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+                    <div class="panel-content" id="canvasArea" ondragover="handleDragOver(event)"
+                        ondrop="handleDrop(event)">
                         <div class="preview-area" id="previewArea">
                             <div class="empty-state" id="emptyState">
                                 <div class="empty-state-icon">
@@ -203,4 +238,3 @@
 </body>
 
 </html>
-

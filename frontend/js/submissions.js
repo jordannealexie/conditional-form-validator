@@ -5,6 +5,7 @@
 let currentPage = 1;
 let currentFilters = {
     bank_id: '',
+    template_id: '',
     status: '',
     search: ''
 };
@@ -24,7 +25,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSubmissions();
 
     // 5. Event Listeners
-    document.getElementById('bankFilter').addEventListener('change', handleFilterChange);
+    document.getElementById('bankFilter').addEventListener('change', handleBankChange);
+    document.getElementById('templateFilter').addEventListener('change', handleFilterChange);
     document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
     document.getElementById('searchInput').addEventListener('input', debounce(handleFilterChange, 500));
     document.getElementById('refreshBtn').addEventListener('click', () => loadSubmissions());
@@ -58,23 +60,48 @@ function setupMobileMenu() {
 
 async function setupFilters() {
     const bankFilter = document.getElementById('bankFilter');
-    // Clear existing options except the first one
-    bankFilter.innerHTML = '';
+    if (!bankFilter) return;
+    bankFilter.innerHTML = '<option value="">All Banks</option>';
 
-    // Add predefined bank options with correct IDs matching database
-    const predefinedBanks = [
-        { id: '', name: 'All Banks' },
-        { id: '1', name: 'BDO' },
-        { id: '2', name: 'Maya' },
-        { id: '3', name: 'Security Bank' }
-    ];
+    try {
+        const banks = await apiGetBanks();
+        const list = Array.isArray(banks) ? banks : (banks && banks.data ? banks.data : []);
+        list.forEach(bank => {
+            const option = document.createElement('option');
+            option.value = bank.id;
+            option.textContent = bank.name;
+            bankFilter.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Failed to load banks for filter:', error);
+    }
+}
 
-    predefinedBanks.forEach(bank => {
-        const option = document.createElement('option');
-        option.value = bank.id;
-        option.textContent = bank.name;
-        bankFilter.appendChild(option);
-    });
+async function handleBankChange() {
+    const bankId = document.getElementById('bankFilter').value;
+    currentFilters.bank_id = bankId;
+    currentFilters.template_id = ''; // Reset template filter when bank changes
+
+    // Update template filter options
+    const templateFilter = document.getElementById('templateFilter');
+    if (templateFilter) {
+        templateFilter.innerHTML = '<option value="">All Templates</option>';
+        // Load templates (filtered by bank or all if no bank selected)
+        try {
+            const templates = await apiGetTemplates(bankId);
+            const list = Array.isArray(templates) ? templates : (templates && templates.data ? templates.data : []);
+            list.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t.id;
+                option.textContent = t.name;
+                templateFilter.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Failed to load templates for filter:', error);
+        }
+    }
+
+    handleFilterChange();
 }
 
 async function loadSubmissions() {
@@ -82,18 +109,21 @@ async function loadSubmissions() {
     body.innerHTML = '<tr><td colspan="7" class="text-center"><div class="loading-spinner">Loading submissions...</div></td></tr>';
 
     try {
-        const response = await apiGetSubmissions(currentPage, 10);
+        const response = await apiGetSubmissions(currentPage, 10, currentFilters);
 
         // Handle response wrapper
         const submissions = response.data || response.items || response;
         const total = response.total || 0;
 
-        // Client-side filtering
+        // Client-side filtering as fallback (already handled by server if apiGetSubmissions is updated)
         let filtered = submissions;
-        if (currentFilters.bank_id) {
+        if (currentFilters.bank_id && !response.filtered_by_bank) { // only filter if server didn't
             filtered = filtered.filter(s => s.template && s.template.bank_id == currentFilters.bank_id);
         }
-        if (currentFilters.status) {
+        if (currentFilters.template_id && !response.filtered_by_template) {
+            filtered = filtered.filter(s => s.template_id == currentFilters.template_id);
+        }
+        if (currentFilters.status && !response.filtered_by_status) {
             filtered = filtered.filter(s => s.status === currentFilters.status);
         }
         if (currentFilters.search) {
@@ -332,6 +362,8 @@ function closeModal() {
 
 function handleFilterChange() {
     currentFilters.bank_id = document.getElementById('bankFilter').value;
+    const tfilter = document.getElementById('templateFilter');
+    currentFilters.template_id = tfilter ? tfilter.value : '';
     currentFilters.status = document.getElementById('statusFilter').value;
     currentFilters.search = document.getElementById('searchInput').value;
     currentPage = 1;

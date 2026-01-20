@@ -75,13 +75,28 @@ async function apiRequest(endpoint, options = {}) {
         }
 
         if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: `HTTP ${response.status}: ${response.statusText}` }));
-            const errorMessage = error.detail || error.message || `Request failed with status ${response.status}`;
-            console.error('API Error Response:', error);
+            let errorPayload = null;
+            try {
+                const errText = await response.text();
+                errorPayload = errText ? JSON.parse(errText) : null;
+            } catch (_) {
+                errorPayload = null;
+            }
+            const errorMessage = (errorPayload && (errorPayload.detail || errorPayload.message)) || `HTTP ${response.status}: ${response.statusText}`;
+            console.error('API Error Response:', errorPayload || response.statusText);
             throw new Error(errorMessage);
         }
 
-        const json = await response.json();
+        // Some endpoints may return 204 or empty body; avoid JSON parse errors
+        const rawText = await response.text();
+        if (!rawText) return {};
+        let json;
+        try {
+            json = JSON.parse(rawText);
+        } catch (e) {
+            console.error('API JSON parse error:', e, rawText);
+            throw new Error('Unexpected response format');
+        }
         // Handle custom response wrapper { success, message, data }
         if (json && typeof json === 'object' && json.hasOwnProperty('data') && json.hasOwnProperty('success')) {
             return json.data;
@@ -145,6 +160,30 @@ async function apiGetCurrentUser() {
 }
 
 /**
+ * Update current user profile
+ * @param {object} profileData 
+ * @returns {Promise<object>}
+ */
+async function apiUpdateProfile(profileData) {
+    return await apiRequest('/users/me', {
+        method: 'PATCH',
+        body: profileData
+    });
+}
+
+/**
+ * Change current user password
+ * @param {object} passwordData {current_password, new_password}
+ * @returns {Promise<object>}
+ */
+async function apiChangePassword(passwordData) {
+    return await apiRequest('/users/me/password', {
+        method: 'POST',
+        body: passwordData
+    });
+}
+
+/**
  * Refresh access token
  * @returns {Promise<boolean>}
  */
@@ -202,9 +241,15 @@ async function apiGetUser(userId) {
  * @returns {Promise<object>}
  */
 async function apiCreateUser(userData) {
+    const payload = { ...userData };
+    // backend expects user_role, not role
+    if (payload.role && !payload.user_role) {
+        payload.user_role = payload.role;
+        delete payload.role;
+    }
     return await apiRequest('/users/', {
         method: 'POST',
-        body: userData
+        body: payload
     });
 }
 
@@ -216,9 +261,14 @@ async function apiCreateUser(userData) {
  * @returns {Promise<object>}
  */
 async function apiUpdateUser(userId, userData) {
+    const payload = { ...userData };
+    if (payload.role && !payload.user_role) {
+        payload.user_role = payload.role;
+        delete payload.role;
+    }
     return await apiRequest(`/users/${userId}`, {
         method: 'PUT',
-        body: userData
+        body: payload
     });
 }
 
@@ -264,6 +314,20 @@ async function apiCreateRole(roleData) {
  */
 async function apiDeleteRole(roleId) {
     return await apiRequest(`/roles/${roleId}`, { method: 'DELETE' });
+}
+
+/**
+ * Update role
+ * Backend endpoint: PUT /roles/{id}
+ * @param {number} roleId 
+ * @param {object} roleData 
+ * @returns {Promise<object>}
+ */
+async function apiUpdateRole(roleId, roleData) {
+    return await apiRequest(`/roles/${roleId}`, {
+        method: 'PUT',
+        body: roleData
+    });
 }
 
 /**
@@ -436,7 +500,10 @@ async function apiGetBanks() {
  * @returns {Promise<Array>}
  */
 async function apiGetTemplates(bankId) {
-    return await apiRequest(`/templates/bank/${bankId}`);
+    if (bankId) {
+        return await apiRequest(`/templates/bank/${bankId}`);
+    }
+    return await apiRequest('/templates/');
 }
 
 /**
@@ -459,7 +526,8 @@ async function apiSubmitForm(submissionData) {
     const payload = {
         template_id: submissionData.template_id,
         status: submissionData.status || 'draft',
-        data_json: submissionData.submission_data || submissionData.data_json
+        data_json: submissionData.submission_data || submissionData.data_json,
+        fieldman_id: submissionData.username || submissionData.fieldman_id
     };
 
     return await apiRequest('/submissions/', {
@@ -474,8 +542,13 @@ async function apiSubmitForm(submissionData) {
  * @param {number} pageSize 
  * @returns {Promise<object>}
  */
-async function apiGetSubmissions(page = 1, pageSize = 10) {
-    return await apiRequest(`/submissions/?page=${page}&page_size=${pageSize}`);
+async function apiGetSubmissions(page = 1, pageSize = 10, filters = {}) {
+    let url = `/submissions/?page=${page}&page_size=${pageSize}`;
+    if (filters.status) url += `&status=${encodeURIComponent(filters.status)}`;
+    if (filters.template_id) url += `&template_id=${encodeURIComponent(filters.template_id)}`;
+    if (filters.bank_id) url += `&bank_id=${encodeURIComponent(filters.bank_id)}`;
+    if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
+    return await apiRequest(url);
 }
 
 /**

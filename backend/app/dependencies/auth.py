@@ -77,10 +77,10 @@ async def get_current_superuser(current_user: User = Depends(get_current_active_
     """
     Get the current superuser (admin).
     """
-    if current_user.user_role != "admin":
+    if not current_user.is_superuser and current_user.user_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access forbidden: admin privileges required"
+            detail="Access forbidden: superuser privileges required"
         )
     
     return current_user
@@ -118,7 +118,7 @@ def authorize(allowed_roles: Optional[List[str]] = None):
     async def role_checker(current_user: User = Depends(get_current_active_user)):
         if allowed_roles:
             # Check if current user has one of the allowed roles
-            if current_user.user_role not in allowed_roles and current_user.user_role != "admin":
+            if not current_user.is_superuser and current_user.user_role not in allowed_roles and current_user.user_role != "admin":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Access forbidden: insufficient role"

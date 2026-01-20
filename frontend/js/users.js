@@ -48,6 +48,8 @@ async function loadUsers() {
 
 function createUserRow(user) {
     const tr = document.createElement('tr');
+    tr.id = `user-row-${user.id}`;
+    tr.dataset.userId = user.id;
     const roleCls = (user.user_role || '').toLowerCase() === 'admin' ? 'badge-primary' : (user.user_role ? 'badge-success' : 'badge-secondary');
     const roleHtml = user.user_role ? `<span class="badge ${roleCls}">${escapeHtml(user.user_role)}</span>` : '<span class="badge badge-secondary">—</span>';
     const statusHtml = user.active !== false ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-secondary">Inactive</span>';
@@ -72,36 +74,62 @@ function showAddUserModal() {
     const locOpts = ['Parañaque', 'Makati', 'Quezon City'].map(l => `<option value="${l}">${l}</option>`).join('');
     const content = `
         <form id="addUserForm" onsubmit="handleAddUser(event)">
+            <div class="field-row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label>First Name</label><input type="text" name="first_name"></div>
+                <div class="form-group" style="flex:1;"><label>Last Name</label><input type="text" name="last_name"></div>
+            </div>
             <div class="form-group"><label>Username *</label><input type="text" name="username" required></div>
             <div class="form-group"><label>Email *</label><input type="email" name="email" required></div>
             <div class="form-group"><label>Password *</label><input type="password" name="password" required minlength="8"></div>
             <div class="form-group"><label>Role</label><select name="user_role">${roleOpts}</select></div>
-            <div class="form-group"><label>Department</label><select name="department"><option value="">Select Department</option>${deptOpts}</select></div>
-            <div class="form-group"><label>Location</label><select name="location"><option value="">Select Location</option>${locOpts}</select></div>
+            <div class="field-row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;"><label>Department</label><select name="department"><option value="">Select Department</option>${deptOpts}</select></div>
+                <div class="form-group" style="flex:1;"><label>Location</label><select name="location"><option value="">Select Location</option>${locOpts}</select></div>
+            </div>
         </form>
     `;
     createModal('Add New User', content, [
         { label: 'Cancel', type: 'secondary', onclick: 'closeModal()' },
-        { label: 'Create', type: 'primary', onclick: 'document.getElementById("addUserForm").requestSubmit()' }
+        { label: 'Create', type: 'primary', onclick: "document.getElementById('addUserForm').requestSubmit()" }
     ]);
 }
 
 async function handleAddUser(ev) {
     ev.preventDefault();
     const fd = new FormData(ev.target);
+    const username = (fd.get('username') || '').trim();
+    const email = (fd.get('email') || '').trim();
+    const password = (fd.get('password') || '').trim();
+
+    if (!username || !email || !password) {
+        showToast('Username, email, and password are required', 'error');
+        return;
+    }
+    if (typeof isValidEmail === 'function' && !isValidEmail(email)) {
+        showToast('Please enter a valid email', 'error');
+        return;
+    }
+    if (password.length < 8) {
+        showToast('Password must be at least 8 characters', 'error');
+        return;
+    }
+
     const payload = {
-        username: fd.get('username'),
-        email: fd.get('email'),
-        password: fd.get('password'),
-        user_role: fd.get('user_role') || 'fieldman',
+        username,
+        email,
+        password,
+        first_name: fd.get('first_name') || null,
+        last_name: fd.get('last_name') || null,
+        user_role: fd.get('user_role'),
         department: fd.get('department') || null,
-        location: fd.get('location') || null
+        location: fd.get('location') || null,
+        bank_id: null
     };
     try {
         await apiCreateUser(payload);
         showToast('User created successfully', 'success');
         closeModal();
-        loadUsers();
+        await loadUsers(); // Reload users to show new user
     } catch (e) {
         showToast(e.message || 'Error creating user', 'error');
     }
@@ -116,11 +144,17 @@ async function editUser(userId) {
         const locOpts = ['Parañaque', 'Makati', 'Quezon City'].map(l => `<option value="${l}" ${(user.location || '') === l ? 'selected' : ''}>${l}</option>`).join('');
         const content = `
             <form id="editUserForm" onsubmit="handleEditUser(event, ${userId})">
+                <div class="field-row" style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;"><label>First Name</label><input type="text" name="first_name" value="${escapeHtml(user.first_name || '')}"></div>
+                    <div class="form-group" style="flex:1;"><label>Last Name</label><input type="text" name="last_name" value="${escapeHtml(user.last_name || '')}"></div>
+                </div>
                 <div class="form-group"><label>Username</label><input type="text" name="username" value="${escapeHtml(user.username)}" readonly></div>
                 <div class="form-group"><label>Email *</label><input type="email" name="email" value="${escapeHtml(user.email || '')}" required></div>
                 <div class="form-group"><label>Role</label><select name="user_role">${roleOpts}</select></div>
-                <div class="form-group"><label>Department</label><select name="department"><option value="">Select Department</option>${deptOpts}</select></div>
-                <div class="form-group"><label>Location</label><select name="location"><option value="">Select Location</option>${locOpts}</select></div>
+                <div class="field-row" style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;"><label>Department</label><select name="department"><option value="">Select Department</option>${deptOpts}</select></div>
+                    <div class="form-group" style="flex:1;"><label>Location</label><select name="location"><option value="">Select Location</option>${locOpts}</select></div>
+                </div>
                 <div class="form-group"><label>Status</label><select name="active">
                     <option value="true" ${user.active !== false ? 'selected' : ''}>Active</option>
                     <option value="false" ${user.active === false ? 'selected' : ''}>Inactive</option>
@@ -129,7 +163,7 @@ async function editUser(userId) {
         `;
         createModal('Edit User', content, [
             { label: 'Cancel', type: 'secondary', onclick: 'closeModal()' },
-            { label: 'Save', type: 'primary', onclick: 'document.getElementById("editUserForm").requestSubmit()' }
+            { label: 'Save', type: 'primary', onclick: "document.getElementById('editUserForm').requestSubmit()" }
         ]);
     } catch (e) {
         showToast('Error loading user', 'error');
@@ -139,8 +173,19 @@ async function editUser(userId) {
 async function handleEditUser(ev, userId) {
     ev.preventDefault();
     const fd = new FormData(ev.target);
+    const email = (fd.get('email') || '').trim();
+    if (!email) {
+        showToast('Email is required', 'error');
+        return;
+    }
+    if (typeof isValidEmail === 'function' && !isValidEmail(email)) {
+        showToast('Please enter a valid email', 'error');
+        return;
+    }
     const payload = {
-        email: fd.get('email'),
+        email,
+        first_name: fd.get('first_name') || null,
+        last_name: fd.get('last_name') || null,
         user_role: fd.get('user_role'),
         department: fd.get('department') || null,
         location: fd.get('location') || null,
@@ -150,7 +195,7 @@ async function handleEditUser(ev, userId) {
         await apiUpdateUser(userId, payload);
         showToast('User updated successfully', 'success');
         closeModal();
-        loadUsers();
+        await loadUsers(); // Reload users to show changes
     } catch (e) {
         showToast(e.message || 'Error updating user', 'error');
     }

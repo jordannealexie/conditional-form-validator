@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 def _can_access_submission(submission, user: User) -> bool:
-    if user.user_role == "admin":
+    if getattr(user, 'is_superuser', False) or user.user_role == "admin":
         return True
     if user.user_role == "supervisor" and submission.template and submission.template.bank_id == user.bank_id:
         return True
@@ -81,6 +81,8 @@ async def create_submission(
         "validation_errors": [e.model_dump() for e in validation_result.errors] if validation_result.errors else []
     }
     submission = await FormSubmissionRepository.create(db, **data)
+    # Reload with relationships for the response
+    submission = await FormSubmissionRepository.get_by_id(db, submission.id)
     QueueService.enqueue(send_submission_notification, submission_id=submission.id, background_tasks=background_tasks)
     return create_response(data=FormSubmissionResponse.model_validate(submission))
 
@@ -106,8 +108,8 @@ async def list_submissions(
         ).outerjoin(models.FormTemplate, models.FormSubmission.template_id == models.FormTemplate.id)
         
         # Filter by user role/bank
-        if current_user.user_role == "admin":
-            pass # Admin sees all
+        if getattr(current_user, 'is_superuser', False) or current_user.user_role == "admin":
+            pass # Admin/Superuser sees all
         elif current_user.user_role == "supervisor":
             # Supervisor sees all in their bank
             if current_user.bank_id:
@@ -128,9 +130,11 @@ async def list_submissions(
         count_query = select(func.count(models.FormSubmission.id)).select_from(models.FormSubmission).outerjoin(models.FormTemplate, models.FormSubmission.template_id == models.FormTemplate.id)
         
         # Apply same filters to count query
-        if current_user.user_role == "supervisor" and current_user.bank_id:
+        if getattr(current_user, 'is_superuser', False) or current_user.user_role == "admin":
+            pass
+        elif current_user.user_role == "supervisor" and current_user.bank_id:
             count_query = count_query.where(models.FormTemplate.bank_id == current_user.bank_id)
-        elif current_user.user_role not in ["admin", "supervisor"]:
+        else:
             count_query = count_query.where(models.FormSubmission.fieldman_id == current_user.username)
         
         if status:

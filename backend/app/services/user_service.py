@@ -26,7 +26,7 @@ class UserService:
             "active": True,
             "first_name": inp.first_name,
             "last_name": inp.last_name,
-            "full_name": inp.full_name,
+            "full_name": inp.full_name or " ".join([p for p in [inp.first_name, inp.last_name] if p]).strip() or None,
             "department": inp.department,
             "level": inp.level or 1,
             "location": inp.location,
@@ -88,14 +88,20 @@ class UserService:
             return None
 
         # Convert to dict if it's a Pydantic model
-        update_data = obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+        update_data = obj_in if isinstance(obj_in, dict) else (obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, "model_dump") else obj_in.dict(exclude_unset=True))
+
+        # Normalize common aliases
+        if "is_active" in update_data:
+            update_data["active"] = update_data.pop("is_active")
+        if "role" in update_data and "user_role" not in update_data:
+            update_data["user_role"] = update_data.pop("role")
 
         # Filter out None values from update_data
         filtered_update_data = {k: v for k, v in update_data.items() if v is not None}
 
         # Handle password update separately
         if "password" in filtered_update_data and filtered_update_data["password"]:
-            filtered_update_data["hashed_password"] = get_password_hash(filtered_update_data["password"])
+            filtered_update_data["password_hash"] = get_password_hash(filtered_update_data["password"])
             del filtered_update_data["password"]  # remove plaintext password
         
         return await self.user_repo.update(id=user_id, obj_in=filtered_update_data)

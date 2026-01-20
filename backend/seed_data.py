@@ -12,6 +12,7 @@ sys.path.insert(0, str(backend_path))
 from app.db.session import AsyncSessionLocal
 from app.models.user import User, Role, user_roles
 from app.models.forms import Bank, FormTemplate, FormSubmission, FormFile
+from app.models.audit import AuditLog
 from app.core.security import get_password_hash
 
 # --- FORM TEMPLATE DEFINITIONS ---
@@ -134,14 +135,19 @@ SECB_TEMPLATE = {
 # --- SEEDING LOGIC ---
 
 async def seed_data():
+    print("🚀 Starting seed_data function...")
     async with AsyncSessionLocal() as session:
         print("🌱 Starting data seeding...")
-
-        # 1. Clear existing data (optional, but good for a fresh start)
-        # Note: Be careful with foreign keys
+        print("🌱 Starting data seeding...")
+        # 0. Clean up existing data (optional but good for testing)
+        # Using raw SQL for cascade delete or just correct order
+        await session.execute(delete(AuditLog))
+        await session.execute(delete(user_roles))
+        await session.execute(delete(User))
         await session.execute(delete(FormSubmission))
         await session.execute(delete(FormTemplate))
         await session.execute(delete(Bank))
+        await session.execute(delete(Role))
         
         # 2. Seed Banks
         banks_data = [
@@ -158,9 +164,25 @@ async def seed_data():
 
         # 3. Seed Roles (Consolidated JSONB format)
         role_definitions = [
-            {"name": "admin", "description": "Full system access", "permissions": {"all": True}},
-            {"name": "supervisor", "description": "View and review submissions", "permissions": {"submissions": ["read", "review"], "templates": ["read"]}},
-            {"name": "fieldman", "description": "Submit and view own forms", "permissions": {"submissions": ["create", "read_own"], "templates": ["read"]}}
+            {
+                "name": "admin", 
+                "description": "Full system access", 
+                "permissions": [
+                    "users:read", "users:write", "templates:read", "templates:write",
+                    "submissions:read", "submissions:write", "submissions:review",
+                    "roles:read", "roles:write", "banks:read", "banks:write"
+                ]
+            },
+            {
+                "name": "supervisor", 
+                "description": "View and review submissions", 
+                "permissions": ["submissions:read", "submissions:review", "templates:read"]
+            },
+            {
+                "name": "fieldman", 
+                "description": "Submit and view own forms", 
+                "permissions": ["submissions:create", "submissions:read_own", "templates:read"]
+            }
         ]
         roles = {}
         for r_def in role_definitions:
@@ -196,8 +218,29 @@ async def seed_data():
                     )
                     user.roles = [roles[role_name]]
                     session.add(user)
-        
-        # 5. Seed Templates
+         
+        # 5. Seed Specific Admin (harrypotter)
+        hp_res = await session.execute(select(User).where(User.username == "harrypotter"))
+        if not hp_res.scalar_one_or_none():
+            hp = User(
+                username="harrypotter",
+                email="harrypotter@example.com",
+                password_hash=get_password_hash("harrypotter"),
+                user_role="admin",
+                first_name="Harry",
+                last_name="Potter",
+                full_name="Harry Potter",
+                department="IT",
+                level=5,
+                location="Parañaque",
+                active=True,
+                is_superuser=True
+            )
+            hp.roles = [roles["admin"]]
+            session.add(hp)
+            print("⚡ harrypotter added to session")
+
+        # 6. Seed Templates
         template_maps = [
             (banks[0].id, BDO_TEMPLATE),
             (banks[1].id, MAYA_TEMPLATE),

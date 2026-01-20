@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     first_name: Optional[str] = Field(None, min_length=2, max_length=50, description="First name of the user")
     last_name: Optional[str] = Field(None, min_length=2, max_length=50, description="Last name of the user")
     is_active: Optional[bool] = True
+    is_superuser: Optional[bool] = False
     department: Optional[str] = None
     level: Optional[int] = 1
     location: Optional[str] = None
@@ -39,6 +40,8 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = Field(None, min_length=2, max_length=50)
     last_name: Optional[str] = Field(None, min_length=2, max_length=50)
     is_active: Optional[bool] = None
+    department: Optional[str] = None
+    location: Optional[str] = None
 
 class UserLogin(BaseModel):
     """Schema for user login"""
