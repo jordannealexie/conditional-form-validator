@@ -11,6 +11,8 @@ from app.api.v1.api import api_router
 from app.db.session import engine
 from app.db.base_class import Base
 
+port = int(os.getenv("PORT", "8000"))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,7 +28,7 @@ async def lifespan(app: FastAPI):
     await casbin_enforcer.initialize()
     
     print("✅ Application started successfully!")
-    print(f"📚 API Documentation: http://localhost:8000{settings.API_V1_STR}/docs")
+    print(f"📚 API Documentation: http://localhost:{port}{settings.API_V1_STR}/docs")
     
     yield
     
@@ -125,6 +127,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=True
     )
