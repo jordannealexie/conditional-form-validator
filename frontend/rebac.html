@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReBAC - SecureFlow Auth System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🔐 RBAC System</h2>
+                <button class="menu-toggle" id="menuToggle">☰</button>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="dashboard.html">
+                        <span class="icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="users.html">
+                        <span class="icon">👥</span>
+                        <span>Users</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="roles.html">
+                        <span class="icon">🎭</span>
+                        <span>Roles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="abac.html">
+                        <span class="icon">📋</span>
+                        <span>ABAC Policies</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="rebac.html">
+                        <span class="icon">🔗</span>
+                        <span>ReBAC</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-role" id="userRole">User</span>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="logout()">
+                    Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1>Relationship-Based Access Control</h1>
+                <p class="page-subtitle">Manage resource relationships and access based on connections</p>
+            </header>
+
+            <!-- Add Relationship Form -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2>Add New Relationship</h2>
+                    <button class="btn btn-primary" onclick="toggleAddRelationshipForm()">
+                        <span>+</span> Add Relationship
+                    </button>
+                </div>
+
+                <form id="addRelationshipForm" class="form-container" style="display: none;">
+                    <div class="form-group">
+                        <label for="subjectType">Subject Type</label>
+                        <select id="subjectType" required>
+                            <option value="">Select Type</option>
+                            <option value="user">User</option>
+                            <option value="role">Role</option>
+                            <option value="group">Group</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="subjectId">Subject ID</label>
+                        <input type="text" id="subjectId" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="relation">Relation</label>
+                        <select id="relation" required>
+                            <option value="">Select Relation</option>
+                            <option value="owner">Owner</option>
+                            <option value="member">Member</option>
+                            <option value="parent">Parent</option>
+                            <option value="child">Child</option>
+                            <option value="manager">Manager</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="objectType">Object Type</label>
+                        <select id="objectType" required>
+                            <option value="">Select Type</option>
+                            <option value="resource">Resource</option>
+                            <option value="document">Document</option>
+                            <option value="project">Project</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="objectId">Object ID</label>
+                        <input type="text" id="objectId" required>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Create Relationship</button>
+                        <button type="button" class="btn btn-secondary"
+                            onclick="toggleAddRelationshipForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Relationships List -->
+            <div class="content-section">
+                <h2>Existing Relationships</h2>
+                <div class="table-container">
+                    <table class="data-table" id="relationshipsTable">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Relation</th>
+                                <th>Object</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="relationshipsTableBody">
+                            <!-- Relationships will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Relationship Graph -->
+            <div class="content-section">
+                <h2>Relationship Graph</h2>
+                <div class="graph-container" id="relationshipGraph">
+                    <!-- Graph visualization will be rendered here -->
+                    <p>Graph visualization coming soon...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/rebac.js"></script>
+</body>
+
+</html>

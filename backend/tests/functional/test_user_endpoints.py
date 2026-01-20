@@ -7,9 +7,9 @@ from app.core.security import create_access_token
 from app.models.user import User, UserRole
 
 
-async def create_auth_headers(user_email: str):
+async def create_auth_headers(username: str):
     """helper to create authorization headers for testing"""
-    token_data = {"email": user_email}
+    token_data = {"sub": username}
     token = create_access_token(token_data)
     return {"Authorization": f"Bearer {token}"}
 
@@ -23,10 +23,12 @@ class TestUserEndpointsWithAuth:
         self, client: AsyncClient, created_user: User
     ):
         """test getting current user info"""
-        headers = await create_auth_headers(created_user.email)
+        headers = await create_auth_headers(created_user.username)
 
         response = await client.get("/api/v1/users/me", headers=headers)
 
+        if response.status_code != status.HTTP_200_OK:
+             print(f"DEBUG: Status {response.status_code}, Body: {response.text}")
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
 
@@ -39,6 +41,9 @@ class TestUserEndpointsWithAuth:
     async def test_get_current_user_unauthorized(self, client: AsyncClient):
         """test getting current user without auth fails"""
         response = await client.get("/api/v1/users/me")
+        
+        if response.status_code != status.HTTP_401_UNAUTHORIZED:
+            print(f"DEBUG: Status {response.status_code}, Body: {response.text}")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -51,12 +56,11 @@ class TestUserEndpointsWithAuth:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
 
-        assert data["success"] is False
-        assert data["error_code"] == "INVALID_CREDENTIALS"
+        assert "detail" in data
 
     async def test_get_user_by_id_success(self, client: AsyncClient, created_user):
         """test getting user by id with proper auth"""
-        headers = await create_auth_headers(created_user.email)
+        headers = await create_auth_headers(created_user.username)
 
         response = await client.get(f"/api/v1/users/{created_user.id}", headers=headers)
 
@@ -69,7 +73,7 @@ class TestUserEndpointsWithAuth:
 
     async def test_get_user_by_id_not_found(self, client: AsyncClient, created_user):
         """test getting non-existent user returns null data"""
-        headers = await create_auth_headers(created_user.email)
+        headers = await create_auth_headers(created_user.username)
 
         response = await client.get("/api/v1/users/99999", headers=headers)
 
@@ -81,7 +85,7 @@ class TestUserEndpointsWithAuth:
 
     async def test_get_user_by_email_success(self, client: AsyncClient, created_user):
         """test getting user by email with proper auth"""
-        headers = await create_auth_headers(created_user.email)
+        headers = await create_auth_headers(created_user.username)
 
         response = await client.get(
             f"/api/v1/users/by-email?email={created_user.email}", headers=headers
@@ -96,7 +100,7 @@ class TestUserEndpointsWithAuth:
 
     async def test_get_user_by_email_not_found(self, client: AsyncClient, created_user):
         """test getting user by non-existent email"""
-        headers = await create_auth_headers(created_user.email)
+        headers = await create_auth_headers(created_user.username)
 
         response = await client.get(
             "/api/v1/users/by-email?email=nonexistent@example.com", headers=headers
@@ -115,22 +119,21 @@ class TestUserEndpointsWithRoleAuth:
     async def test_get_all_users_user_forbidden(
         self, client: AsyncClient, created_user
     ):
-        headers = await create_auth_headers(created_user.email)
+        headers = await create_auth_headers(created_user.username)
 
         response = await client.get("/api/v1/users/", headers=headers)
 
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.status_code == status.HTTP_403_FORBIDDEN
         data = response.json()
 
-        assert data["success"] is False
-        assert data["error_code"] == "ACCESS_FORBIDDEN"
-        assert "insufficient role" in data["errors"][0]
+        assert "detail" in data
+        assert "insufficient role" in data["detail"]
 
     async def test_get_all_users_admin_success(
         self, client: AsyncClient, created_admin, created_user
     ):
         """test admin can get all users"""
-        headers = await create_auth_headers(created_admin.email)
+        headers = await create_auth_headers(created_admin.username)
 
         response = await client.get("/api/v1/users/", headers=headers)
 
@@ -166,6 +169,7 @@ class TestFullUserFlow:
         # step 1: register new user
         registration_data = {
             "email": "fullflow@example.com",
+            "username": "fullflowuser",
             "password": "FullFlowPassword123",
             "first_name": "Full",
             "last_name": "Flow",
@@ -174,21 +178,21 @@ class TestFullUserFlow:
         register_response = await client.post(
             "/api/v1/auth/register", json=registration_data
         )
-        assert register_response.status_code == status.HTTP_201_CREATED
+        assert register_response.status_code == status.HTTP_200_OK
 
-        user_data = register_response.json()["data"]
+        user_data = register_response.json()
         user_id = user_data["id"]
 
         # step 2: login with registered user
         login_data = {
-            "email": registration_data["email"],
+            "username": registration_data["email"],
             "password": registration_data["password"],
         }
 
-        login_response = await client.post("/api/v1/auth/login", json=login_data)
+        login_response = await client.post("/api/v1/auth/login", data=login_data)
         assert login_response.status_code == status.HTTP_200_OK
 
-        token = login_response.json()["data"]
+        token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
         # step 3: access protected endpoint with token
@@ -211,14 +215,14 @@ class TestFullUserFlow:
         """test admin-specific workflows"""
         # login as admin
         login_data = {
-            "email": created_admin.email,
-            "password": "AdminPassword123",  # from fixture
+            "username": created_admin.email,
+            "password": "AdminPassword123",
         }
 
-        login_response = await client.post("/api/v1/auth/login", json=login_data)
+        login_response = await client.post("/api/v1/auth/login", data=login_data)
         assert login_response.status_code == status.HTTP_200_OK
 
-        token = login_response.json()["data"]
+        token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 
         # access admin-only endpoint

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - SecureFlow Auth System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation (same as dashboard) -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🔐 RBAC System</h2>
+                <button class="menu-toggle" id="menuToggle">☰</button>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="dashboard.html">
+                        <span class="icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="users.html">
+                        <span class="icon">👥</span>
+                        <span>Users</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="roles.html">
+                        <span class="icon">🎭</span>
+                        <span>Roles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="abac.html">
+                        <span class="icon">📋</span>
+                        <span>ABAC Policies</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="rebac.html">
+                        <span class="icon">🔗</span>
+                        <span>ReBAC</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-role" id="userRole">User</span>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="logout()">
+                    Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1>User Management</h1>
+                <p class="page-subtitle">Manage users, roles, and permissions</p>
+            </header>
+
+            <!-- Users Table -->
+            <div class="table-container">
+                <div class="table-header">
+                    <div class="search-box">
+                        <input type="text" id="searchUsers" placeholder="Search users..."
+                            onkeyup="debounce(() => filterTable('usersTable', this.value), 300)()">
+                    </div>
+                    <button class="btn btn-primary" onclick="showAddUserModal()">
+                        + Add User
+                    </button>
+                </div>
+
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Roles</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/rbac.js"></script>
+    <script src="js/users.js"></script>
+</body>
+
+</html>

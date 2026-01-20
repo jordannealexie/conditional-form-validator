@@ -1,6 +1,5 @@
 from enum import Enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, TIMESTAMP
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, TIMESTAMP, JSON, Uuid
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -43,10 +42,10 @@ class FormTemplate(Base):
     version = Column(String(20), nullable=False)  # Semantic versioning: "1.0.0", "1.1.0", etc.
     
     # JSON Schema for validation
-    json_schema = Column(JSONB, nullable=False)
+    json_schema = Column(JSON, nullable=False)
     
     # UI Schema for rendering hints
-    ui_schema = Column(JSONB, nullable=True)
+    ui_schema = Column(JSON, nullable=True)
     
     # Metadata
     title = Column(String(255), nullable=True)
@@ -79,10 +78,10 @@ class FormSubmission(Base):
     status = Column(String(20), default=SubmissionStatus.DRAFT, nullable=False, index=True)
     
     # Actual form data (validated against json_schema)
-    submission_data = Column(JSONB, nullable=False)
+    submission_data = Column(JSON, nullable=False)
     
     # Validation results
-    validation_errors = Column(JSONB, nullable=True)  # Null means valid or not validated yet
+    validation_errors = Column(JSON, nullable=True)  # Null means valid or not validated yet
     is_valid = Column(Boolean, default=False, nullable=False)
     
     # Timestamps
@@ -112,7 +111,7 @@ class FormFile(Base):
     mime_type = Column(String(100), nullable=False)
     
     # Security token for access control
-    access_token = Column(PG_UUID(as_uuid=True), default=uuid.uuid4, nullable=False, unique=True, index=True)
+    access_token = Column(Uuid(as_uuid=True), default=uuid.uuid4, nullable=False, unique=True, index=True)
     
     # Timestamps
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

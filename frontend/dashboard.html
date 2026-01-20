@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SecureFlow Auth System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🔐 RBAC System</h2>
+                <button class="menu-toggle" id="menuToggle">☰</button>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item active">
+                    <a href="dashboard.html">
+                        <span class="icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="users.html">
+                        <span class="icon">👥</span>
+                        <span>Users</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="roles.html">
+                        <span class="icon">🎭</span>
+                        <span>Roles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="abac.html">
+                        <span class="icon">📋</span>
+                        <span>ABAC Policies</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="rebac.html">
+                        <span class="icon">🔗</span>
+                        <span>ReBAC</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-role" id="userRole">User</span>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="logout()">
+                    Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1>Dashboard</h1>
+                <p class="page-subtitle">Welcome back! Here's your system overview</p>
+            </header>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-details">
+                        <h3 id="totalUsers">0</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">🎭</div>
+                    <div class="stat-details">
+                        <h3 id="totalRoles">0</h3>
+                        <p>Active Roles</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-details">
+                        <h3 id="totalPolicies">0</h3>
+                        <p>ABAC Policies</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">🔗</div>
+                    <div class="stat-details">
+                        <h3 id="totalRelationships">0</h3>
+                        <p>Relationships</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="content-section">
+                <h2>Quick Access</h2>
+                <div class="quick-actions">
+                    <a href="users.html" class="quick-action-card">
+                        <div class="quick-action-icon">👤</div>
+                        <h3>Manage Users</h3>
+                        <p>Add, edit, or remove users and assign roles</p>
+                    </a>
+
+                    <a href="roles.html" class="quick-action-card">
+                        <div class="quick-action-icon">🎭</div>
+                        <h3>Configure Roles</h3>
+                        <p>Create roles and manage permissions</p>
+                    </a>
+
+                    <a href="abac.html" class="quick-action-card">
+                        <div class="quick-action-icon">📋</div>
+                        <h3>ABAC Policies</h3>
+                        <p>Define attribute-based access rules</p>
+                    </a>
+
+                    <a href="rebac.html" class="quick-action-card">
+                        <div class="quick-action-icon">🔗</div>
+                        <h3>Relationships</h3>
+                        <p>Manage resource relationships</p>
+                    </a>
+                </div>
+            </div>
+
+            <!-- System Info -->
+            <div class="content-section">
+                <h2>System Information</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Current User:</strong>
+                        <span id="currentUserName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>User Roles:</strong>
+                        <span id="currentUserRoles">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Department:</strong>
+                        <span id="currentUserDept">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Access Level:</strong>
+                        <span id="currentUserLevel">-</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>

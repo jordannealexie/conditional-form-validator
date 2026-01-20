@@ -63,6 +63,9 @@ class UserService:
         # Remove password field as we don't store it directly
         if "password" in db_obj:
             del db_obj["password"]
+            
+        if "role" in db_obj:
+            del db_obj["role"]
 
         return await self.user_repo.create(obj_in=db_obj)
 

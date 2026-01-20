@@ -8,6 +8,8 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from fastapi.testclient import TestClient
 
 # Pytest override environment variables for testing
@@ -16,7 +18,7 @@ load_dotenv(".env.test")
 from app.main import app
 from app.db.base_class import Base
 from app.db.session import get_db
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, Role
 from app.schemas.user import UserCreate
 from app.repositories.user import UserRepository
 from app.services.user_service import UserService
@@ -81,6 +83,7 @@ async def test_user_data() -> dict[str, str]:
     unique_id = str(uuid.uuid4())[:8]
     return {
         "email": f"test{unique_id}@example.com",
+        "username": f"testuser{unique_id}",
         "password": "TestPassword123",
         "first_name": "Test",
         "last_name": "User",
@@ -113,6 +116,7 @@ async def test_admin_data() -> dict:
     unique_id = str(uuid.uuid4())[:8]
     return {
         "email": f"admin{unique_id}@example.com",
+        "username": f"adminuser{unique_id}",
         "password": "AdminPassword123",
         "first_name": "Admin",
         "last_name": "User",
@@ -127,9 +131,34 @@ async def created_admin(
     """create and return test admin user in database"""
     admin_create = UserCreate(**test_admin_data)
     admin = await user_service.create(admin_create)
+    
+    
+    # Manually set superuser and role
+    admin.is_superuser = True
+    
+    # Ensure admin role exists and assign it
+    from sqlalchemy import select
+    result = await db_session.execute(select(Role).where(Role.name == "admin"))
+    admin_role = result.scalar_one_or_none()
+    if not admin_role:
+        admin_role = Role(name="admin", description="Administrator")
+        db_session.add(admin_role)
+    
+        db_session.add(admin_role)
+    
+    
+    # Re-fetch with eager loaded roles to avoid MissingGreenlet
+    result = await db_session.execute(
+        select(User).options(selectinload(User.roles)).where(User.id == admin.id)
+    )
+    admin_refreshed = result.scalar_one()
+    
+    admin_refreshed.roles.append(admin_role)
+    db_session.add(admin_refreshed)
+    
     await db_session.commit()
-    await db_session.refresh(admin)
-    return admin
+    await db_session.refresh(admin_refreshed)
+    return admin_refreshed
 
 
 async def override_get_db():

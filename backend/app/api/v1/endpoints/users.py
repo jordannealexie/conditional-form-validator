@@ -2,7 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from app.dependencies.services import get_user_service
-from app.dependencies.auth import get_current_active_user
+from app.dependencies.services import get_user_service
+from app.dependencies.auth import get_current_active_user, authorize
 from app.core.casbin_enforcer import casbin_enforcer
 from app.models.user import User
 from app.dtos.custom_response_dto import CustomResponse
@@ -19,7 +20,8 @@ router = APIRouter()
     description="Get a list of users"
 )
 async def get_users(
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
+    current_user: User = Depends(authorize(allowed_roles=["admin"]))
 ) -> CustomResponse[List[UserResponse]]:
     users = await user_service.get_all_users()
 
@@ -40,7 +42,8 @@ async def get_users(
 )
 async def get_user_by_email(
     email: str,
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user)
 ) -> CustomResponse[UserResponse]:
     user = await user_service.get_by_email(email)
 
@@ -54,6 +57,22 @@ async def get_user_by_email(
     )
 
 @router.get(
+    "/me",
+    response_model=CustomResponse[UserResponse],
+    summary="Get current user",
+    description="Get current authenticated user"
+)
+async def read_user_me(
+    current_user: User = Depends(get_current_active_user),
+) -> CustomResponse[UserResponse]:
+    """
+    Get current user.
+    """
+    return create_response(
+        data=UserResponse.from_orm(current_user)
+    )
+
+@router.get(
     "/{id}",
     response_model=CustomResponse[UserResponse],
     summary="Get user by ID",
@@ -61,7 +80,8 @@ async def get_user_by_email(
 )
 async def get_user_by_id(
     id: int,
-    user_service: UserService = Depends(get_user_service)
+    user_service: UserService = Depends(get_user_service),
+    current_user: User = Depends(get_current_active_user)
 ) -> CustomResponse[UserResponse]:
     user = await user_service.get(id)
 

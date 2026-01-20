@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roles - SecureFlow Auth System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🔐 RBAC System</h2>
+                <button class="menu-toggle" id="menuToggle">☰</button>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="dashboard.html">
+                        <span class="icon">📊</span>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="users.html">
+                        <span class="icon">👥</span>
+                        <span>Users</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="roles.html">
+                        <span class="icon">🎭</span>
+                        <span>Roles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="abac.html">
+                        <span class="icon">📋</span>
+                        <span>ABAC Policies</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="rebac.html">
+                        <span class="icon">🔗</span>
+                        <span>ReBAC</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-role" id="userRole">User</span>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="logout()">
+                    Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="page-header">
+                <h1>Role Management</h1>
+                <p class="page-subtitle">Create and manage roles and their permissions</p>
+            </header>
+
+            <!-- Add Role Form -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h2>Add New Role</h2>
+                    <button class="btn btn-primary" onclick="toggleAddRoleForm()">
+                        <span>+</span> Add Role
+                    </button>
+                </div>
+
+                <form id="addRoleForm" class="form-container" style="display: none;">
+                    <div class="form-group">
+                        <label for="roleName">Role Name</label>
+                        <input type="text" id="roleName" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="roleDescription">Description</label>
+                        <textarea id="roleDescription" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Permissions</label>
+                        <div class="permissions-grid" id="permissionsGrid">
+                            <!-- Permissions will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Create Role</button>
+                        <button type="button" class="btn btn-secondary" onclick="toggleAddRoleForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Roles List -->
+            <div class="content-section">
+                <h2>Existing Roles</h2>
+                <div class="table-container">
+                    <table class="data-table" id="rolesTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Permissions</th>
+                                <th>Users Count</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rolesTableBody">
+                            <!-- Roles will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/rbac.js"></script>
+</body>
+
+</html>

@@ -60,22 +60,25 @@ def custom_openapi():
         routes=app.routes,
     )
     
-    # Add Bearer authentication (JWT) - simplifies Swagger UI to just username/password
-    # Add Basic authentication
+    # Add Bearer authentication (JWT)
     openapi_schema["components"]["securitySchemes"] = {
-        "HTTPBasic": {
+        "BearerAuth": {
             "type": "http",
-            "scheme": "basic",
-            "description": "Enter your username and password"
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "Enter your JWT token"
         }
     }
+    
+    # Apply security globally
+    openapi_schema["security"] = [{"BearerAuth": []}]
     
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
 
-# Set custom OpenAPI schema
-app.openapi = custom_openapi
+# Set custom OpenAPI schema (Optional - FastAPI handles this via dependencies)
+# app.openapi = custom_openapi
 
 # Configure CORS
 app.add_middleware(
@@ -90,10 +93,9 @@ app.add_middleware(
 # Include API router (includes all endpoint routers)
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
-# Mount frontend static files
-# Construct path to frontend/src relative to this file
-# backend/app/main.py -> backend/app -> backend -> root -> frontend/src
-frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "src")
+# Construct path to frontend relative to this file
+# backend/app/main.py -> backend/app -> backend -> root -> frontend
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend")
 
 if os.path.isdir(frontend_path):
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")

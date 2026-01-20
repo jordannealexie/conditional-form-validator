@@ -1,7 +1,8 @@
 from typing import List, Optional
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import verify_password
 from app.core.config import settings
@@ -12,58 +13,48 @@ from app.models.user import User
 from app.db.session import get_db
 from app.services.user_service import UserService
 
-from fastapi.security import HTTPBasic, HTTPBasicCredentials, OAuth2PasswordBearer
+
 from app.core.security import verify_password, decode_access_token
 
-security_basic = HTTPBasic(auto_error=False)
+
 security_bearer = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
 
 async def get_current_user(
-    basic_credentials: Optional[HTTPBasicCredentials] = Depends(security_basic),
     bearer_token: Optional[str] = Depends(security_bearer),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get the current authenticated user using JWT or Basic Auth.
+    Get the current authenticated user using JWT.
     """
     user = None
     
-    # 1. Try JWT (Bearer) first - primary for frontend
+    # 1. Try JWT (Bearer)
     if bearer_token:
+        # Handle case where user pasted "Bearer " + token into Swagger UI
+        if bearer_token.startswith("Bearer "):
+            bearer_token = bearer_token.replace("Bearer ", "").strip()
+            
         try:
             payload = decode_access_token(bearer_token)
             username = payload.get("sub")
             if username:
                 result = await db.execute(
-                    select(User).where(User.username == username)
+                    select(User).options(selectinload(User.roles)).where(User.username == username)
                 )
                 user = result.scalar_one_or_none()
         except Exception:
-            pass # Fall through to Basic Auth
-            
-    # 2. Try Basic Auth - for Swagger UI simplify
-    if not user and basic_credentials:
-        # Try username
-        result = await db.execute(
-            select(User).where(User.username == basic_credentials.username)
-        )
-        user = result.scalar_one_or_none()
-        
-        # If username not found, try email
-        if not user:
-            result = await db.execute(
-                select(User).where(User.email == basic_credentials.username)
+            # Token invalid or expired
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
             )
-            user = result.scalar_one_or_none()
-
-        if user and not verify_password(basic_credentials.password, user.hashed_password):
-            user = None
-
+            
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer, Basic"},
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
     return user
