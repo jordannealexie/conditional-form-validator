@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 minutes for access token
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days for refresh token
     
     # Database
     POSTGRES_SERVER: str = "localhost"

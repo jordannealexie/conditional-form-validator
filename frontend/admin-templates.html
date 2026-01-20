@@ -5,132 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Template Builder - Form Submission</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/index.css">
-    <style>
-        .builder-container {
-            display: grid;
-            grid-template-columns: 250px 1fr 300px;
-            gap: 20px;
-            height: calc(100vh - 150px);
-        }
-
-        .builder-panel {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .panel-header {
-            padding: 16px;
-            background: var(--gray-50);
-            border-bottom: 1px solid var(--gray-200);
-            font-weight: 600;
-        }
-
-        .panel-content {
-            padding: 16px;
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .field-type-item {
-            padding: 12px;
-            margin-bottom: 8px;
-            background: white;
-            border: 1px solid var(--gray-200);
-            border-radius: 4px;
-            cursor: move;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.2s;
-        }
-
-        .field-type-item:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-        }
-
-        .preview-area {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            min-height: 400px;
-            border: 2px dashed var(--gray-300);
-            border-radius: 8px;
-            padding: 20px;
-            background: var(--gray-50);
-        }
-
-        .preview-field {
-            background: white;
-            padding: 16px;
-            border-radius: 6px;
-            border: 1px solid var(--gray-200);
-            position: relative;
-            cursor: pointer;
-        }
-
-        .preview-field.active {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px var(--primary-light);
-        }
-
-        .preview-field .actions {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: none;
-        }
-
-        .preview-field:hover .actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--gray-500);
-            text-align: center;
-        }
-
-        .config-group {
-            margin-bottom: 16px;
-        }
-
-        .config-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--gray-600);
-            margin-bottom: 4px;
-            text-transform: uppercase;
-        }
-
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid var(--gray-200);
-            margin-bottom: 16px;
-        }
-
-        .tab {
-            padding: 8px 16px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-
-        .tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-    </style>
 </head>
 
 <body>
@@ -177,9 +53,7 @@
 
             <div class="sidebar-footer">
                 <div class="user-info" id="userInfo">
-                    <div class="user-avatar"
-                        style="background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        U</div>
+                    <div class="user-avatar">U</div>
                     <div class="user-details">
                         <span class="user-name" id="userName">Loading...</span>
                         <span class="user-role" id="userRole">User</span>
@@ -194,41 +68,79 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="content-header">
-                <div>
+                <div class="header-left">
                     <h1>Template Builder</h1>
                     <p class="page-subtitle">Design dynamic form templates for banks</p>
                 </div>
-                <div>
-                    <button class="btn btn-secondary" onclick="previewJSON()" style="margin-right: var(--space-sm);">Preview JSON</button>
-                    <button class="btn btn-primary" onclick="saveTemplate()">Save Template</button>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="previewJSON()">
+                        <i class="fas fa-code"></i> Preview JSON
+                    </button>
+                    <button class="btn btn-primary" onclick="saveTemplate()">
+                        <i class="fas fa-save"></i> Save Template
+                    </button>
                 </div>
             </header>
 
+            <!-- Template Info -->
+            <div class="card template-info">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bankSelect">Select Bank</label>
+                        <select id="bankSelect" class="form-select">
+                            <option value="">-- Select Bank --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="templateName">Template Name</label>
+                        <input type="text" id="templateName" class="form-input" placeholder="e.g., Credit Card Application">
+                    </div>
+                    <div class="form-group">
+                        <label for="templateVersion">Version</label>
+                        <input type="text" id="templateVersion" class="form-input" value="1.0.0" placeholder="1.0.0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Builder Container -->
             <div class="builder-container">
                 <!-- Left: Toolset -->
                 <aside class="builder-panel">
-                    <div class="panel-header">Field Types</div>
+                    <div class="panel-header">
+                        <i class="fas fa-tools"></i> Field Types
+                    </div>
                     <div class="panel-content">
                         <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'text')">
+                            <i class="fas fa-font"></i>
                             <span>Text Input</span>
                         </div>
                         <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'number')">
+                            <i class="fas fa-hashtag"></i>
                             <span>Number Input</span>
                         </div>
+                        <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'email')">
+                            <i class="fas fa-envelope"></i>
+                            <span>Email Input</span>
+                        </div>
                         <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'select')">
+                            <i class="fas fa-caret-square-down"></i>
                             <span>Dropdown Select</span>
                         </div>
                         <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'checkbox')">
+                            <i class="fas fa-check-square"></i>
                             <span>Checkbox</span>
                         </div>
                         <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'file')">
+                            <i class="fas fa-file-upload"></i>
                             <span>File Upload</span>
                         </div>
                         <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'textarea')">
+                            <i class="fas fa-align-left"></i>
                             <span>Text Area</span>
                         </div>
-                        <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'email')">
-                            <span>Email Input</span>
+                        <div class="field-type-item" draggable="true" ondragstart="handleDragStart(event, 'date')">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Date Picker</span>
                         </div>
                     </div>
                 </aside>
@@ -237,30 +149,43 @@
                 <section class="builder-panel">
                     <div class="panel-header">
                         <div class="tabs">
-                            <div class="tab active" onclick="switchTab('design')">Design</div>
-                            <div class="tab" onclick="switchTab('json')">JSON Schema</div>
-                        </div>
-                    </div>
-                    <div class="panel-content" id="canvasArea" ondragover="handleDragOver(event)"
-                        ondrop="handleDrop(event)">
-                        <div class="preview-area" id="previewArea">
-                            <div class="empty-state" id="emptyState">
-                                <p>Drag and drop fields here to start building your form</p>
+                            <div class="tab active" onclick="switchTab('design')">
+                                <i class="fas fa-palette"></i> Design
+                            </div>
+                            <div class="tab" onclick="switchTab('json')">
+                                <i class="fas fa-code"></i> JSON Schema
                             </div>
                         </div>
-                        <div id="jsonPreviewArea" style="display: none;">
-                            <pre id="jsonPreviewCode"
-                                style="background: #f4f4f4; padding: 15px; border-radius: 4px; height: 100%; overflow: auto;"></pre>
+                        <span class="field-count" id="fieldCount">0 fields</span>
+                    </div>
+                    <div class="panel-content" id="canvasArea" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+                        <div class="preview-area" id="previewArea">
+                            <div class="empty-state" id="emptyState">
+                                <div class="empty-state-icon">
+                                    <i class="fas fa-magic"></i>
+                                </div>
+                                <p class="empty-state-title">Drag fields to start</p>
+                                <p>Drag and drop field types from the left panel to build your form</p>
+                            </div>
+                        </div>
+                        <div id="jsonPreviewArea" class="json-preview-area" style="display: none;">
+                            <pre id="jsonPreviewCode"></pre>
                         </div>
                     </div>
                 </section>
 
                 <!-- Right: Properties -->
                 <aside class="builder-panel">
-                    <div class="panel-header">Field Properties</div>
+                    <div class="panel-header">
+                        <i class="fas fa-sliders-h"></i> Field Properties
+                    </div>
                     <div class="panel-content" id="propertiesPanel">
                         <div class="empty-state">
-                            <p>Select a field to edit its properties</p>
+                            <div class="empty-state-icon">
+                                <i class="fas fa-mouse-pointer"></i>
+                            </div>
+                            <p class="empty-state-title">Select a field</p>
+                            <p>Click on a field in the canvas to edit its properties</p>
                         </div>
                     </div>
                 </aside>
@@ -278,3 +203,4 @@
 </body>
 
 </html>
+

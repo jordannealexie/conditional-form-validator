@@ -8,22 +8,14 @@ let currentFilters = {
     status: '',
     search: ''
 };
+let currentSubmissionId = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Check Authentication
-    if (!isAuthenticated()) {
-        window.location.href = '/index.html';
-        return;
-    }
+    if (typeof requireAuth === 'function') requireAuth();
 
     // 2. Load User Info
-    try {
-        const user = await apiGetCurrentUser();
-        document.getElementById('userName').textContent = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
-        document.getElementById('userRole').textContent = user.roles && user.roles.length > 0 ? user.roles[0] : 'User';
-    } catch (error) {
-        console.error('Failed to load user info:', error);
-    }
+    await loadUserInfo();
 
     // 3. Setup Filters
     await setupFilters();
@@ -36,7 +28,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
     document.getElementById('searchInput').addEventListener('input', debounce(handleFilterChange, 500));
     document.getElementById('refreshBtn').addEventListener('click', () => loadSubmissions());
+    
+    // 6. Setup Mobile Menu
+    setupMobileMenu();
 });
+
+async function loadUserInfo() {
+    try {
+        const user = await apiGetCurrentUser();
+        if (user) {
+            const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+            document.getElementById('userName').textContent = fullName;
+            document.getElementById('userRole').textContent = user.user_role || 'User';
+        }
+    } catch (error) {
+        console.error('Failed to load user info:', error);
+    }
+}
+
+function setupMobileMenu() {
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+    }
+}
 
 async function setupFilters() {
     const bankFilter = document.getElementById('bankFilter');
@@ -55,20 +73,19 @@ async function setupFilters() {
 
 async function loadSubmissions() {
     const body = document.getElementById('submissionsBody');
-    body.innerHTML = '<tr><td colspan="6" class="text-center py-10"><i class="fas fa-spinner fa-spin mr-2"></i> Loading submissions...</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" class="text-center"><div class="loading-spinner">Loading submissions...</div></td></tr>';
 
     try {
-        // Note: The API might not support all filters directly in the URL search yet,
-        // but we'll fetch and filter client-side for now or implement backend filtering.
         const response = await apiGetSubmissions(currentPage, 10);
+        
+        // Handle response wrapper
+        const submissions = response.data || response.items || response;
+        const total = response.total || 0;
 
-        // Response wrapper check
-        const submissions = response.items || response;
-
-        // Client-side filtering as fallback
+        // Client-side filtering
         let filtered = submissions;
         if (currentFilters.bank_id) {
-            filtered = filtered.filter(s => s.template.bank_id == currentFilters.bank_id);
+            filtered = filtered.filter(s => s.template && s.template.bank_id == currentFilters.bank_id);
         }
         if (currentFilters.status) {
             filtered = filtered.filter(s => s.status === currentFilters.status);
@@ -76,18 +93,18 @@ async function loadSubmissions() {
         if (currentFilters.search) {
             const q = currentFilters.search.toLowerCase();
             filtered = filtered.filter(s =>
-                s.fieldman_id.toLowerCase().includes(q) ||
-                s.template.name.toLowerCase().includes(q) ||
+                (s.fieldman_id && s.fieldman_id.toLowerCase().includes(q)) ||
+                (s.template && s.template.name && s.template.name.toLowerCase().includes(q)) ||
                 s.id.toString().includes(q)
             );
         }
 
         renderTable(filtered);
-        updatePagination(response);
+        updatePagination(total);
 
     } catch (error) {
         console.error('Failed to load submissions:', error);
-        body.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-red-500">Error loading submissions</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="text-center error-message">Error loading submissions. Please try again.</td></tr>';
     }
 }
 
@@ -95,105 +112,216 @@ function renderTable(submissions) {
     const body = document.getElementById('submissionsBody');
     body.innerHTML = '';
 
-    if (submissions.length === 0) {
-        body.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-500">No submissions found</td></tr>';
+    if (!submissions || submissions.length === 0) {
+        body.innerHTML = '<tr><td colspan="7" class="text-center empty-state"><p>No submissions found</p></td></tr>';
         return;
     }
 
     submissions.forEach(sub => {
         const row = document.createElement('tr');
-        row.className = 'border-b hover:bg-gray-50 transition-colors';
+        row.className = 'submission-row';
 
-        const statusClass = {
-            'draft': 'bg-gray-100 text-gray-700',
-            'submitted': 'bg-blue-100 text-blue-700',
-            'processed': 'bg-green-100 text-green-700'
-        }[sub.status] || 'bg-gray-100 text-gray-700';
+        const statusClass = getStatusClass(sub.status);
+        const bankName = sub.template && sub.template.bank ? sub.template.bank.name : 'Unknown';
+        const templateName = sub.template ? sub.template.name : 'Unknown Template';
 
         row.innerHTML = `
-            <td class="px-6 py-4 font-medium">${sub.fieldman_id}</td>
-            <td class="px-6 py-4">${sub.template.name}</td>
-            <td class="px-6 py-4">${sub.template.bank ? sub.template.bank.name : 'Unknown Bank'}</td>
-            <td class="px-6 py-4">
-                <span class="px-3 py-1 rounded-full text-xs font-bold ${statusClass}">
-                    ${sub.status.toUpperCase()}
-                </span>
-            </td>
-            <td class="px-6 py-4 text-gray-500 text-sm">
-                ${new Date(sub.created_at).toLocaleDateString()}
-            </td>
-            <td class="px-6 py-4">
-                <button onclick="viewSubmission(${sub.id})" class="text-indigo-600 hover:text-indigo-800 font-medium">
-                    <i class="fas fa-eye"></i> View
-                </button>
+            <td><strong>#${sub.id}</strong></td>
+            <td>${sub.fieldman_id || 'N/A'}</td>
+            <td>${templateName}</td>
+            <td>${bankName}</td>
+            <td><span class="badge ${statusClass}">${(sub.status || '').toUpperCase()}</span></td>
+            <td>${formatDate(sub.created_at)}</td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn btn-sm btn-outline" onclick="viewSubmission(${sub.id})">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    ${sub.status === 'draft' ? `
+                        <button class="btn btn-sm btn-danger" onclick="deleteSubmission(${sub.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ''}
+                </div>
             </td>
         `;
         body.appendChild(row);
     });
 }
 
+function getStatusClass(status) {
+    const statusClasses = {
+        'draft': 'badge-secondary',
+        'submitted': 'badge-primary',
+        'validated': 'badge-success',
+        'rejected': 'badge-danger',
+        'approved': 'badge-success',
+        'rejected': 'badge-danger'
+    };
+    return statusClasses[status] || 'badge-secondary';
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 async function viewSubmission(id) {
     const modal = document.getElementById('viewModal');
     const content = document.getElementById('modalContent');
+    const approveBtn = document.getElementById('approveBtn');
+    const rejectBtn = document.getElementById('rejectBtn');
 
-    content.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-indigo-300"></i></div>';
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    currentSubmissionId = id;
+    content.innerHTML = '<div class="loading-spinner">Loading submission details...</div>';
+    modal.classList.add('active');
 
     try {
         const sub = await apiGetSubmission(id);
 
-        let html = `
-            <div class="space-y-6">
-                <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl">
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Fieldman</p>
-                        <p class="font-medium">${sub.fieldman_id}</p>
+        // Build form data display
+        let dataHtml = '';
+        if (sub.data_json && Object.keys(sub.data_json).length > 0) {
+            dataHtml = '<div class="form-data-section">';
+            for (const [key, value] of Object.entries(sub.data_json)) {
+                const displayValue = value === true ? 'Yes' : (value === false ? 'No' : (value || 'N/A'));
+                dataHtml += `
+                    <div class="form-data-item">
+                        <span class="form-data-label">${formatFieldName(key)}</span>
+                        <span class="form-data-value">${escapeHtml(displayValue)}</span>
                     </div>
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase font-bold tracking-wider">Status</p>
-                        <p class="font-medium">${sub.status.toUpperCase()}</p>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="font-bold text-gray-700 mb-4 border-b pb-2">Form Data</h4>
-                    <div class="space-y-3">
-        `;
+                `;
+            }
+            dataHtml += '</div>';
+        } else {
+            dataHtml = '<p class="empty-message">No form data submitted</p>';
+        }
 
-        for (const [key, value] of Object.entries(sub.data_json)) {
-            html += `
-                <div class="flex justify-between border-b border-gray-100 pb-2">
-                    <span class="text-gray-500 text-sm capitalize">${key.replace(/_/g, ' ')}</span>
-                    <span class="font-medium text-sm">${value === true ? 'Yes' : (value === false ? 'No' : value)}</span>
+        // Validation errors
+        let errorsHtml = '';
+        if (sub.validation_errors && sub.validation_errors.length > 0) {
+            errorsHtml = `
+                <div class="validation-errors">
+                    <h4>Validation Errors</h4>
+                    <ul>
+                        ${sub.validation_errors.map(e => `<li>${e.message || e}</li>`).join('')}
+                    </ul>
                 </div>
             `;
         }
 
-        html += `
+        content.innerHTML = `
+            <div class="submission-details">
+                <div class="detail-header">
+                    <div class="detail-item">
+                        <span class="detail-label">Submission ID</span>
+                        <span class="detail-value">#${sub.id}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status</span>
+                        <span class="badge ${getStatusClass(sub.status)}">${(sub.status || '').toUpperCase()}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Fieldman</span>
+                        <span class="detail-value">${sub.fieldman_id || 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Template</span>
+                        <span class="detail-value">${sub.template ? sub.template.name : 'N/A'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Submitted</span>
+                        <span class="detail-value">${formatDate(sub.created_at)}</span>
                     </div>
                 </div>
+                ${errorsHtml}
+                ${dataHtml}
             </div>
         `;
 
-        content.innerHTML = html;
-
-        // Show approve button for supervisors/admins if submitted
+        // Show approve/reject buttons for supervisors/admins on submitted forms
         const userRole = (document.getElementById('userRole').textContent || '').toLowerCase();
-        if (sub.status === 'submitted' && (userRole === 'supervisor' || userRole === 'admin')) {
-            document.getElementById('approveBtn').classList.remove('hidden');
+        const canReview = userRole === 'supervisor' || userRole === 'admin';
+        
+        if (sub.status === 'submitted' && canReview) {
+            approveBtn.classList.remove('hidden');
+            rejectBtn.classList.remove('hidden');
         } else {
-            document.getElementById('approveBtn').classList.add('hidden');
+            approveBtn.classList.add('hidden');
+            rejectBtn.classList.add('hidden');
         }
 
     } catch (error) {
-        content.innerHTML = `<p class="text-red-500">Error loading details: ${error.message}</p>`;
+        content.innerHTML = `<p class="error-message">Error loading details: ${error.message}</p>`;
+    }
+}
+
+function formatFieldName(fieldId) {
+    return fieldId
+        .replace(/_/g, ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+}
+
+function escapeHtml(text) {
+    if (typeof text !== 'string') return text;
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function approveSubmission() {
+    if (!currentSubmissionId) return;
+    
+    try {
+        await apiReviewSubmission(currentSubmissionId, { action: 'approve' });
+        showToast('Submission approved successfully', 'success');
+        closeModal();
+        loadSubmissions();
+    } catch (error) {
+        showToast(error.message || 'Failed to approve submission', 'error');
+    }
+}
+
+async function rejectSubmission() {
+    if (!currentSubmissionId) return;
+    
+    const comment = prompt('Please provide a reason for rejection:');
+    if (comment === null) return; // Cancelled
+    
+    try {
+        await apiReviewSubmission(currentSubmissionId, { action: 'reject', comment: comment || 'Rejected' });
+        showToast('Submission rejected', 'success');
+        closeModal();
+        loadSubmissions();
+    } catch (error) {
+        showToast(error.message || 'Failed to reject submission', 'error');
+    }
+}
+
+async function deleteSubmission(id) {
+    if (!confirm('Are you sure you want to delete this draft submission?')) return;
+    
+    try {
+        await apiDeleteSubmission(id);
+        showToast('Submission deleted successfully', 'success');
+        loadSubmissions();
+    } catch (error) {
+        showToast(error.message || 'Failed to delete submission', 'error');
     }
 }
 
 function closeModal() {
-    document.getElementById('viewModal').classList.add('hidden');
-    document.getElementById('viewModal').classList.remove('flex');
+    const modal = document.getElementById('viewModal');
+    modal.classList.remove('active');
+    currentSubmissionId = null;
 }
 
 function handleFilterChange() {
@@ -204,12 +332,11 @@ function handleFilterChange() {
     loadSubmissions();
 }
 
-function updatePagination(response) {
+function updatePagination(total) {
     const info = document.getElementById('paginationInfo');
     const btns = document.getElementById('paginationBtns');
-
-    const total = response.total || 0;
     const itemsPerPage = 10;
+
     const start = (currentPage - 1) * itemsPerPage + 1;
     const end = Math.min(currentPage * itemsPerPage, total);
 
@@ -219,9 +346,23 @@ function updatePagination(response) {
     const totalPages = Math.ceil(total / itemsPerPage);
 
     if (totalPages > 1) {
+        // Previous button
+        const prevBtn = document.createElement('button');
+        prevBtn.className = `btn btn-sm ${currentPage === 1 ? 'btn-secondary' : 'btn-outline'}`;
+        prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadSubmissions();
+            }
+        };
+        btns.appendChild(prevBtn);
+
+        // Page numbers
         for (let i = 1; i <= totalPages; i++) {
             const btn = document.createElement('button');
-            btn.className = `px-3 py-1 rounded-lg ${i === currentPage ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'} border transition-colors`;
+            btn.className = `btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline'}`;
             btn.textContent = i;
             btn.onclick = () => {
                 currentPage = i;
@@ -229,6 +370,19 @@ function updatePagination(response) {
             };
             btns.appendChild(btn);
         }
+
+        // Next button
+        const nextBtn = document.createElement('button');
+        nextBtn.className = `btn btn-sm ${currentPage === totalPages ? 'btn-secondary' : 'btn-outline'}`;
+        nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadSubmissions();
+            }
+        };
+        btns.appendChild(nextBtn);
     }
 }
 
@@ -243,3 +397,12 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
+
+// Close modal on outside click
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('viewModal');
+    if (e.target === modal) {
+        closeModal();
+    }
+});
+

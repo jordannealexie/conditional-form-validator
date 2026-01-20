@@ -1,5 +1,6 @@
 /**
  * FormRenderer: Dynamically generates and manages forms from JSON templates.
+ * Uses the project's design system CSS classes for consistent styling.
  */
 class FormRenderer {
     constructor(containerId, options = {}) {
@@ -8,6 +9,7 @@ class FormRenderer {
         this.formData = {};
         this.onChanged = options.onChanged || null;
         this.onValidated = options.onValidated || null;
+        this.uploadedFiles = {}; // Store file tokens
     }
 
     render(fields) {
@@ -16,11 +18,26 @@ class FormRenderer {
 
         const form = document.createElement('form');
         form.id = 'dynamic-form';
-        form.className = 'space-y-6';
+        form.className = 'form-container';
 
         fields.forEach(field => {
             const fieldWrapper = this.createFieldElement(field);
             form.appendChild(fieldWrapper);
+        });
+
+        // Add submit button
+        const submitSection = document.createElement('div');
+        submitSection.className = 'form-actions';
+        submitSection.innerHTML = `
+            <button type="submit" class="btn btn-primary">Submit Application</button>
+            <button type="button" class="btn btn-secondary" onclick="renderer.saveDraft()">Save as Draft</button>
+        `;
+        form.appendChild(submitSection);
+
+        // Form submit handler
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleSubmit();
         });
 
         this.container.appendChild(form);
@@ -30,10 +47,10 @@ class FormRenderer {
     createFieldElement(field) {
         const wrapper = document.createElement('div');
         wrapper.id = `wrapper-${field.id}`;
-        wrapper.className = 'field-wrapper transition-all duration-300 transform';
+        wrapper.className = 'field-wrapper';
 
         const label = document.createElement('label');
-        label.className = 'block text-sm font-medium text-gray-700 mb-1';
+        label.htmlFor = field.id;
         label.textContent = field.label + (field.required ? ' *' : '');
         wrapper.appendChild(label);
 
@@ -41,7 +58,17 @@ class FormRenderer {
 
         if (field.type === 'select') {
             input = document.createElement('select');
-            input.className = 'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white';
+            input.id = field.id;
+            input.name = field.id;
+            input.className = 'form-select';
+            if (field.required) input.setAttribute('required', 'true');
+            
+            // Add default empty option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = `Select ${field.label}...`;
+            input.appendChild(defaultOption);
+            
             field.options.forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt;
@@ -50,32 +77,87 @@ class FormRenderer {
             });
         } else if (field.type === 'textarea') {
             input = document.createElement('textarea');
-            input.className = 'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500';
-            input.rows = 4;
+            input.id = field.id;
+            input.name = field.id;
+            input.className = 'form-textarea';
+            if (field.placeholder) input.placeholder = field.placeholder;
+            if (field.rows) input.rows = field.rows;
+            if (field.required) input.setAttribute('required', 'true');
         } else if (field.type === 'checkbox') {
             input = document.createElement('input');
             input.type = 'checkbox';
-            input.className = 'h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded';
-            label.className = 'flex items-center space-x-2 text-sm font-medium text-gray-700 mb-1';
-            label.prepend(input);
-            // Don't append another label for checkbox
+            input.id = field.id;
+            input.name = field.id;
+            input.className = 'form-checkbox';
+            
+            // Reset label for checkbox - checkbox comes before text
+            const checkboxWrapper = document.createElement('div');
+            checkboxWrapper.className = 'form-group-inline';
+            checkboxWrapper.appendChild(input);
+            
+            const checkboxLabel = document.createElement('label');
+            checkboxLabel.htmlFor = field.id;
+            checkboxLabel.textContent = field.label + (field.required ? ' *' : '');
+            checkboxWrapper.appendChild(checkboxLabel);
+            
+            wrapper.innerHTML = ''; // Clear wrapper
+            wrapper.appendChild(checkboxWrapper);
+            input = checkboxWrapper; // Reference for event listeners
         } else if (field.type === 'file') {
-            input = document.createElement('input');
-            input.type = 'file';
-            input.className = 'block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100';
+            input = document.createElement('div');
+            input.className = 'file-upload-wrapper';
+            input.id = `file-wrapper-${field.id}`;
+            
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = field.id;
+            fileInput.name = field.id;
+            fileInput.className = 'form-file';
+            if (field.accept) fileInput.accept = field.accept;
+            if (field.required) fileInput.setAttribute('required', 'true');
+            
+            // Hidden input to store the token
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.id = `${field.id}_token`;
+            tokenInput.name = field.id;
+            
+            const uploadStatus = document.createElement('div');
+            uploadStatus.id = `${field.id}_status`;
+            uploadStatus.className = 'upload-status';
+            
+            input.appendChild(fileInput);
+            input.appendChild(tokenInput);
+            input.appendChild(uploadStatus);
+            
+            // File upload handler
+            fileInput.addEventListener('change', async (e) => {
+                await this.handleFileUpload(field, e.target.files[0]);
+            });
         } else {
             input = document.createElement('input');
             input.type = field.type || 'text';
-            input.className = 'w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500';
+            input.id = field.id;
+            input.name = field.id;
+            input.className = 'form-input';
+            if (field.placeholder) input.placeholder = field.placeholder;
+            if (field.required) input.setAttribute('required', 'true');
         }
 
-        input.id = field.id;
-        input.name = field.id;
-        if (field.placeholder) input.placeholder = field.placeholder;
+        // Add validation attributes
+        if (field.validation) {
+            if (field.validation.minLength) input.minLength = field.validation.minLength;
+            if (field.validation.maxLength) input.maxLength = field.validation.maxLength;
+            if (field.validation.minimum) input.min = field.validation.minimum;
+            if (field.validation.maximum) input.max = field.validation.maximum;
+            if (field.validation.pattern) input.pattern = field.validation.pattern;
+        }
 
-        // Event Listeners
-        input.addEventListener('change', () => this.handleInputChange(field.id));
-        input.addEventListener('input', () => this.handleInputChange(field.id));
+        // Event listeners for non-checkbox, non-file inputs
+        if (field.type !== 'checkbox' && field.type !== 'file') {
+            input.addEventListener('change', () => this.handleInputChange(field.id));
+            input.addEventListener('input', () => this.handleInputChange(field.id));
+        }
 
         if (field.type !== 'checkbox') {
             wrapper.appendChild(input);
@@ -83,17 +165,68 @@ class FormRenderer {
 
         // Error message placeholder
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'field-error text-red-500 text-xs mt-1 hidden';
+        errorDiv.className = 'field-error';
         errorDiv.id = `error-${field.id}`;
+        errorDiv.style.display = 'none';
         wrapper.appendChild(errorDiv);
 
+        // Help text
+        if (field.description && field.type !== 'checkbox') {
+            const helpText = document.createElement('small');
+            helpText.className = 'form-help';
+            helpText.textContent = field.description;
+            wrapper.appendChild(helpText);
+        }
+
         return wrapper;
+    }
+
+    async handleFileUpload(field, file) {
+        if (!file) return;
+        
+        const statusEl = document.getElementById(`${field.id}_status`);
+        statusEl.innerHTML = '<span>Uploading...</span>';
+        statusEl.className = 'upload-status uploading';
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('field_id', field.id);
+            
+            const result = await apiUploadFile(formData);
+            
+            // Store token
+            this.uploadedFiles[field.id] = result.token;
+            document.getElementById(`${field.id}_token`).value = result.token;
+            
+            statusEl.innerHTML = `
+                <span class="upload-success">✓ ${result.original_filename} uploaded</span>
+                <button type="button" class="btn btn-sm btn-secondary" 
+                    onclick="renderer.removeFile('${field.id}')">Remove</button>
+            `;
+            statusEl.className = 'upload-status success';
+            
+            this.handleInputChange(field.id);
+        } catch (error) {
+            statusEl.innerHTML = `<span class="upload-error">✗ Upload failed: ${error.message}</span>`;
+            statusEl.className = 'upload-status error';
+        }
+    }
+
+    removeFile(fieldId) {
+        delete this.uploadedFiles[fieldId];
+        document.getElementById(`${fieldId}_token`).value = '';
+        const statusEl = document.getElementById(`${fieldId}_status`);
+        statusEl.innerHTML = '';
+        statusEl.className = 'upload-status';
+        document.getElementById(fieldId).value = '';
+        this.handleInputChange(fieldId);
     }
 
     handleInputChange(fieldId) {
         this.updateFormData();
         this.updateVisibility();
-        if (this.onChanged) this.onChanged(this.formData);
+        if (this.onChanged) this.onChanged(this.getData());
     }
 
     updateFormData() {
@@ -104,8 +237,7 @@ class FormRenderer {
                 if (field.type === 'checkbox') {
                     data[field.id] = input.checked;
                 } else if (field.type === 'file') {
-                    // File handling is usually separate, but we can store the name/info
-                    data[field.id] = input.files.length > 0 ? input.files[0].name : null;
+                    data[field.id] = this.uploadedFiles[field.id] || null;
                 } else {
                     data[field.id] = input.value;
                 }
@@ -119,19 +251,26 @@ class FormRenderer {
             const wrapper = document.getElementById(`wrapper-${field.id}`);
             if (wrapper) {
                 const isVisible = this.evaluateCondition(field.show_if);
-                if (isVisible) {
-                    wrapper.classList.remove('hidden', 'opacity-0', 'scale-95');
-                    wrapper.classList.add('block', 'opacity-100', 'scale-100');
-                } else {
-                    wrapper.classList.add('hidden', 'opacity-0', 'scale-95');
-                    wrapper.classList.remove('block', 'opacity-100', 'scale-100');
+                wrapper.style.display = isVisible ? 'block' : 'none';
+                if (!isVisible) {
+                    // Clear value when hidden
+                    const input = document.getElementById(field.id);
+                    if (input) {
+                        if (field.type === 'checkbox') {
+                            input.checked = false;
+                        } else if (field.type === 'file') {
+                            this.removeFile(field.id);
+                        } else {
+                            input.value = '';
+                        }
+                    }
                 }
             }
         });
     }
 
     evaluateCondition(condition) {
-        if (!condition) return True;
+        if (!condition) return true;
         if (typeof condition === 'boolean') return condition;
 
         if (condition.all) {
@@ -156,7 +295,7 @@ class FormRenderer {
             case 'less_or_equal': return Number(currentValue) <= Number(targetValue);
             case 'in': return Array.isArray(targetValue) && targetValue.includes(currentValue);
             case 'not_in': return Array.isArray(targetValue) && !targetValue.includes(currentValue);
-            case 'contains': return currentValue && currentValue.includes(targetValue);
+            case 'contains': return currentValue && String(currentValue).includes(targetValue);
             case 'matches': return new RegExp(targetValue).test(currentValue);
             default: return true;
         }
@@ -167,18 +306,116 @@ class FormRenderer {
         const wrapper = document.getElementById(`wrapper-${fieldId}`);
         if (errorDiv && wrapper) {
             errorDiv.textContent = message;
-            errorDiv.classList.remove('hidden');
-            wrapper.querySelector('input, select, textarea').classList.add('border-red-500');
+            errorDiv.style.display = 'block';
+            wrapper.classList.add('has-error');
         }
     }
 
     clearErrors() {
-        document.querySelectorAll('.field-error').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.field-wrapper input, .field-wrapper select, .field-wrapper textarea').forEach(el => el.classList.remove('border-red-500'));
+        document.querySelectorAll('.field-error').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.querySelectorAll('.field-wrapper').forEach(el => {
+            el.classList.remove('has-error');
+        });
     }
 
     getData() {
         this.updateFormData();
-        return this.formData;
+        return {
+            form_data: this.formData,
+            file_tokens: Object.values(this.uploadedFiles)
+        };
+    }
+
+    async validate() {
+        this.clearErrors();
+        const data = this.getData();
+        
+        try {
+            const result = await apiValidateSubmission(
+                window.currentTemplateId,
+                data.form_data
+            );
+            
+            if (!result.is_valid && result.errors) {
+                result.errors.forEach(error => {
+                    this.showError(error.field, error.message);
+                });
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Validation error:', error);
+            return { is_valid: false, errors: [{ field: '__global__', message: error.message }] };
+        }
+    }
+
+    async handleSubmit() {
+        const validationResult = await this.validate();
+        
+        if (validationResult.is_valid) {
+            try {
+                const data = this.getData();
+                const submitData = {
+                    template_id: window.currentTemplateId,
+                    status: 'submitted',
+                    data_json: data.form_data,
+                    file_tokens: Object.values(this.uploadedFiles)
+                };
+                
+                const result = await apiSubmitForm(submitData);
+                showToast('Application submitted successfully!', 'success');
+                
+                // Redirect to submissions page after a delay
+                setTimeout(() => {
+                    window.location.href = 'submissions.html';
+                }, 2000);
+                
+            } catch (error) {
+                showToast(error.message || 'Error submitting application', 'error');
+            }
+        } else {
+            showToast('Please fix the validation errors before submitting', 'error');
+        }
+    }
+
+    async saveDraft() {
+        try {
+            const data = this.getData();
+            const submitData = {
+                template_id: window.currentTemplateId,
+                status: 'draft',
+                data_json: data.form_data,
+                file_tokens: Object.values(this.uploadedFiles)
+            };
+            
+            const result = await apiSubmitForm(submitData);
+            showToast('Draft saved successfully!', 'success');
+            
+        } catch (error) {
+            showToast(error.message || 'Error saving draft', 'error');
+        }
+    }
+
+    setData(data) {
+        // Populate form with existing data (for editing drafts)
+        if (data) {
+            Object.keys(data).forEach(key => {
+                const input = document.getElementById(key);
+                if (input) {
+                    if (input.type === 'checkbox') {
+                        input.checked = data[key];
+                    } else if (input.type === 'file') {
+                        // File inputs can't be pre-populated
+                    } else {
+                        input.value = data[key];
+                    }
+                }
+            });
+            this.updateFormData();
+            this.updateVisibility();
+        }
     }
 }
+

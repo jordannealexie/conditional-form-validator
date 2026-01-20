@@ -1,30 +1,30 @@
 /**
  * Admin Template Builder Module
- * Handles dragging fields, editing properties, and saving templates
+ * Handles dragging fields, editing properties, and saving templates to backend
  */
 
 let fields = [];
 let selectedFieldId = null;
 let dragType = null;
+let currentTemplate = null;
+let banks = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof requireAuth === 'function') requireAuth();
     loadUserInfo();
+    loadBanks();
     setupMobileMenu();
 });
 
 /**
- * Load user info - simplified for development
+ * Load user info
  */
-function loadUserInfo() {
+async function loadUserInfo() {
     try {
-        if (typeof apiGetCurrentUser === 'function') {
-            apiGetCurrentUser().then(user => {
-                if (user) {
-                    document.getElementById('userName').textContent = user.username;
-                    document.getElementById('userRole').textContent = (user.roles || []).join(', ') || 'Admin';
-                }
-            });
+        const user = await apiGetCurrentUser();
+        if (user) {
+            document.getElementById('userName').textContent = user.username;
+            document.getElementById('userRole').textContent = (user.roles || []).join(', ') || 'Admin';
         }
     } catch (error) {
         console.error('Error loading user info:', error);
@@ -32,8 +32,29 @@ function loadUserInfo() {
 }
 
 /**
- * Setup mobile menu toggle
+ * Load banks for template creation
  */
+async function loadBanks() {
+    try {
+        banks = await apiGetBanks();
+        populateBankSelect();
+    } catch (error) {
+        console.error('Error loading banks:', error);
+    }
+}
+
+function populateBankSelect() {
+    const select = document.getElementById('bankSelect');
+    if (!select) return;
+    
+    banks.forEach(bank => {
+        const option = document.createElement('option');
+        option.value = bank.id;
+        option.textContent = bank.name;
+        select.appendChild(option);
+    });
+}
+
 function setupMobileMenu() {
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
@@ -72,8 +93,10 @@ function handleDrop(event) {
  */
 function addField(type) {
     const defaultLabel = type.charAt(0).toUpperCase() + type.slice(1) + ' Field';
+    const fieldId = `field_${Date.now()}`;
+    
     const newField = {
-        id: `field_${Date.now()}`,
+        id: fieldId,
         type: type,
         label: defaultLabel,
         required: false,
@@ -85,8 +108,10 @@ function addField(type) {
 
     fields.push(newField);
     renderCanvas();
-    selectField(newField.id);
-    document.getElementById('emptyState').style.display = 'none';
+    selectField(fieldId);
+    
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.style.display = 'none';
 }
 
 function deleteField(id) {
@@ -96,7 +121,8 @@ function deleteField(id) {
     renderProperties();
 
     if (fields.length === 0) {
-        document.getElementById('emptyState').style.display = 'flex';
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.style.display = 'flex';
     }
 }
 
@@ -111,7 +137,7 @@ function selectField(id) {
  */
 function renderCanvas() {
     const previewArea = document.getElementById('previewArea');
-    const emptyState = document.getElementById('emptyState');
+    if (!previewArea) return;
 
     // Clear current fields but keep empty state
     const existingFields = previewArea.querySelectorAll('.preview-field');
@@ -125,16 +151,23 @@ function renderCanvas() {
             selectField(field.id);
         };
 
+        const optionsDisplay = field.type === 'select' && field.options 
+            ? `<div style="font-size: 12px; color: var(--gray); margin-top: 4px;">Options: ${field.options.join(', ')}</div>` 
+            : '';
+        const showIfDisplay = field.show_if 
+            ? `<div style="font-size: 12px; color: var(--warning); margin-top: 4px;">⚡ Conditional</div>` 
+            : '';
+
         div.innerHTML = `
-            <div style="font-weight: 600; font-size: 14px; margin-bottom: 5px;">
-                ${escapeHtml(field.label)} ${field.required ? '<span style="color:red">*</span>' : ''}
+            <div class="field-header">
+                <span class="field-label">${escapeHtml(field.label)} ${field.required ? '<span class="required-mark">*</span>' : ''}</span>
+                <div class="field-actions">
+                    <button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); deleteField('${field.id}')">Delete</button>
+                </div>
             </div>
-            <div style="color: var(--gray-500); font-size: 13px;">
-                Type: ${field.type} | ID: ${field.id}
-            </div>
-            <div class="actions">
-                <button class="btn btn-sm btn-outline" onclick="deleteField('${field.id}')">Delete</button>
-            </div>
+            <div class="field-type">Type: ${field.type}</div>
+            ${optionsDisplay}
+            ${showIfDisplay}
         `;
 
         previewArea.appendChild(div);
@@ -157,32 +190,60 @@ function renderProperties() {
         optionsHtml = `
             <div class="config-group">
                 <label class="config-label">Options (one per line)</label>
-                <textarea onchange="updateFieldProperty('options', this.value.split('\\n'))" rows="4">${(field.options || []).join('\n')}</textarea>
+                <textarea class="form-textarea" onchange="updateFieldProperty('options', this.value.split('\\n'))" rows="4">${(field.options || []).join('\n')}</textarea>
             </div>
         `;
     }
 
+    let conditionHtml = '';
+    if (field.show_if) {
+        conditionHtml = JSON.stringify(field.show_if, null, 2);
+    }
+
     panel.innerHTML = `
+        <h4 class="section-title">Field Properties</h4>
+        
         <div class="config-group">
             <label class="config-label">Field ID</label>
-            <input type="text" value="${field.id}" onchange="updateFieldProperty('id', this.value)">
+            <input type="text" class="form-input" value="${field.id}" onchange="updateFieldProperty('id', this.value)">
         </div>
+        
         <div class="config-group">
             <label class="config-label">Label</label>
-            <input type="text" value="${escapeHtml(field.label)}" onchange="updateFieldProperty('label', this.value)">
+            <input type="text" class="form-input" value="${escapeHtml(field.label)}" onchange="updateFieldProperty('label', this.value)">
         </div>
+        
         <div class="config-group">
             <label class="config-label">Required</label>
-            <select onchange="updateFieldProperty('required', this.value === 'true')">
+            <select class="form-select" onchange="updateFieldProperty('required', this.value === 'true')">
                 <option value="false" ${!field.required ? 'selected' : ''}>No</option>
                 <option value="true" ${field.required ? 'selected' : ''}>Yes</option>
             </select>
         </div>
+        
+        <div class="config-group">
+            <label class="config-label">Placeholder</label>
+            <input type="text" class="form-input" value="${escapeHtml(field.placeholder || '')}" 
+                   onchange="updateFieldProperty('placeholder', this.value)" placeholder="Enter placeholder text">
+        </div>
+        
         ${optionsHtml}
+        
         <div class="config-group">
             <label class="config-label">Condition (show_if)</label>
-            <textarea placeholder='{"field": "other_id", "operator": "equals", "value": "xyz"}' 
-                      onchange="updateFieldCondition(this.value)" rows="4">${field.show_if ? JSON.stringify(field.show_if, null, 2) : ''}</textarea>
+            <textarea class="form-textarea" placeholder='{"field": "other_id", "operator": "equals", "value": "xyz"}' 
+                      onchange="updateFieldCondition(this.value)" rows="4">${conditionHtml}</textarea>
+            <small class="form-help">Use "all" for AND, "any" for OR, "not" for NOT conditions</small>
+        </div>
+        
+        <div class="config-group">
+            <label class="config-label">Validation Rules</label>
+            <div class="validation-rules">
+                <input type="number" class="form-input" placeholder="Min length" 
+                       style="width: 48%;" onchange="updateValidation('minLength', this.value)">
+                <input type="number" class="form-input" placeholder="Max length" 
+                       style="width: 48%;" onchange="updateValidation('maxLength', this.value)">
+            </div>
         </div>
     `;
 }
@@ -195,6 +256,20 @@ function updateFieldProperty(prop, value) {
     if (field) {
         field[prop] = value;
         renderCanvas();
+        updateJSONPreview();
+    }
+}
+
+function updateValidation(rule, value) {
+    const field = fields.find(f => f.id === selectedFieldId);
+    if (field) {
+        if (!field.validation) field.validation = {};
+        if (value) {
+            field.validation[rule] = parseInt(value);
+        } else {
+            delete field.validation[rule];
+        }
+        updateJSONPreview();
     }
 }
 
@@ -203,6 +278,7 @@ function updateFieldCondition(value) {
     if (field) {
         try {
             field.show_if = value ? JSON.parse(value) : null;
+            renderCanvas();
             updateJSONPreview();
         } catch (e) {
             console.error('Invalid JSON condition');
@@ -236,45 +312,122 @@ function switchTab(tab) {
 function updateJSONPreview() {
     const code = document.getElementById('jsonPreviewCode');
     if (code) {
-        code.textContent = JSON.stringify(fields, null, 2);
+        const schema = generateJSONSchema(fields);
+        code.textContent = JSON.stringify({
+            fields: fields,
+            schema: schema
+        }, null, 2);
     }
 }
 
 /**
- * Actions
+ * Generate JSONSchema from fields
  */
-function saveTemplate() {
-    if (fields.length === 0) {
-        showToast('Add at least one field before saving', 'warning');
-        return;
-    }
-
-    const templateName = prompt('Enter a name for this template:');
-    if (!templateName) return;
-
-    const templateData = {
-        name: templateName,
-        fields: fields,
-        json_schema: generateJSONSchema(fields)
-    };
-
-    showToast('Template layout saved (Simulated)', 'success');
-    console.log('Saved Template:', templateData);
-}
-
 function generateJSONSchema(fields) {
     const schema = {
-        type: "object",
-        properties: {},
-        required: []
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Form",
+        "properties": {},
+        "required": []
     };
 
     fields.forEach(f => {
-        schema.properties[f.id] = { type: f.type === 'number' ? 'number' : 'string' };
+        const prop = {
+            "type": f.type === 'number' ? 'number' : (f.type === 'checkbox' ? 'boolean' : 'string'),
+            "title": f.label
+        };
+
+        // Add validation rules
+        if (f.validation) {
+            if (f.validation.minLength) prop.minLength = f.validation.minLength;
+            if (f.validation.maxLength) prop.maxLength = f.validation.maxLength;
+            if (f.validation.minimum) prop.minimum = f.validation.minimum;
+            if (f.validation.maximum) prop.maximum = f.validation.maximum;
+            if (f.validation.pattern) prop.pattern = f.validation.pattern;
+        }
+
+        if (f.placeholder) prop.description = f.placeholder;
+
+        if (f.type === 'select' && f.options) {
+            prop.enum = f.options;
+        }
+
+        schema.properties[f.id] = prop;
         if (f.required) schema.required.push(f.id);
     });
 
     return schema;
+}
+
+/**
+ * Save Template to Backend
+ */
+async function saveTemplate() {
+    if (fields.length === 0) {
+        showToast('Add at least one field before saving', 'error');
+        return;
+    }
+
+    const bankSelect = document.getElementById('bankSelect');
+    const bankId = bankSelect ? parseInt(bankSelect.value) : null;
+    
+    if (!bankId) {
+        showToast('Please select a bank', 'error');
+        return;
+    }
+
+    const templateName = document.getElementById('templateName');
+    const name = templateName ? templateName.value : prompt('Enter a name for this template:');
+    
+    if (!name) {
+        showToast('Template name is required', 'error');
+        return;
+    }
+
+    const version = document.getElementById('templateVersion');
+    const templateVersion = version ? version.value : '1.0.0';
+
+    const schema = generateJSONSchema(fields);
+
+    const templateData = {
+        bank_id: bankId,
+        name: name,
+        version: templateVersion,
+        schema_json: schema,
+        fields: fields,
+        description: `Form template created with ${fields.length} fields`,
+        active: true
+    };
+
+    try {
+        showToast('Saving template...', 'info');
+        
+        const result = await apiRequest('/templates/', {
+            method: 'POST',
+            body: templateData
+        });
+
+        showToast('Template saved successfully!', 'success');
+        
+        // Clear form after successful save
+        fields = [];
+        selectedFieldId = null;
+        renderCanvas();
+        renderProperties();
+        
+        if (document.getElementById('emptyState')) {
+            document.getElementById('emptyState').style.display = 'flex';
+        }
+        
+        // Reset form fields
+        if (templateName) templateName.value = '';
+        if (bankSelect) bankSelect.value = '';
+        
+    } catch (error) {
+        console.error('Error saving template:', error);
+        showToast(error.message || 'Failed to save template. Please try again.', 'error');
+    }
 }
 
 function previewJSON() {
@@ -285,7 +438,9 @@ function previewJSON() {
  * Helpers
  */
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
+

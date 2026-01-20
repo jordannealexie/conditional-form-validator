@@ -7,29 +7,25 @@ let currentTemplate = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Check Authentication
-    if (!isAuthenticated()) {
-        window.location.href = '/index.html';
-        return;
-    }
+    if (typeof requireAuth === 'function') requireAuth();
 
     // 2. Extract Template ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const templateId = urlParams.get('template_id');
 
     if (!templateId) {
-        alert('No template selected. Returning to dashboard.');
-        window.location.href = '/dashboard.html';
+        showToast('No template selected. Returning to dashboard.', 'error');
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 2000);
         return;
     }
 
+    // Store template ID globally for FormRenderer
+    window.currentTemplateId = parseInt(templateId);
+
     // 3. Load User Info
-    try {
-        const user = await apiGetCurrentUser();
-        const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
-        document.getElementById('userName').textContent = fullName;
-    } catch (error) {
-        console.error('Failed to load user info:', error);
-    }
+    await loadUserInfo();
 
     // 4. Load Template and Initialize Renderer
     await loadTemplate(templateId);
@@ -37,7 +33,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. Setup Buttons
     document.getElementById('submitBtn').addEventListener('click', handleSubmit);
     document.getElementById('saveDraftBtn').addEventListener('click', handleSaveDraft);
+    
+    // 6. Setup Mobile Menu
+    setupMobileMenu();
 });
+
+async function loadUserInfo() {
+    try {
+        const user = await apiGetCurrentUser();
+        const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+        document.getElementById('userName').textContent = fullName;
+        document.getElementById('userRole').textContent = user.user_role || 'User';
+    } catch (error) {
+        console.error('Failed to load user info:', error);
+    }
+}
 
 async function loadTemplate(templateId) {
     const container = document.getElementById('renderer-container');
@@ -49,11 +59,29 @@ async function loadTemplate(templateId) {
         document.getElementById('formTitle').textContent = currentTemplate.name;
         document.getElementById('formDescription').textContent = currentTemplate.description || 'Please fill out all the required information below.';
 
+        // Show template banner with bank info
+        const templateBanner = document.getElementById('templateBanner');
+        const bankLogo = document.getElementById('bankLogo');
         const bankBadge = document.getElementById('bankBadge');
-        // We might need to fetch bank info if not in template, but usually we know the bank from ID/Context
-        // For now, use a generic color scheme or look at bank_id
-        bankBadge.textContent = currentTemplate.bank ? currentTemplate.bank.name : `Bank ID: ${currentTemplate.bank_id}`;
-        bankBadge.classList.add('bg-indigo-100', 'text-indigo-800');
+        
+        templateBanner.style.display = 'flex';
+        
+        if (currentTemplate.bank) {
+            const bankName = currentTemplate.bank.name;
+            const bankCode = currentTemplate.bank.code;
+            const primaryColor = currentTemplate.bank.primary_color || '#133522';
+            
+            bankLogo.textContent = bankCode.substring(0, 2).toUpperCase();
+            bankLogo.style.background = primaryColor;
+            
+            bankBadge.textContent = bankName;
+            bankBadge.style.background = `${primaryColor}20`;
+            bankBadge.style.color = primaryColor;
+        } else {
+            bankLogo.textContent = 'BK';
+            bankLogo.style.background = 'var(--dark-green)';
+            bankBadge.textContent = 'Bank';
+        }
 
         // Initialize Renderer
         renderer = new FormRenderer('renderer-container', {
@@ -61,76 +89,139 @@ async function loadTemplate(templateId) {
         });
 
         // Use the fields from the template
-        renderer.render(currentTemplate.fields);
+        if (currentTemplate.fields && currentTemplate.fields.length > 0) {
+            renderer.render(currentTemplate.fields);
+        } else {
+            // Fallback: render from schema properties
+            const fields = generateFieldsFromSchema(currentTemplate.schema_json);
+            renderer.render(fields);
+        }
 
     } catch (error) {
         console.error('Failed to load template:', error);
         container.innerHTML = `
-            <div class="p-8 text-center text-red-600 bg-red-50 rounded-xl">
-                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
-                <p class="font-bold">Error loading form template</p>
-                <p class="text-sm opacity-80">${error.message}</p>
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <p class="empty-state-title">Error loading form template</p>
+                <p>${error.message || 'Please try again later.'}</p>
+                <button onclick="window.location.href='dashboard.html'" class="btn btn-primary" style="margin-top: var(--space-md);">
+                    Back to Dashboard
+                </button>
             </div>
         `;
+    }
+}
+
+/**
+ * Generate field definitions from JSONSchema properties
+ */
+function generateFieldsFromSchema(schema) {
+    if (!schema || !schema.properties) return [];
+    
+    const fields = [];
+    const required = schema.required || [];
+    
+    Object.keys(schema.properties).forEach((key, index) => {
+        const prop = schema.properties[key];
+        const field = {
+            id: key,
+            label: prop.title || key,
+            required: required.includes(key),
+            type: mapJsonSchemaType(prop.type)
+        };
+        
+        if (prop.enum) {
+            field.options = prop.enum;
+        }
+        
+        if (prop.minLength) field.validation = { ...field.validation, minLength: prop.minLength };
+        if (prop.maxLength) field.validation = { ...field.validation, maxLength: prop.maxLength };
+        if (prop.minimum) field.validation = { ...field.validation, minimum: prop.minimum };
+        if (prop.maximum) field.validation = { ...field.validation, maximum: prop.maximum };
+        if (prop.pattern) field.validation = { ...field.validation, pattern: prop.pattern };
+        
+        fields.push(field);
+    });
+    
+    return fields;
+}
+
+function mapJsonSchemaType(jsonType) {
+    switch (jsonType) {
+        case 'string':
+            if (schema.format === 'email') return 'email';
+            if (schema.format === 'date') return 'date';
+            return 'text';
+        case 'number':
+        case 'integer':
+            return 'number';
+        case 'boolean':
+            return 'checkbox';
+        default:
+            return 'text';
     }
 }
 
 async function handleSubmit() {
     if (!renderer || !currentTemplate) return;
 
-    renderer.clearErrors();
-    const data = renderer.getData();
-
-    // Simple client-side check before API call
-    // Note: The API does its own validation via FormValidator
+    // Validate first
+    const validationResult = await renderer.validate();
+    
+    if (!validationResult.is_valid) {
+        showToast('Please fix the validation errors before submitting', 'error');
+        return;
+    }
 
     try {
+        const data = renderer.getData();
         const payload = {
             template_id: currentTemplate.id,
-            fieldman_id: getCurrentUser().username,
-            data_json: data,
-            status: 'submitted'
+            status: 'submitted',
+            data_json: data.form_data,
+            file_tokens: data.file_tokens
         };
 
         const result = await apiSubmitForm(payload);
-
-        if (result.is_valid) {
-            showSuccessModal();
-        } else {
-            // Show validation errors from server
-            result.validation_errors.forEach(err => {
-                renderer.showError(err.field, err.message);
-            });
-            alert('Please correct the errors in the form.');
-        }
+        showToast('Application submitted successfully!', 'success');
+        
+        // Show success modal
+        document.getElementById('successModal').classList.add('active');
+        
     } catch (error) {
         console.error('Submission error:', error);
-        alert('Failed to submit application: ' + error.message);
+        showToast(error.message || 'Failed to submit application', 'error');
     }
 }
 
 async function handleSaveDraft() {
     if (!renderer || !currentTemplate) return;
 
-    const data = renderer.getData();
-
     try {
+        const data = renderer.getData();
         const payload = {
             template_id: currentTemplate.id,
-            fieldman_id: getCurrentUser().username,
-            data_json: data,
-            status: 'draft'
+            status: 'draft',
+            data_json: data.form_data,
+            file_tokens: data.file_tokens
         };
 
         await apiSubmitForm(payload);
-        alert('Draft saved successfully!');
+        showToast('Draft saved successfully!', 'success');
+        
     } catch (error) {
         console.error('Draft save error:', error);
-        alert('Failed to save draft: ' + error.message);
+        showToast(error.message || 'Failed to save draft', 'error');
     }
 }
 
-function showSuccessModal() {
-    document.getElementById('successModal').classList.remove('hidden');
-    document.getElementById('successModal').classList.add('flex');
+function setupMobileMenu() {
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+    }
 }
+

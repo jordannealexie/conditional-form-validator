@@ -53,9 +53,7 @@
 
             <div class="sidebar-footer">
                 <div class="user-info" id="userInfo">
-                    <div class="user-avatar"
-                        style="background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        U</div>
+                    <div class="user-avatar">U</div>
                     <div class="user-details">
                         <span class="user-name" id="userName">Loading...</span>
                         <span class="user-role" id="userRole">User</span>
@@ -70,39 +68,40 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="content-header">
-                <div>
-                    <button onclick="history.back()" class="btn btn-secondary" style="margin-right: var(--space-md);">
-                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <div class="header-left">
+                    <button onclick="history.back()" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back
                     </button>
-                    <div id="bankBadge" style="display: inline-block; padding: var(--space-xs) var(--space-sm); border-radius: 50px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;"></div>
+                    <div id="bankBadge" class="bank-badge"></div>
                 </div>
             </header>
 
+            <!-- Template Info Banner -->
+            <div class="template-info-banner" id="templateBanner" style="display: none;">
+                <div id="bankLogo" class="template-bank-logo"></div>
+                <div class="template-details">
+                    <h2 id="formTitle" class="template-name">Loading Form...</h2>
+                    <p id="formDescription" class="template-description"></p>
+                </div>
+            </div>
+
             <div class="card">
-                <div style="background: var(--primary); padding: var(--space-lg); color: var(--white);">
-                    <h1 id="formTitle">Loading Form...</h1>
-                    <p id="formDescription" style="color: rgba(255,255,255,0.8); font-size: 14px;"></p>
+                <div id="renderer-container" class="form-container">
+                    <!-- Form will be rendered here -->
+                    <div class="loading-spinner">
+                        Loading form template...
+                    </div>
                 </div>
 
-                <div style="padding: var(--space-lg);">
-                    <div id="renderer-container">
-                        <!-- Form will be rendered here -->
-                        <div style="display: flex; flex-direction: column; align-items: center; padding: 80px 0;">
-                            <i class="fas fa-spinner fa-spin" style="font-size: 36px; color: var(--gray); margin-bottom: var(--space-md);"></i>
-                            <p style="color: var(--gray);">Loading form template...</p>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--off-white); display: flex; align-items: center; justify-content: space-between;">
-                        <p style="font-size: 12px; color: var(--gray); font-style: italic;">* Required fields</p>
-                        <div>
-                            <button id="saveDraftBtn" class="btn btn-secondary" style="margin-right: var(--space-md);">
-                                Save as Draft
-                            </button>
-                            <button id="submitBtn" class="btn btn-primary">
-                                Submit Application
-                            </button>
-                        </div>
+                <div class="form-actions">
+                    <p class="required-note">* Required fields</p>
+                    <div class="form-actions-right">
+                        <button id="saveDraftBtn" class="btn btn-secondary">
+                            Save as Draft
+                        </button>
+                        <button id="submitBtn" class="btn btn-primary">
+                            Submit Application
+                        </button>
                     </div>
                 </div>
             </div>
@@ -112,23 +111,27 @@
     <!-- Success Modal -->
     <div id="successModal" class="modal">
         <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <div style="width: 80px; height: 80px; background: rgba(39, 174, 96, 0.1); color: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto var(--space-lg) auto;">
+            <div class="success-icon">
                 <i class="fas fa-check"></i>
             </div>
-            <h3 style="font-size: 24px; font-weight: bold; color: var(--black); margin-bottom: var(--space-xs);">Submitted!</h3>
-            <p style="color: var(--gray); margin-bottom: var(--space-xl);">Your application has been received and is being processed.</p>
-            <button onclick="location.href='dashboard.html'" class="btn btn-primary" style="width: 100%;">
+            <h3>Submitted!</h3>
+            <p>Your application has been received and is being processed.</p>
+            <button onclick="location.href='dashboard.html'" class="btn btn-primary btn-block">
                 Back to Dashboard
             </button>
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <!-- Scripts -->
-    <script src="/js/utils.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/auth.js"></script>
-    <script src="/js/FormRenderer.js"></script>
-    <script src="/js/form-fill.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/FormRenderer.js"></script>
+    <script src="js/form-fill.js"></script>
 </body>
 
 </html>
+

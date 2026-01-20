@@ -11,7 +11,7 @@
 
 <body>
     <div class="app-container">
-        <!-- Sidebar Navigation (Same as Dashboard) -->
+        <!-- Sidebar Navigation -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2>Form Submission</h2>
@@ -53,9 +53,7 @@
 
             <div class="sidebar-footer">
                 <div class="user-info" id="userInfo">
-                    <div class="user-avatar"
-                        style="background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        U</div>
+                    <div class="user-avatar">U</div>
                     <div class="user-details">
                         <span class="user-name" id="userName">Loading...</span>
                         <span class="user-role" id="userRole">User</span>
@@ -74,11 +72,11 @@
                     <h1>Submissions</h1>
                     <p class="page-subtitle">Track and manage all form applications</p>
                 </div>
-                <div>
-                    <button class="btn btn-secondary" id="refreshBtn" style="margin-right: var(--space-sm);">
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="refreshBtn">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
-                    <button class="btn btn-primary" onclick="location.href='/dashboard.html#applications'">
+                    <button class="btn btn-primary" onclick="location.href='dashboard.html'">
                         <i class="fas fa-plus"></i> New Application
                     </button>
                 </div>
@@ -86,7 +84,7 @@
 
             <!-- Filters -->
             <div class="card">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-md);">
+                <div class="filter-row">
                     <div class="form-group">
                         <label>Filter by Bank</label>
                         <select id="bankFilter">
@@ -99,14 +97,15 @@
                             <option value="">All Statuses</option>
                             <option value="draft">Draft</option>
                             <option value="submitted">Submitted</option>
-                            <option value="processed">Processed</option>
+                            <option value="validated">Validated</option>
+                            <option value="rejected">Rejected</option>
                         </select>
                     </div>
-                    <div class="form-group" style="grid-column: span 2;">
+                    <div class="form-group search-group">
                         <label>Search</label>
-                        <div style="position: relative;">
-                            <i class="fas fa-search" style="position: absolute; left: var(--space-sm); top: 50%; transform: translateY(-50%); color: var(--gray);"></i>
-                            <input type="text" id="searchInput" placeholder="Search applicant, template, or ID..." style="padding-left: calc(var(--space-sm) + 20px);">
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="searchInput" placeholder="Search applicant, template, or ID...">
                         </div>
                     </div>
                 </div>
@@ -117,6 +116,7 @@
                 <table>
                     <thead>
                         <tr>
+                            <th>ID</th>
                             <th>Applicant</th>
                             <th>Form Template</th>
                             <th>Bank</th>
@@ -126,16 +126,18 @@
                         </tr>
                     </thead>
                     <tbody id="submissionsBody">
-                        <!-- Loaded dynamically -->
+                        <tr>
+                            <td colspan="7" class="text-center">
+                                <div class="loading-spinner">Loading submissions...</div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
 
                 <!-- Pagination -->
-                <div style="padding: var(--space-sm); background: var(--off-white); border-top: 1px solid var(--dark-gray); display: flex; justify-content: space-between; align-items: center;">
-                    <p id="paginationInfo" style="font-size: 14px; color: var(--gray);">Showing 0 to 0 of 0 entries</p>
-                    <div id="paginationBtns" style="display: flex; gap: var(--space-xs);">
-                        <!-- Dynamically generated -->
-                    </div>
+                <div class="pagination">
+                    <p id="paginationInfo" class="pagination-info">Showing 0 of 0 entries</p>
+                    <div id="paginationBtns" class="pagination-btns"></div>
                 </div>
             </div>
         </main>
@@ -143,20 +145,24 @@
 
     <!-- Submission View Modal -->
     <div id="viewModal" class="modal">
-        <div class="modal-content" style="max-width: 600px; display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;">
-            <div style="background: var(--primary); padding: var(--space-lg); display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--primary); color: white;">
                 <h3 id="modalTitle">Application Details</h3>
-                <button onclick="closeModal()" style="color: var(--white);"><i class="fas fa-times"></i></button>
+                <button class="modal-close" onclick="closeModal()">×</button>
             </div>
-            <div style="padding: var(--space-lg); overflow-y: auto;" id="modalContent">
+            <div class="modal-body" id="modalContent">
                 <!-- Submission data will be shown here -->
             </div>
-            <div style="padding: var(--space-lg); border-top: 1px solid var(--off-white); background: var(--off-white); display: flex; justify-content: flex-end; gap: var(--space-md);">
+            <div class="modal-footer">
                 <button onclick="closeModal()" class="btn btn-secondary">Close</button>
-                <button id="approveBtn" class="btn btn-primary hidden">Approve</button>
+                <button id="approveBtn" class="btn btn-success hidden" onclick="approveSubmission()">Approve</button>
+                <button id="rejectBtn" class="btn btn-danger hidden" onclick="rejectSubmission()">Reject</button>
             </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
 
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
@@ -165,3 +171,4 @@
 </body>
 
 </html>
+

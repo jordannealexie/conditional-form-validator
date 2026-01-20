@@ -128,10 +128,11 @@ async def login(
     refresh_token_jwt = create_refresh_token(data={"sub": user.username})
     
     # Store refresh token in DB
+    from app.core.config import settings
     db_refresh_token = RefreshToken(
         user_id=user.id,
         token=refresh_token_jwt,
-        expires_at=datetime.utcnow() + timedelta(days=7)
+        expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     db.add(db_refresh_token)
     await db.commit()

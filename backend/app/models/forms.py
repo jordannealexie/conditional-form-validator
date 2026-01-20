@@ -41,8 +41,9 @@ class FormTemplate(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bank_id = Column(Integer, ForeignKey('banks.id'), nullable=False, index=True)
-    name = Column(String(255), nullable=False, index=True) # Spec says 'name'
+    name = Column(String(255), nullable=False, index=True)  # Template name (e.g., "Credit Card Application")
     version = Column(String(20), nullable=False)  # Semantic versioning: "1.0.0", "1.1.0", etc.
+    form_type = Column(String(100), nullable=True)  # Optional form type category (e.g., "credit_card", "loan")
     
     # JSON Schema for validation
     schema_json = Column(JSON, nullable=False) # Spec says 'schema_json'
@@ -93,7 +94,7 @@ class FormSubmission(Base):
     # Review fields
     reviewed_by = Column(String(100), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
-    reviewed_comment = Column(Text, nullable=True)  # If DB exists: ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS reviewed_comment TEXT;
+    reviewed_comment = Column(Text, nullable=True)  # Reviewer's comment for approval/rejection
     
     # Timestamps
     submitted_at = Column(DateTime(timezone=True), nullable=True)
@@ -107,21 +108,21 @@ class FormSubmission(Base):
 
 class FormFile(Base):
     """File metadata for form uploads with token-based access"""
-    __tablename__ = "file_uploads" # Spec says 'file_uploads'
+    __tablename__ = "file_uploads"  # Spec says 'file_uploads'
 
     id = Column(Integer, primary_key=True, index=True)
-    token = Column(Uuid(as_uuid=True), default=uuid.uuid4, nullable=False, unique=True, index=True) # Spec says 'token'
+    token = Column(Uuid(as_uuid=True), default=uuid.uuid4, nullable=False, unique=True, index=True)  # Spec says 'token'
     original_filename = Column(String(255), nullable=False)
-    storage_path = Column(String(255), nullable=False, unique=True) # Spec says 'storage_path'
+    storage_path = Column(String(255), nullable=False, unique=True)  # Spec says 'storage_path'
     mime_type = Column(String(100), nullable=False)
     file_size = Column(Integer, nullable=False)
     
     submission_id = Column(Integer, ForeignKey('form_submissions.id'), nullable=True, index=True)
-    field_id = Column(String(100), nullable=False)  # Spec says 'field_id' (rename field_name)
+    field_id = Column(String(100), nullable=False)  # Field identifier this file belongs to
     
     # Timestamps
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    uploaded_by = Column(String(100), nullable=False)  # Username
+    uploaded_by = Column(String(100), nullable=False)  # Username who uploaded the file
     
     # Relationships
     submission = relationship("FormSubmission", back_populates="files")
