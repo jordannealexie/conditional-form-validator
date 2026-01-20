@@ -14,8 +14,10 @@ import uuid
 class BankBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Bank name")
     code: str = Field(..., min_length=1, max_length=50, description="Bank code (unique identifier)")
+    logo_url: Optional[str] = Field(None, description="Bank logo URL")
+    primary_color: Optional[str] = Field(None, description="Bank primary brand color (HEX)")
     description: Optional[str] = Field(None, description="Bank description")
-    is_active: bool = Field(True, description="Whether the bank is active")
+    active: bool = Field(True, description="Whether the bank is active")
 
 
 class BankCreate(BankBase):
@@ -27,8 +29,10 @@ class BankUpdate(BaseModel):
     """Schema for updating a bank"""
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     code: Optional[str] = Field(None, min_length=1, max_length=50)
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
     description: Optional[str] = None
-    is_active: Optional[bool] = None
+    active: Optional[bool] = None
 
 
 class BankResponse(BankBase):
@@ -47,13 +51,13 @@ class BankResponse(BankBase):
 
 class FormTemplateBase(BaseModel):
     bank_id: int = Field(..., description="Bank ID this template belongs to")
-    form_type: str = Field(..., min_length=1, max_length=100, description="Type of form (e.g., customer_survey)")
-    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$", description="Semantic version (e.g., 1.0.0)")
-    json_schema: Dict[str, Any] = Field(..., description="JSONSchema for validation")
+    name: str = Field(..., min_length=1, max_length=255, description="Template name (unique per bank)")
+    version: str = Field(..., description="Semantic version (e.g., 1.0.0)")
+    schema_json: Dict[str, Any] = Field(..., description="JSONSchema for validation")
+    fields: Optional[List[Dict[str, Any]]] = Field(None, description="Fields array for UI rendering and conditional logic")
     ui_schema: Optional[Dict[str, Any]] = Field(None, description="UI rendering hints")
-    title: Optional[str] = Field(None, max_length=255, description="Form title")
     description: Optional[str] = Field(None, description="Form description")
-    is_active: bool = Field(True, description="Whether this template version is active")
+    active: bool = Field(True, description="Whether this template version is active")
 
 
 class FormTemplateCreate(FormTemplateBase):
@@ -63,11 +67,12 @@ class FormTemplateCreate(FormTemplateBase):
 
 class FormTemplateUpdate(BaseModel):
     """Schema for updating a form template"""
-    json_schema: Optional[Dict[str, Any]] = None
+    schema_json: Optional[Dict[str, Any]] = None
+    fields: Optional[List[Dict[str, Any]]] = None
     ui_schema: Optional[Dict[str, Any]] = None
-    title: Optional[str] = Field(None, max_length=255)
+    name: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
-    is_active: Optional[bool] = None
+    active: Optional[bool] = None
 
 
 class FormTemplateResponse(FormTemplateBase):
@@ -76,6 +81,7 @@ class FormTemplateResponse(FormTemplateBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     created_by: Optional[str] = None
+    bank: Optional[BankResponse] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -86,32 +92,50 @@ class FormTemplateResponse(FormTemplateBase):
 
 class FormSubmissionBase(BaseModel):
     template_id: int = Field(..., description="Form template ID")
-    submitted_by: str = Field(..., min_length=1, max_length=100, description="Username or agent ID")
-    submission_data: Dict[str, Any] = Field(..., description="Form data (must match template schema)")
+    fieldman_id: str = Field(..., min_length=1, max_length=100, description="Username of fieldman")
+    data_json: Dict[str, Any] = Field(..., description="Form data (must match template schema)")
 
 
-class FormSubmissionCreate(FormSubmissionBase):
+class FormSubmissionCreate(BaseModel):
     """Schema for creating a new form submission"""
+    template_id: int = Field(..., description="Form template ID")
+    fieldman_id: Optional[str] = Field(None, max_length=100, description="Override; usually set by backend from current user")
+    data_json: Optional[Dict[str, Any]] = Field(None, description="Form data")
+    submission_data: Optional[Dict[str, Any]] = Field(None, description="Alias for data_json (API compatibility)")
+    file_tokens: Optional[List[str]] = Field(None, description="List of file tokens from uploads")
     status: Optional[str] = Field("draft", description="Submission status")
 
 
 class FormSubmissionUpdate(BaseModel):
     """Schema for updating a form submission (draft only)"""
-    submission_data: Optional[Dict[str, Any]] = None
+    data_json: Optional[Dict[str, Any]] = None
     status: Optional[str] = None
 
 
-class FormSubmissionResponse(FormSubmissionBase):
+class FormSubmissionResponse(BaseModel):
     """Schema for form submission response"""
     id: int
+    template_id: int
+    fieldman_id: str
+    data_json: Dict[str, Any]
     status: str
-    validation_errors: Optional[Dict[str, Any]] = None
+    validation_errors: Optional[List[Dict[str, Any]]] = None
     is_valid: bool
+    template: Optional[FormTemplateResponse] = None
     submitted_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_comment: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
+
+
+class SubmissionReviewRequest(BaseModel):
+    """Schema for supervisor review"""
+    action: str = Field(..., description="approve or reject")
+    comment: Optional[str] = None
 
 
 # ============================================================================
@@ -121,12 +145,12 @@ class FormSubmissionResponse(FormSubmissionBase):
 class FileUploadResponse(BaseModel):
     """Schema for file upload response"""
     file_id: int
-    field_name: str
+    field_id: str
     original_filename: str
-    stored_filename: str
+    storage_path: str
     file_size: int
     mime_type: str
-    access_token: uuid.UUID
+    token: uuid.UUID
     uploaded_at: datetime
     message: str = "File uploaded successfully"
 
@@ -135,12 +159,12 @@ class FormFileResponse(BaseModel):
     """Schema for form file metadata"""
     id: int
     submission_id: Optional[int] = None
-    field_name: str
+    field_id: str
     original_filename: str
-    stored_filename: str
+    storage_path: str
     file_size: int
     mime_type: str
-    access_token: uuid.UUID
+    token: uuid.UUID
     uploaded_at: datetime
     uploaded_by: str
     
@@ -168,7 +192,7 @@ class ValidationResult(BaseModel):
 class ValidateSubmissionRequest(BaseModel):
     """Schema for submission validation request"""
     template_id: int
-    submission_data: Dict[str, Any]
+    submission_data: Dict[str, Any] # Request uses submission_data for flexibility
 
 
 # ============================================================================

@@ -61,7 +61,7 @@ class BankRepository:
     async def soft_delete(db: AsyncSession, bank: Bank) -> Bank:
         """Soft delete bank"""
         bank.deleted_at = datetime.utcnow()
-        bank.is_active = False
+        bank.active = False
         await db.commit()
         await db.refresh(bank)
         return bank
@@ -100,7 +100,7 @@ class FormTemplateRepository:
         query = select(FormTemplate).where(
             and_(
                 FormTemplate.bank_id == bank_id,
-                FormTemplate.form_type == form_type
+                FormTemplate.name == form_type
             )
         )
         
@@ -108,7 +108,7 @@ class FormTemplateRepository:
             query = query.where(FormTemplate.version == version)
         else:
             # Get latest active version
-            query = query.where(FormTemplate.is_active == True).order_by(FormTemplate.created_at.desc())
+            query = query.where(FormTemplate.active == True).order_by(FormTemplate.created_at.desc())
         
         result = await db.execute(query)
         return result.scalar_first()
@@ -123,9 +123,9 @@ class FormTemplateRepository:
         query = select(FormTemplate).where(FormTemplate.bank_id == bank_id)
         
         if active_only:
-            query = query.where(FormTemplate.is_active == True)
+            query = query.where(FormTemplate.active == True)
         
-        result = await db.execute(query.order_by(FormTemplate.form_type, FormTemplate.version.desc()))
+        result = await db.execute(query.order_by(FormTemplate.name, FormTemplate.version.desc()))
         return list(result.scalars().all())
     
     @staticmethod
@@ -134,9 +134,9 @@ class FormTemplateRepository:
         query = select(FormTemplate).options(joinedload(FormTemplate.bank))
         
         if active_only:
-            query = query.where(FormTemplate.is_active == True)
+            query = query.where(FormTemplate.active == True)
         
-        result = await db.execute(query.order_by(FormTemplate.bank_id, FormTemplate.form_type))
+        result = await db.execute(query.order_by(FormTemplate.bank_id, FormTemplate.name))
         return list(result.unique().scalars().all())
     
     @staticmethod
@@ -161,7 +161,7 @@ class FormTemplateRepository:
             select(func.count(FormTemplate.id)).where(
                 and_(
                     FormTemplate.bank_id == bank_id,
-                    FormTemplate.form_type == form_type,
+                    FormTemplate.name == form_type,
                     FormTemplate.version == version
                 )
             )
@@ -211,7 +211,7 @@ class FormSubmissionRepository:
         
         filters = []
         if submitted_by:
-            filters.append(FormSubmission.submitted_by == submitted_by)
+            filters.append(FormSubmission.fieldman_id == submitted_by)
         if status:
             filters.append(FormSubmission.status == status)
         if template_id:
@@ -237,7 +237,7 @@ class FormSubmissionRepository:
         
         filters = []
         if submitted_by:
-            filters.append(FormSubmission.submitted_by == submitted_by)
+            filters.append(FormSubmission.fieldman_id == submitted_by)
         if status:
             filters.append(FormSubmission.status == status)
         if template_id:
@@ -290,11 +290,11 @@ class FormFileRepository:
         return file_record
     
     @staticmethod
-    async def get_by_token(db: AsyncSession, access_token: str) -> Optional[FormFile]:
-        """Get file by access token"""
-        result = await db.execute(
-            select(FormFile).where(FormFile.access_token == access_token)
-        )
+    async def get_by_token(db: AsyncSession, token) -> Optional[FormFile]:
+        """Get file by token (str or UUID)."""
+        import uuid as _uuid
+        tok = _uuid.UUID(str(token)) if not hasattr(token, 'hex') else token
+        result = await db.execute(select(FormFile).where(FormFile.token == tok))
         return result.scalar_one_or_none()
     
     @staticmethod

@@ -1,80 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - SecureFlow Auth System</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Register - Form Submission</title>
+    <link rel="stylesheet" href="css/index.css">
 </head>
+
 <body class="auth-page">
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
-                <h1>🔐 Create Account</h1>
-                <p>Register for SecureFlow Auth System</p>
+                <h1>Create Account</h1>
+                <p>Register for Form Submission</p>
             </div>
-            
+
             <form id="registerForm" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username *</label>
-                    <input 
-                        type="text" 
-                        id="username" 
-                        name="username" 
-                        placeholder="Choose a username"
-                        required 
-                        pattern="[a-zA-Z0-9_]{3,20}"
-                        title="3-20 characters, letters, numbers, and underscores only"
-                    >
+                    <input type="text" id="username" name="username" placeholder="Choose a username" required
+                        pattern="[a-zA-Z0-9_]{3,20}" title="3-20 characters, letters, numbers, and underscores only">
                     <small style="color: #6b7280;">3-20 characters, alphanumeric and underscores</small>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="email">Email *</label>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        placeholder="your.email@example.com"
-                        required
-                    >
+                    <input type="email" id="email" name="email" placeholder="your.email@example.com" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="full_name">Full Name *</label>
-                    <input 
-                        type="text" 
-                        id="full_name" 
-                        name="full_name" 
-                        placeholder="John Doe"
-                        required
-                    >
+                    <input type="text" id="full_name" name="full_name" placeholder="John Doe" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="password">Password *</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        placeholder="Enter password"
-                        required
-                        minlength="8"
-                    >
-                    <small style="color: #6b7280;">Minimum 8 characters, include uppercase, lowercase, and number</small>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required
+                        minlength="8">
+                    <small style="color: #6b7280;">Minimum 8 characters, include uppercase, lowercase, and
+                        number</small>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="confirm_password">Confirm Password *</label>
-                    <input 
-                        type="password" 
-                        id="confirm_password" 
-                        name="confirm_password" 
-                        placeholder="Confirm password"
-                        required
-                    >
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password"
+                        required>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="department">Department</label>
                     <select id="department" name="department">
@@ -87,7 +60,7 @@
                         <option value="Operations">Operations</option>
                     </select>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="level">Access Level</label>
@@ -97,7 +70,7 @@
                             <option value="3">Level 3 (Advanced)</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="location">Location</label>
                         <select id="location" name="location">
@@ -109,36 +82,36 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div id="errorMessage" class="error-message" style="display: none;"></div>
                 <div id="passwordStrength" style="margin-bottom: 16px; font-size: 0.875rem;"></div>
-                
+
                 <button type="submit" class="btn btn-primary btn-block">
                     Create Account
                 </button>
             </form>
-            
+
             <div class="auth-footer">
                 <p>Already have an account? <a href="index.html">Login here</a></p>
             </div>
         </div>
     </div>
-    
+
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
-    
+
     <script>
         // Check if user is already logged in
         document.addEventListener('DOMContentLoaded', () => {
             if (isAuthenticated()) {
                 window.location.href = 'dashboard.html';
             }
-            
+
             // Add password strength checker
             const passwordInput = document.getElementById('password');
             const strengthDiv = document.getElementById('passwordStrength');
-            
+
             passwordInput.addEventListener('input', () => {
                 const result = validatePassword(passwordInput.value);
                 if (passwordInput.value.length > 0) {
@@ -152,11 +125,11 @@
                 }
             });
         });
-        
+
         // Handle registration form submission
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const username = formData.get('username');
             const email = formData.get('email');
@@ -167,36 +140,36 @@
             const level = formData.get('level');
             const location = formData.get('location');
             const errorDiv = document.getElementById('errorMessage');
-            
+
             // Clear previous errors
             errorDiv.style.display = 'none';
-            
+
             // Validation
             if (!isValidUsername(username)) {
                 errorDiv.textContent = 'Invalid username format. Use 3-20 alphanumeric characters and underscores.';
                 errorDiv.style.display = 'block';
                 return;
             }
-            
+
             if (!isValidEmail(email)) {
                 errorDiv.textContent = 'Invalid email format.';
                 errorDiv.style.display = 'block';
                 return;
             }
-            
+
             const passwordValidation = validatePassword(password);
             if (!passwordValidation.valid) {
                 errorDiv.textContent = passwordValidation.message;
                 errorDiv.style.display = 'block';
                 return;
             }
-            
+
             if (password !== confirm_password) {
                 errorDiv.textContent = 'Passwords do not match.';
                 errorDiv.style.display = 'block';
                 return;
             }
-            
+
             try {
                 const result = await register({
                     username,
@@ -207,7 +180,7 @@
                     level,
                     location
                 });
-                
+
                 if (result.success) {
                     showToast('Account created successfully! Redirecting...', 'success');
                     setTimeout(() => {
@@ -224,4 +197,5 @@
         });
     </script>
 </body>
+
 </html>

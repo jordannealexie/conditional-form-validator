@@ -15,6 +15,7 @@ from app.schemas.forms import (
     BankListResponse
 )
 from app.repositories.forms import BankRepository
+from app.utils.response import create_response
 
 
 router = APIRouter()
@@ -31,10 +32,8 @@ async def list_banks(
     Requires authentication.
     """
     banks = await BankRepository.get_all(db, include_deleted=include_deleted)
-    return BankListResponse(
-        total=len(banks),
-        data=[BankResponse.model_validate(bank) for bank in banks]
-    )
+    data = [BankResponse.model_validate(bank) for bank in banks]
+    return create_response(data=data)
 
 
 @router.post("/", response_model=BankResponse, status_code=status.HTTP_201_CREATED, summary="Create a new bank")
@@ -56,7 +55,7 @@ async def create_bank(
         )
     
     bank = await BankRepository.create(db, **bank_data.model_dump())
-    return BankResponse.model_validate(bank)
+    return create_response(data=BankResponse.model_validate(bank))
 
 
 @router.get("/{bank_id}", response_model=BankResponse, summary="Get bank by ID")
@@ -110,7 +109,7 @@ async def update_bank(
         bank, 
         **bank_data.model_dump(exclude_unset=True)
     )
-    return BankResponse.model_validate(updated_bank)
+    return create_response(data=BankResponse.model_validate(updated_bank))
 
 
 @router.delete("/{bank_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete bank")

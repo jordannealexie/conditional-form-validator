@@ -15,6 +15,7 @@ from app.schemas.abac import (
     ABACCheckRequest, ABACCheckResponse
 )
 from app.services.abac_service import ABACService
+from app.utils.response import create_response
 from sqlalchemy import select
 
 router = APIRouter()
@@ -35,7 +36,7 @@ async def create_abac_policy(
         rules=policy_data.rules,
         is_active=policy_data.is_active
     )
-    return policy
+    return create_response(data=ABACPolicyResponse.model_validate(policy), status_code=status.HTTP_201_CREATED)
 
 
 @router.get("/policies", response_model=List[ABACPolicyResponse])
@@ -47,7 +48,8 @@ async def list_abac_policies(
     """List all ABAC policies (admin only)"""
     service = ABACService(db)
     policies = await service.get_policies(active_only=active_only)
-    return policies
+    data = [ABACPolicyResponse.model_validate(p) for p in policies]
+    return create_response(data=data)
 
 
 @router.get("/policies/{policy_id}", response_model=ABACPolicyResponse)
@@ -61,7 +63,7 @@ async def get_abac_policy(
     policy = await service.get_policy(policy_id)
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
-    return policy
+    return create_response(data=ABACPolicyResponse.model_validate(policy))
 
 
 @router.delete("/policies/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -92,7 +94,7 @@ async def set_user_attribute(
         attribute_key=attribute_data.attribute_key,
         attribute_value=attribute_data.attribute_value
     )
-    return attribute
+    return create_response(data=UserAttributeResponse.model_validate(attribute), status_code=status.HTTP_201_CREATED)
 
 
 @router.get("/attributes/user/{user_id}", response_model=List[UserAttributeResponse])
@@ -108,7 +110,8 @@ async def get_user_attributes(
     
     service = ABACService(db)
     attributes = await service.get_user_attributes(user_id)
-    return attributes
+    data = [UserAttributeResponse.model_validate(a) for a in attributes]
+    return create_response(data=data)
 
 
 # Resource Attribute Endpoints

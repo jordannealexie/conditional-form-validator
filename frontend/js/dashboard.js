@@ -7,6 +7,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof requireAuth === 'function') requireAuth();
     loadDashboard();
+    loadApplications();
     setupMobileMenu();
 });
 
@@ -22,14 +23,17 @@ async function loadDashboard() {
         }
 
         // Update user info in sidebar
-        document.getElementById('userName').textContent = currentUser.full_name || currentUser.username;
-        document.getElementById('userRole').textContent = currentUser.roles?.join(', ') || 'User';
+        const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username;
+        document.getElementById('userName').textContent = fullName;
+        document.getElementById('userRole').textContent = currentUser.user_role || 'User';
 
         // Update system info section
-        document.getElementById('currentUserName').textContent = currentUser.username;
-        document.getElementById('currentUserRoles').textContent = currentUser.roles?.join(', ') || 'None';
-        document.getElementById('currentUserDept').textContent = currentUser.department || 'N/A';
-        document.getElementById('currentUserLevel').textContent = currentUser.level || 'N/A';
+        if (document.getElementById('currentUserName')) {
+            document.getElementById('currentUserName').textContent = currentUser.username;
+            document.getElementById('currentUserRoles').textContent = currentUser.user_role || 'None';
+            document.getElementById('currentUserDept').textContent = currentUser.bank_id ? `Bank #${currentUser.bank_id}` : 'N/A';
+            document.getElementById('currentUserLevel').textContent = currentUser.active ? 'Active' : 'Inactive';
+        }
 
         // Fetch counts from various APIs
         const [users, roles, policies, relationships] = await Promise.all([
@@ -51,6 +55,64 @@ async function loadDashboard() {
     }
 }
 
+async function loadApplications() {
+    const grid = document.getElementById('applicationsGrid');
+    if (!grid) return;
+
+    try {
+        const banks = await apiGetBanks();
+        grid.innerHTML = '';
+
+        for (const bank of banks) {
+            const templates = await apiGetTemplates(bank.id);
+            templates.forEach(template => {
+                const card = createApplicationCard(template, bank);
+                grid.appendChild(card);
+            });
+        }
+
+        if (grid.innerHTML === '') {
+            grid.innerHTML = '<p class="text-muted">No applications available at the moment.</p>';
+        }
+    } catch (error) {
+        console.error('Failed to load applications:', error);
+        grid.innerHTML = '<p class="text-error">Error loading applications. Please try again later.</p>';
+    }
+}
+
+function createApplicationCard(template, bank) {
+    const card = document.createElement('div');
+    card.className = 'application-card';
+    card.onclick = () => {
+        window.location.href = `/form-fill.html?template_id=${template.id}`;
+    };
+
+    if (bank.primary_color) {
+        card.style = `border-left: 5px solid ${bank.primary_color};`;
+    } else {
+        const bankColors = {
+            'BDO': 'border-left: 5px solid #ec1c24;',
+            'MAYA': 'border-left: 5px solid #00ff00;',
+            'SECB': 'border-left: 5px solid #004a99;'
+        };
+        card.style = bankColors[bank.code] || '';
+    }
+
+    card.innerHTML = `
+        <div class="app-card-header">
+            <span class="bank-tag bank-${bank.code.toLowerCase()}">${bank.name}</span>
+            <span class="version-badge">v${template.version}</span>
+        </div>
+        <h3 class="app-title">${template.name}</h3>
+        <p class="app-description">${template.description || 'Fill out your application details online.'}</p>
+        <div class="app-card-footer">
+            <span class="action-link">Apply Now ➔</span>
+        </div>
+    `;
+
+    return card;
+}
+
 /**
  * Setup mobile menu toggle
  */
@@ -63,3 +125,4 @@ function setupMobileMenu() {
         });
     }
 }
+

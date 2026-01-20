@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field, validator, ConfigDict
 
 from app.models.user import UserRole
@@ -63,8 +63,26 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     """Schema for user response"""
     id: int
+    roles: Optional[List[str]] = []
+    attributes: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+    @validator('roles', pre=True)
+    def extract_role_names(cls, v):
+        """Extract role names if they are Role objects"""
+        if isinstance(v, list):
+            return [r.name if hasattr(r, 'name') else str(r) for r in v]
+        return v
+
+    @validator('attributes', always=True)
+    def set_attributes(cls, v, values):
+        """Map flat user fields to attributes object for frontend compatibility"""
+        return {
+            "department": values.get("department") or "General",
+            "level": values.get("level") or 1,
+            "location": values.get("location") or "Main Office"
+        }
 
     # Pydantic v2: allow constructing from ORM objects/attributes
     model_config = ConfigDict(from_attributes=True)

@@ -21,15 +21,15 @@ async def create_admin():
             admin = User(
                 email="harrypotter@example.com",
                 username="harrypotter",
-                hashed_password=get_password_hash("harrypotter"),
+                password_hash=get_password_hash("harrypotter"),
                 first_name="Harry",
                 last_name="Potter",
                 full_name="Harry Potter",
                 department="Web Dev",
                 level=5,
                 location="Tower 2",
-                is_superuser=True,
-                is_active=True
+                user_role="admin",
+                active=True
             )
             
             # Check for admin role

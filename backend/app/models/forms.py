@@ -21,8 +21,10 @@ class Bank(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, nullable=False, index=True)
     code = Column(String(50), unique=True, nullable=False, index=True)
+    logo_url = Column(String(500), nullable=True)
+    primary_color = Column(String(20), nullable=True)
     description = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    active = Column(Boolean, default=True, nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_onupdate=func.now())
@@ -30,6 +32,7 @@ class Bank(Base):
     
     # Relationships
     form_templates = relationship("FormTemplate", back_populates="bank", cascade="all, delete-orphan")
+    bank_users = relationship("User", back_populates="bank")
 
 
 class FormTemplate(Base):
@@ -38,19 +41,21 @@ class FormTemplate(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bank_id = Column(Integer, ForeignKey('banks.id'), nullable=False, index=True)
-    form_type = Column(String(100), nullable=False, index=True)  # e.g., "customer_survey", "loan_application"
+    name = Column(String(255), nullable=False, index=True) # Spec says 'name'
     version = Column(String(20), nullable=False)  # Semantic versioning: "1.0.0", "1.1.0", etc.
     
     # JSON Schema for validation
-    json_schema = Column(JSON, nullable=False)
+    schema_json = Column(JSON, nullable=False) # Spec says 'schema_json'
     
-    # UI Schema for rendering hints
+    # Fields array for UI rendering and conditional logic
+    fields = Column(JSON, nullable=True)
+    
+    # UI Schema for rendering hints (additional styling, etc.)
     ui_schema = Column(JSON, nullable=True)
     
     # Metadata
-    title = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    active = Column(Boolean, default=True, nullable=False) # Spec says 'active'
     
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_onupdate=func.now())
@@ -72,20 +77,26 @@ class FormSubmission(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey('form_templates.id'), nullable=False, index=True)
+    fieldman_id = Column(String(100), nullable=False, index=True) # Spec says 'fieldman_id' (rename submitted_by)
     
     # Submission metadata
-    submitted_by = Column(String(100), nullable=False, index=True)  # Username or field agent ID
     status = Column(String(20), default=SubmissionStatus.DRAFT, nullable=False, index=True)
     
-    # Actual form data (validated against json_schema)
-    submission_data = Column(JSON, nullable=False)
+    # Actual form data (validated against schema_json)
+    data_json = Column(JSON, nullable=False) # Spec says 'data_json'
+    file_tokens = Column(JSON, nullable=True) # Spec says 'file_tokens'
     
     # Validation results
-    validation_errors = Column(JSON, nullable=True)  # Null means valid or not validated yet
+    validation_errors = Column(JSON, nullable=True)
     is_valid = Column(Boolean, default=False, nullable=False)
     
+    # Review fields
+    reviewed_by = Column(String(100), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    reviewed_comment = Column(Text, nullable=True)  # If DB exists: ALTER TABLE form_submissions ADD COLUMN IF NOT EXISTS reviewed_comment TEXT;
+    
     # Timestamps
-    submitted_at = Column(DateTime(timezone=True), nullable=True)  # When status changed to "submitted"
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_onupdate=func.now())
     
@@ -96,22 +107,17 @@ class FormSubmission(Base):
 
 class FormFile(Base):
     """File metadata for form uploads with token-based access"""
-    __tablename__ = "form_files"
+    __tablename__ = "file_uploads" # Spec says 'file_uploads'
 
     id = Column(Integer, primary_key=True, index=True)
-    submission_id = Column(Integer, ForeignKey('form_submissions.id'), nullable=True, index=True)
-    
-    # Field information
-    field_name = Column(String(100), nullable=False)  # Which form field this file belongs to
-    
-    # File metadata
+    token = Column(Uuid(as_uuid=True), default=uuid.uuid4, nullable=False, unique=True, index=True) # Spec says 'token'
     original_filename = Column(String(255), nullable=False)
-    stored_filename = Column(String(255), nullable=False, unique=True)  # UUID-based filename
-    file_size = Column(Integer, nullable=False)  # Size in bytes
+    storage_path = Column(String(255), nullable=False, unique=True) # Spec says 'storage_path'
     mime_type = Column(String(100), nullable=False)
+    file_size = Column(Integer, nullable=False)
     
-    # Security token for access control
-    access_token = Column(Uuid(as_uuid=True), default=uuid.uuid4, nullable=False, unique=True, index=True)
+    submission_id = Column(Integer, ForeignKey('form_submissions.id'), nullable=True, index=True)
+    field_id = Column(String(100), nullable=False)  # Spec says 'field_id' (rename field_name)
     
     # Timestamps
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

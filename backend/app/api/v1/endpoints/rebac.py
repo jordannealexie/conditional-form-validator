@@ -15,6 +15,7 @@ from app.schemas.rbac import (
     REBACCheckResponse
 )
 from app.services.rebac_service import REBACService
+from app.utils.response import create_response
 
 router = APIRouter()
 
@@ -36,7 +37,7 @@ async def create_relationship(
         parent_resource_id=relationship_data.parent_resource_id,
         relationship_type=relationship_data.relationship_type
     )
-    return relationship
+    return create_response(data=ResourceRelationshipResponse.model_validate(relationship), status_code=status.HTTP_201_CREATED)
 
 
 @router.get("/relationships", response_model=List[ResourceRelationshipResponse])
@@ -56,7 +57,8 @@ async def list_relationships(
         resource_type=resource_type,
         resource_id=resource_id
     )
-    return relationships
+    data = [ResourceRelationshipResponse.model_validate(r) for r in relationships]
+    return create_response(data=data)
 
 
 @router.delete("/relationships/{relationship_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -86,7 +88,8 @@ async def get_resource_relationships(
         resource_type=resource_type,
         resource_id=resource_id
     )
-    return relationships
+    data = [ResourceRelationshipResponse.model_validate(r) for r in relationships]
+    return create_response(data=data)
 
 
 @router.post("/check", response_model=REBACCheckResponse)

@@ -10,10 +10,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import select
+from sqlalchemy import select, insert
 from app.core.config import settings
 from app.db.base_class import Base
-from app.models.user import User, Role, Permission, ResourceRelationship
+from app.models.user import User, Role, ResourceRelationship, user_roles
 from app.core.security import get_password_hash
 from app.core.casbin_enforcer import casbin_enforcer
 
@@ -63,7 +63,7 @@ async def init_db():
                 "username": "admin",
                 "password": "Admin123!",
                 "full_name": "Admin User",
-                "is_superuser": True,
+                "active": True,
                 "department": "IT",
                 "level": 10,
                 "location": "HQ",
@@ -74,7 +74,7 @@ async def init_db():
                 "username": "manager",
                 "password": "Manager123!",
                 "full_name": "Manager User",
-                "is_superuser": False,
+                "active": True,
                 "department": "Engineering",
                 "level": 7,
                 "location": "US",
@@ -85,7 +85,7 @@ async def init_db():
                 "username": "user",
                 "password": "User123!",
                 "full_name": "Regular User",
-                "is_superuser": False,
+                "active": True,
                 "department": "Engineering",
                 "level": 5,
                 "location": "US",
@@ -103,7 +103,7 @@ async def init_db():
             if not result.scalar_one_or_none():
                 user = User(
                     **user_data,
-                    hashed_password=get_password_hash(password)
+                    password_hash=get_password_hash(password)
                 )
                 session.add(user)
                 await session.flush()
@@ -114,10 +114,10 @@ async def init_db():
                         select(Role).where(Role.name.in_(role_names))
                     )
                     roles = result.scalars().all()
-                    # Refresh user to load relationships
-                    await session.refresh(user)
-                    user.roles.extend(roles)
+                    for role in roles:
+                        await session.execute(insert(user_roles).values(user_id=user.id, role_id=role.id))
                     await session.flush()
+                await session.commit()
         
         await session.commit()
         print("✅ Users created")

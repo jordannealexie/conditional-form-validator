@@ -4,6 +4,7 @@
 // Session storage keys
 const SESSION_KEY = 'rbac_session';
 const TOKEN_KEY = 'rbac_token';
+const REFRESH_TOKEN_KEY = 'rbac_refresh_token';
 
 /**
  * Login function
@@ -16,9 +17,10 @@ async function login(username, password) {
         const result = await apiLogin(username, password);
 
         if (result && result.access_token) {
-            // In a real app, we'd fetch the user info after login
-            // For now, store the token and fetch 'me'
             localStorage.setItem(TOKEN_KEY, result.access_token);
+            if (result.refresh_token) {
+                localStorage.setItem(REFRESH_TOKEN_KEY, result.refresh_token);
+            }
 
             const user = await apiGetCurrentUser();
 
@@ -26,10 +28,12 @@ async function login(username, password) {
                 id: user.id,
                 username: user.username,
                 email: user.email,
-                full_name: user.full_name,
-                roles: user.roles || ['viewer'],
-                is_admin: user.is_admin || false,
-                attributes: user.attributes || {},
+                first_name: user.first_name,
+                last_name: user.last_name,
+                roles: [user.user_role], // Wrap single role in array for compatibility
+                user_role: user.user_role,
+                bank_id: user.bank_id,
+                is_admin: user.user_role === 'admin',
                 loginTime: new Date().toISOString()
             };
 
@@ -78,6 +82,7 @@ async function register(userData) {
 function logout() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     window.location.href = 'index.html';
 }
 
@@ -139,6 +144,22 @@ function getCurrentUser() {
  */
 function getAuthToken() {
     return localStorage.getItem(TOKEN_KEY);
+}
+
+/**
+ * Get refresh token
+ * @returns {string|null}
+ */
+function getRefreshToken() {
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+/**
+ * Refresh token orchestration
+ * @returns {Promise<boolean>}
+ */
+async function refreshToken() {
+    return await apiRefreshToken();
 }
 
 /**

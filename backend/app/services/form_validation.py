@@ -1,12 +1,8 @@
-"""
-JSONSchema validation service for form submissions
-Supports all JSONSchema validation rules including conditional logic
-"""
 from typing import Dict, Any, List, Optional, Tuple
 import jsonschema
-from jsonschema import validate, ValidationError as JsonSchemaValidationError, Draft7Validator
+from jsonschema import ValidationError as JsonSchemaValidationError
+from app.core.validator import FormValidator
 from app.schemas.forms import ValidationResult, ValidationError as ValidationErrorSchema
-
 
 class FormValidationService:
     """
@@ -15,51 +11,26 @@ class FormValidationService:
     """
     
     @staticmethod
-    def validate_submission(data: Dict[str, Any], schema: Dict[str, Any]) -> ValidationResult:
+    def validate_submission(data: Dict[str, Any], template: Dict[str, Any]) -> ValidationResult:
         """
-        Validate submission data against a JSONSchema
+        Validate submission data against a JSONSchema and UI-level conditional logic
+        """
+        result_dict = FormValidator.validate(data, template)
         
-        Args:
-            data: Form submission data
-            schema: JSONSchema to validate against
-            
-        Returns:
-            ValidationResult with is_valid flag and list of errors
-        """
-        try:
-            # Use Draft7Validator for better error messages
-            validator = Draft7Validator(schema, format_checker=jsonschema.FormatChecker())
-            
-            # Collect all validation errors
-            errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
-            
-            if not errors:
-                return ValidationResult(
-                    is_valid=True,
-                    errors=[],
-                    message="Validation successful"
-                )
-            
-            # Transform JSONSchema errors into user-friendly format
-            validation_errors = FormValidationService._format_validation_errors(errors)
-            
-            return ValidationResult(
-                is_valid=False,
-                errors=validation_errors,
-                message=f"Validation failed with {len(validation_errors)} error(s)"
+        errors = [
+            ValidationErrorSchema(
+                field=e["field"],
+                message=e["message"],
+                constraint=e["code"]
             )
-            
-        except Exception as e:
-            # Handle schema itself being invalid
-            return ValidationResult(
-                is_valid=False,
-                errors=[ValidationErrorSchema(
-                    field="__schema__",
-                    message=f"Schema validation error: {str(e)}",
-                    constraint="schema_error"
-                )],
-                message="Invalid schema configuration"
-            )
+            for e in result_dict["errors"]
+        ]
+        
+        return ValidationResult(
+            is_valid=result_dict["valid"],
+            errors=errors,
+            message="Validation successful" if result_dict["valid"] else "Validation failed"
+        )
     
     @staticmethod
     def validate_with_custom_rules(

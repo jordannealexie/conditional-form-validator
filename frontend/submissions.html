@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submissions - Form Submission</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation (Same as Dashboard) -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Form Submission</h2>
+                <button class="menu-toggle" id="menuToggle">☰</button>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="dashboard.html">
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="users.html">
+                        <span>User Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="admin-templates.html">
+                        <span>Form Templates</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="submissions.html">
+                        <span>Submissions</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="roles.html">
+                        <span>Roles & Permissions</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="profile.html">
+                        <span>My Profile</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar"
+                        style="background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        U</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-role" id="userRole">User</span>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="logout()">
+                    Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <div>
+                    <h1>Submissions</h1>
+                    <p class="page-subtitle">Track and manage all form applications</p>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" id="refreshBtn" style="margin-right: var(--space-sm);">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="location.href='/dashboard.html#applications'">
+                        <i class="fas fa-plus"></i> New Application
+                    </button>
+                </div>
+            </header>
+
+            <!-- Filters -->
+            <div class="card">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-md);">
+                    <div class="form-group">
+                        <label>Filter by Bank</label>
+                        <select id="bankFilter">
+                            <option value="">All Banks</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="draft">Draft</option>
+                            <option value="submitted">Submitted</option>
+                            <option value="processed">Processed</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Search</label>
+                        <div style="position: relative;">
+                            <i class="fas fa-search" style="position: absolute; left: var(--space-sm); top: 50%; transform: translateY(-50%); color: var(--gray);"></i>
+                            <input type="text" id="searchInput" placeholder="Search applicant, template, or ID..." style="padding-left: calc(var(--space-sm) + 20px);">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submissions Table -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Applicant</th>
+                            <th>Form Template</th>
+                            <th>Bank</th>
+                            <th>Status</th>
+                            <th>Submitted On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissionsBody">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div style="padding: var(--space-sm); background: var(--off-white); border-top: 1px solid var(--dark-gray); display: flex; justify-content: space-between; align-items: center;">
+                    <p id="paginationInfo" style="font-size: 14px; color: var(--gray);">Showing 0 to 0 of 0 entries</p>
+                    <div id="paginationBtns" style="display: flex; gap: var(--space-xs);">
+                        <!-- Dynamically generated -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Submission View Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;">
+            <div style="background: var(--primary); padding: var(--space-lg); display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="modalTitle">Application Details</h3>
+                <button onclick="closeModal()" style="color: var(--white);"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="padding: var(--space-lg); overflow-y: auto;" id="modalContent">
+                <!-- Submission data will be shown here -->
+            </div>
+            <div style="padding: var(--space-lg); border-top: 1px solid var(--off-white); background: var(--off-white); display: flex; justify-content: flex-end; gap: var(--space-md);">
+                <button onclick="closeModal()" class="btn btn-secondary">Close</button>
+                <button id="approveBtn" class="btn btn-primary hidden">Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/submissions.js"></script>
+</body>
+
+</html>

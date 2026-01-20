@@ -1,5 +1,5 @@
 from enum import Enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Table, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -23,14 +23,16 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    user_role = Column(String, nullable=True)  # Primary role name
+    bank_id = Column(Integer, ForeignKey('banks.id'), nullable=True)
+    active = Column(Boolean, default=True)
+    
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
-    full_name = Column(String, nullable=True)  # Computed or for backward compatibility
-    is_active = Column(Boolean, default=True)
-    is_superuser = Column(Boolean, default=False)
+    full_name = Column(String, nullable=True)
     
     # Attributes for ABAC
     department = Column(String, nullable=True)
@@ -42,17 +44,10 @@ class User(Base):
     
     # Relationships
     roles = relationship("Role", secondary=user_roles, back_populates="users")
-    attributes = relationship("UserAttribute", back_populates="user", cascade="all, delete-orphan")
+    bank = relationship("Bank", back_populates="bank_users")
+    abac_attributes = relationship("UserAttribute", back_populates="user", cascade="all, delete-orphan")
     
-    @property
-    def role(self) -> str:
-        """Get primary role (first role or default to USER)"""
-        # Check for Casbin role first (set by UserService)
-        if hasattr(self, '_casbin_role'):
-            return self._casbin_role
-        if self.roles:
-            return self.roles[0].name
-        return UserRole.USER.value
+
 
 
 class Role(Base):
@@ -61,24 +56,25 @@ class Role(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
     description = Column(String)
+    permissions = Column(JSON, nullable=True)  # JSONB permissions as per spec
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
     users = relationship("User", secondary=user_roles, back_populates="roles")
-    permissions = relationship("Permission", back_populates="role")
 
-
-class Permission(Base):
-    __tablename__ = "permissions"
+class RefreshToken(Base):
+    """Model for managing refresh tokens and revocation"""
+    __tablename__ = "refresh_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
-    role_id = Column(Integer, ForeignKey('roles.id'), nullable=False)
-    resource = Column(String, nullable=False)
-    action = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token = Column(String(500), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
-    role = relationship("Role", back_populates="permissions")
+    user = relationship("User", backref="refresh_tokens")
 
 
 class ResourceRelationship(Base):

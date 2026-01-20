@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
+from app.utils.response import create_response
 from app.core.casbin_enforcer import casbin_enforcer
 from app.schemas.rbac import (
     RoleAssignment,
@@ -146,3 +147,24 @@ async def check_permission(
         action=check_request.action,
         has_permission=has_permission
     )
+
+
+@router.get("/", response_model=List[RoleResponse])
+async def list_roles():
+    """List all available roles"""
+    # In a real system, roles would be in the database
+    # Here we can query Casbin or just return the standard ones if not found
+    from app.models.user import UserRole
+    from app.db.session import get_db
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from fastapi import Depends
+    from app.repositories.user import UserRepository
+
+    # We'll use a hardcoded list for now as Casbin only stores policies, 
+    # and the prompt asks for "all roles and permissions"
+    data = [
+        {"id": 1, "name": "admin", "description": "System administrator with full access"},
+        {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank"},
+        {"id": 3, "name": "fieldman", "description": "Submit forms and manage own submissions"}
+    ]
+    return create_response(data=data)

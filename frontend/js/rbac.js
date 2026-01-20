@@ -18,8 +18,9 @@ async function loadUserInfo() {
     try {
         const currentUser = await apiGetCurrentUser();
         if (currentUser) {
-            document.getElementById('userName').textContent = currentUser.full_name || currentUser.username;
-            document.getElementById('userRole').textContent = currentUser.roles?.join(', ') || 'User';
+            const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username;
+            document.getElementById('userName').textContent = fullName;
+            document.getElementById('userRole').textContent = currentUser.user_role || 'User';
         }
     } catch (error) {
         console.error('Error loading user info:', error);

@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import health
 from app.api.v1.endpoints import users
-from app.api.v1.endpoints import auth  
+from app.api.v1.endpoints import auth
 from app.api.v1.endpoints import rbac
 from app.api.v1.endpoints import abac
 from app.api.v1.endpoints import rebac
@@ -10,6 +10,8 @@ from app.api.v1.endpoints import authorization
 from app.api.v1.endpoints import banks
 from app.api.v1.endpoints import templates
 from app.api.v1.endpoints import submissions
+from app.api.v1.endpoints import roles
+from app.api.v1.endpoints import files
 
 api_router = APIRouter()
 
@@ -23,5 +25,7 @@ api_router.include_router(authorization.router, prefix="/authorization", tags=["
 api_router.include_router(banks.router, prefix="/banks", tags=["Form System - Banks"])
 api_router.include_router(templates.router, prefix="/templates", tags=["Form System - Templates"])
 api_router.include_router(submissions.router, prefix="/submissions", tags=["Form System - Submissions"])
+api_router.include_router(roles.router, prefix="/roles", tags=["Roles"])
+api_router.include_router(files.router, prefix="/files", tags=["Files"])
 
 # This is the main API router that includes all endpoint routers

@@ -54,6 +54,26 @@ async function apiRequest(endpoint, options = {}) {
     try {
         const response = await fetch(url, config);
 
+        if (response.status === 401 && !options._retry && typeof refreshToken === 'function') {
+            options._retry = true;
+            try {
+                const refreshed = await refreshToken();
+                if (refreshed) {
+                    // Retry original request with new token
+                    const newToken = getAuthToken();
+                    config.headers['Authorization'] = `Bearer ${newToken}`;
+                    const retryResponse = await fetch(url, config);
+                    const retryJson = await retryResponse.json();
+                    if (retryJson && typeof retryJson === 'object' && retryJson.hasOwnProperty('data')) {
+                        return retryJson.data;
+                    }
+                    return retryJson;
+                }
+            } catch (err) {
+                console.error('Refresh token failed:', err);
+            }
+        }
+
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: 'API request failed' }));
             throw new Error(error.detail || 'API request failed');
@@ -119,7 +139,37 @@ async function apiRegister(userData) {
  * @returns {Promise<object>}
  */
 async function apiGetCurrentUser() {
-    return await apiRequest('/users/me');
+    return await apiRequest('/auth/me');
+}
+
+/**
+ * Refresh access token
+ * @returns {Promise<boolean>}
+ */
+async function apiRefreshToken() {
+    const refreshTokenValue = getRefreshToken();
+    if (!refreshTokenValue) return false;
+
+    try {
+        const response = await fetch(`${API_CONFIG.baseURL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshTokenValue })
+        });
+
+        if (!response.ok) return false;
+
+        const json = await response.json();
+        const data = json.data || json;
+
+        if (data && data.access_token) {
+            localStorage.setItem('rbac_token', data.access_token);
+            return true;
+        }
+        return false;
+    } catch (err) {
+        return false;
+    }
 }
 
 // ============ RBAC Endpoints ============
@@ -130,7 +180,7 @@ async function apiGetCurrentUser() {
  * @returns {Promise<Array>}
  */
 async function apiGetUsers() {
-    return await apiRequest('/users'); // Backend uses /users for general user listing
+    return await apiRequest('/users/'); // Backend uses /users for general user listing
 }
 
 /**
@@ -150,7 +200,7 @@ async function apiGetUser(userId) {
  * @returns {Promise<object>}
  */
 async function apiCreateUser(userData) {
-    return await apiRequest('/users', {
+    return await apiRequest('/users/', {
         method: 'POST',
         body: userData
     });
@@ -183,25 +233,45 @@ async function apiDeleteUser(userId) {
 }
 
 /**
- * Get all roles
- * Backend endpoint: GET /rbac/roles
+ * Get all roles with permissions
+ * Backend endpoint: GET /roles
  * @returns {Promise<Array>}
  */
 async function apiGetRoles() {
-    return await apiRequest('/rbac');
+    return await apiRequest('/roles/');
 }
 
 /**
  * Create new role
- * Backend endpoint: POST /rbac/roles
- * @param {object} roleData 
+ * Backend endpoint: POST /roles
+ * @param {object} roleData { name, description?, permissions? }
  * @returns {Promise<object>}
  */
 async function apiCreateRole(roleData) {
-    return await apiRequest('/rbac', {
+    return await apiRequest('/roles/', {
         method: 'POST',
         body: roleData
     });
+}
+
+/**
+ * Delete role
+ * Backend endpoint: DELETE /roles/{id}
+ * @param {number} roleId 
+ * @returns {Promise<object>}
+ */
+async function apiDeleteRole(roleId) {
+    return await apiRequest(`/roles/${roleId}`, { method: 'DELETE' });
+}
+
+/**
+ * Get role permissions
+ * Backend endpoint: GET /roles/{id}/permissions
+ * @param {number} roleId 
+ * @returns {Promise<object>}
+ */
+async function apiGetRolePermissions(roleId) {
+    return await apiRequest(`/roles/${roleId}/permissions`);
 }
 
 /**
@@ -212,7 +282,7 @@ async function apiCreateRole(roleData) {
  * @returns {Promise<{success: boolean}>}
  */
 async function apiAssignRole(username, roleName) {
-    return await apiRequest('/rbac/assign', {
+    return await apiRequest('/rbac/roles/assign', {
         method: 'POST',
         body: { username, role: roleName }
     });
@@ -226,7 +296,7 @@ async function apiAssignRole(username, roleName) {
  * @returns {Promise<{success: boolean}>}
  */
 async function apiRevokeRole(username, roleName) {
-    return await apiRequest('/rbac/revoke', {
+    return await apiRequest('/rbac/roles/revoke', {
         method: 'DELETE',
         body: { username, role: roleName }
     });
@@ -280,7 +350,7 @@ async function apiCreatePolicy(policyData) {
  * @returns {Promise<{allowed: boolean, policy: object}>}
  */
 async function apiTestPolicy(userAttributes, resourceAttributes, policyId) {
-    return await apiRequest('/abac/test', {
+    return await apiRequest('/abac/check', {
         method: 'POST',
         body: {
             user_attributes: userAttributes,
@@ -346,4 +416,142 @@ async function apiCheckPath(sourceId, targetId) {
         has_path: path !== null,
         path: path || []
     };
+}
+
+// ============ Form System Endpoints ============
+
+/**
+ * Get all available banks
+ * @returns {Promise<Array>}
+ */
+async function apiGetBanks() {
+    return await apiRequest('/banks/');
+}
+
+/**
+ * Get templates for a bank
+ * @param {number} bankId 
+ * @returns {Promise<Array>}
+ */
+async function apiGetTemplates(bankId) {
+    return await apiRequest(`/templates/bank/${bankId}`);
+}
+
+/**
+ * Get single template by ID
+ * @param {number} templateId 
+ * @returns {Promise<object>}
+ */
+async function apiGetTemplate(templateId) {
+    return await apiRequest(`/templates/${templateId}`);
+}
+
+/**
+ * Create a new form submission
+ * @param {object} submissionData 
+ * @returns {Promise<object>}
+ */
+async function apiSubmitForm(submissionData) {
+    // submissionData should already contain template_id, status, and data_json
+    // But for backward compatibility with frontend code that might pass old format:
+    const payload = {
+        template_id: submissionData.template_id,
+        status: submissionData.status || 'draft',
+        data_json: submissionData.submission_data || submissionData.data_json
+    };
+
+    return await apiRequest('/submissions/', {
+        method: 'POST',
+        body: payload
+    });
+}
+
+/**
+ * Get all submissions (paginated)
+ * @param {number} page 
+ * @param {number} pageSize 
+ * @returns {Promise<object>}
+ */
+async function apiGetSubmissions(page = 1, pageSize = 10) {
+    return await apiRequest(`/submissions/?page=${page}&page_size=${pageSize}`);
+}
+
+/**
+ * Validate a submission without saving
+ * @param {number} templateId 
+ * @param {object} submissionData 
+ * @returns {Promise<object>}
+ */
+async function apiValidateSubmission(templateId, submissionData) {
+    return await apiRequest('/submissions/validate', {
+        method: 'POST',
+        body: { template_id: templateId, submission_data: submissionData }
+    });
+}
+
+
+/**
+ * Get single submission details
+ * @param {number} submissionId 
+ * @returns {Promise<object>}
+ */
+async function apiGetSubmission(submissionId) {
+    return await apiRequest(`/submissions/${submissionId}`);
+}
+
+/**
+ * Update submission (draft only)
+ * @param {number} submissionId 
+ * @param {object} data { data_json?, status? }
+ * @returns {Promise<object>}
+ */
+async function apiUpdateSubmission(submissionId, data) {
+    return await apiRequest(`/submissions/${submissionId}`, { method: 'PUT', body: data });
+}
+
+/**
+ * Delete submission (own draft only)
+ * @param {number} submissionId 
+ * @returns {Promise<object>}
+ */
+async function apiDeleteSubmission(submissionId) {
+    return await apiRequest(`/submissions/${submissionId}`, { method: 'DELETE' });
+}
+
+/**
+ * Review submission (supervisor): approve or reject
+ * @param {number} submissionId 
+ * @param {object} data { action: 'approve'|'reject', comment? }
+ * @returns {Promise<object>}
+ */
+async function apiReviewSubmission(submissionId, data) {
+    return await apiRequest(`/submissions/${submissionId}/review`, { method: 'POST', body: data });
+}
+
+/**
+ * Upload file for form. Returns { token, field_id, original_filename, ... }.
+ * @param {FormData} formData with 'file', 'field_id', optionally 'submission_id'
+ * @returns {Promise<object>}
+ */
+async function apiUploadFile(formData) {
+    const url = `${API_CONFIG.baseURL}/files/upload`;
+    const headers = {};
+    if (typeof getAuthToken === 'function') {
+        const t = getAuthToken();
+        if (t) headers['Authorization'] = `Bearer ${t}`;
+    }
+    const r = await fetch(url, { method: 'POST', body: formData, headers });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || j.message || 'Upload failed');
+    return (j && j.data) ? j.data : j;
+}
+
+/**
+ * Get file download URL by token (for use in href or iframe).
+ * The actual download requires auth; this returns the API path.
+ * @param {string} token 
+ * @returns {string}
+ */
+function apiGetFileUrl(token) {
+    return `${API_CONFIG.baseURL}/files/${token}`;
 }

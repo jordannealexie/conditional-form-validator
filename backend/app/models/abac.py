@@ -18,7 +18,7 @@ class UserAttribute(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationship to User
-    user = relationship("User", back_populates="attributes")
+    user = relationship("User", back_populates="abac_attributes")
 
 
 class ResourceAttribute(Base):

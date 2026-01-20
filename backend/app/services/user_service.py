@@ -5,6 +5,7 @@ from app.core.casbin_enforcer import casbin_enforcer
 from app.models.user import User
 from app.repositories.user import UserRepository
 from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.auth import UserCreate as AuthUserCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 class UserService:    
@@ -13,6 +14,24 @@ class UserService:
         """Initialize with user repository"""
         self.db = db
         self.user_repo = user_repo
+
+    async def create_admin_user(self, inp: AuthUserCreate) -> User:
+        """Create user from admin (auth.UserCreate with user_role, bank_id)."""
+        data = {
+            "username": inp.username,
+            "email": inp.email,
+            "password_hash": get_password_hash(inp.password),
+            "user_role": inp.user_role or "fieldman",
+            "bank_id": inp.bank_id,
+            "active": True,
+            "first_name": inp.first_name,
+            "last_name": inp.last_name,
+            "full_name": inp.full_name,
+            "department": inp.department,
+            "level": inp.level or 1,
+            "location": inp.location,
+        }
+        return await self.user_repo.create(obj_in=data)
 
     async def get(self, user_id: int) -> Optional[User]:
         """Get a user by ID"""
@@ -54,19 +73,11 @@ class UserService:
 
     async def create(self, obj_in: UserCreate) -> User:
         """Create a new user"""
-        hashed_password = get_password_hash(obj_in.password)        
-
-        # Create user object
-        db_obj = obj_in.dict()
-        db_obj["hashed_password"] = hashed_password
-
-        # Remove password field as we don't store it directly
-        if "password" in db_obj:
-            del db_obj["password"]
-            
+        hashed = get_password_hash(obj_in.password)
+        db_obj = obj_in.model_dump(exclude={"password"}, exclude_unset=True) if hasattr(obj_in, "model_dump") else obj_in.dict(exclude={"password"})
+        db_obj["password_hash"] = hashed
         if "role" in db_obj:
-            del db_obj["role"]
-
+            db_obj["user_role"] = db_obj.pop("role", None)
         return await self.user_repo.create(obj_in=db_obj)
 
     async def update(self, user_id: int, obj_in: Union[UserUpdate, dict]) -> Optional[User]:
@@ -116,8 +127,8 @@ class UserService:
         if not user:
             return None
             
-        # 1. Update is_active
-        user.is_active = False
+        # 1. Update active
+        user.active = False
         self.db.add(user)
         
         # 2. Remove permissions/roles from Casbin

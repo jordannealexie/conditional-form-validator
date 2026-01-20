@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Form Submission</title>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Form Submission</h2>
+                <button class="menu-toggle" id="menuToggle">☰</button>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="dashboard.html">
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="users.html">
+                        <span>User Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="admin-templates.html">
+                        <span>Form Templates</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="submissions.html">
+                        <span>Submissions</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="roles.html">
+                        <span>Roles & Permissions</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="profile.html">
+                        <span>My Profile</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-info" id="userInfo">
+                    <div class="user-avatar"
+                        style="background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        U</div>
+                    <div class="user-details">
+                        <span class="user-name" id="userName">Loading...</span>
+                        <span class="user-role" id="userRole">User</span>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-block" onclick="logout()">
+                    Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <h1>My Profile</h1>
+                <p class="page-subtitle">Manage your account settings and view activity</p>
+            </header>
+
+            <div class="grid grid-2">
+                <!-- User Information -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Personal Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm" onsubmit="handleProfileUpdate(event)">
+                            <div class="form-group">
+                                <label for="profile_username">Username</label>
+                                <input type="text" id="profile_username" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="profile_email">Email</label>
+                                <input type="email" id="profile_email" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="profile_first_name">First Name</label>
+                                    <input type="text" id="profile_first_name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="profile_last_name">Last Name</label>
+                                    <input type="text" id="profile_last_name">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="profile_department">Department</label>
+                                <input type="text" id="profile_department" readonly>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Update Profile</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Password Change -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Security</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="passwordForm" onsubmit="handlePasswordChange(event)">
+                            <div class="form-group">
+                                <label for="current_password">Current Password</label>
+                                <input type="password" id="current_password" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new_password">New Password</label>
+                                <input type="password" id="new_password" required minlength="8">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm_password">Confirm New Password</label>
+                                <input type="password" id="confirm_password" required minlength="8">
+                            </div>
+                            <button type="submit" class="btn btn-outline btn-block">Change Password</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="card" style="margin-top: 24px;">
+                <div class="card-header">
+                    <h3 class="card-title">Recent Activity</h3>
+                </div>
+                <div class="table-container">
+                    <table id="activityTable">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Resource</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center;">Loading activity...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+
+</html>

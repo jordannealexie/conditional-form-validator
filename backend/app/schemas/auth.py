@@ -4,24 +4,27 @@ from datetime import datetime
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 
 class TokenData(BaseModel):
+    user_id: Optional[int] = None
     username: Optional[str] = None
-    email: Optional[str] = None
-    department: Optional[str] = None
-    level: Optional[int] = None
-    location: Optional[str] = None
+    user_role: Optional[str] = None
+    bank_id: Optional[int] = None
+    permissions: Optional[list] = None
 
 
 class UserCreate(BaseModel):
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
+    user_role: Optional[str] = "fieldman"
+    bank_id: Optional[int] = None
     first_name: Optional[str] = Field(None, min_length=2, max_length=50)
     last_name: Optional[str] = Field(None, min_length=2, max_length=50)
-    full_name: Optional[str] = None  # Backward compatibility
+    full_name: Optional[str] = None
     department: Optional[str] = None
     level: int = 1
     location: Optional[str] = None
@@ -31,11 +34,12 @@ class UserResponse(BaseModel):
     id: int
     email: str
     username: str
+    user_role: Optional[str] = None
+    bank_id: Optional[int] = None
+    active: bool
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     full_name: Optional[str] = None
-    is_active: bool
-    is_superuser: bool
     department: Optional[str] = None
     level: int
     location: Optional[str] = None
@@ -44,3 +48,15 @@ class UserResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class UserAdminUpdate(BaseModel):
+    """Schema for admin updating user (email, role, bank, active)"""
+    email: Optional[EmailStr] = None
+    user_role: Optional[str] = None
+    bank_id: Optional[int] = None
+    active: Optional[bool] = None
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str

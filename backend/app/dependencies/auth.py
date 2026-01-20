@@ -63,14 +63,8 @@ async def get_current_user(
 async def get_current_active_user(current_user: User = Depends(get_current_user)):
     """
     Get the current active user from the token.
-    Args:
-        current_user: Current authenticated user (User model)
-    Returns:
-        Current active user (User model)
-    Raises:
-        HTTPException: If the user is inactive
     """
-    if not current_user.is_active:
+    if not current_user.active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
@@ -82,14 +76,8 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
 async def get_current_superuser(current_user: User = Depends(get_current_active_user)):
     """
     Get the current superuser (admin).
-    Args:
-        current_user: Current authenticated user (User model)
-    Returns:
-        Current superuser (User model)
-    Raises:
-        HTTPException: If the user is not a superuser
     """
-    if not current_user.is_superuser:
+    if current_user.user_role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: admin privileges required"
@@ -129,15 +117,8 @@ def authorize(allowed_roles: Optional[List[str]] = None):
     """
     async def role_checker(current_user: User = Depends(get_current_active_user)):
         if allowed_roles:
-            # Get user's role - check if they have a role in the database
-            # For now, check if user has roles relationship
-            user_roles = [role.name for role in current_user.roles] if current_user.roles else []
-            # Also check is_superuser as admin role
-            if current_user.is_superuser and "admin" not in user_roles:
-                user_roles.append("admin")
-            
-            # Check if user has any of the allowed roles
-            if not any(role in allowed_roles for role in user_roles):
+            # Check if current user has one of the allowed roles
+            if current_user.user_role not in allowed_roles and current_user.user_role != "admin":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Access forbidden: insufficient role"
