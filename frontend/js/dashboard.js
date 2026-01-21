@@ -23,17 +23,7 @@ async function loadDashboard() {
         }
 
         // Update user info in sidebar
-        const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username;
-        const firstLetter = (currentUser.first_name || currentUser.username || 'U')[0].toUpperCase();
-
-        document.getElementById('userName').textContent = fullName;
-        document.getElementById('userRole').textContent = currentUser.user_role || 'User';
-
-        // Update user avatar with first letter
-        const userAvatar = document.getElementById('userAvatar');
-        if (userAvatar) {
-            userAvatar.textContent = firstLetter;
-        }
+        updateAppUserDisplay(currentUser);
 
         // Update system info section
         if (document.getElementById('currentUserName')) {
@@ -44,17 +34,17 @@ async function loadDashboard() {
         }
 
         // Fetch counts from various APIs
-        const [users, roles, policies, relationships] = await Promise.all([
+        const [users, roles, abacStats, relationships] = await Promise.all([
             apiGetUsers().catch(() => []),
             apiGetRoles().catch(() => []),
-            apiGetPolicies().catch(() => []),
+            apiGetAbacStats().catch(() => ({ total_policies: 0, applied_policies: 0 })),
             apiGetRelationships().catch(() => [])
         ]);
 
         // Update stats cards
         document.getElementById('totalUsers').textContent = users.length;
         document.getElementById('totalRoles').textContent = roles.length;
-        document.getElementById('totalPolicies').textContent = policies.length;
+        document.getElementById('totalPolicies').textContent = `${abacStats.total_policies} (${abacStats.applied_policies} Applied)`;
         document.getElementById('totalRelationships').textContent = relationships.length;
 
     } catch (error) {

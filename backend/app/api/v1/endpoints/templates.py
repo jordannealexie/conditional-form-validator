@@ -152,5 +152,12 @@ async def delete_template(
     template = await FormTemplateRepository.get_by_id(db, template_id)
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
-    await FormTemplateRepository.delete(db, template)
+    try:
+        await FormTemplateRepository.delete(db, template)
+    except Exception as e:
+        # In case of foreign key constraints or other DB errors
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not delete template. It may have associated submissions. Error: {str(e)}"
+        )
     return create_response(message="Template deleted")

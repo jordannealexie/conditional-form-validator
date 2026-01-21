@@ -23,12 +23,52 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadUserInfo() {
     try {
         const user = await apiGetCurrentUser();
-        if (user) {
-            document.getElementById('userName').textContent = user.username;
-            document.getElementById('userRole').textContent = (user.roles || []).join(', ') || 'Admin';
-        }
+        updateAppUserDisplay(user);
     } catch (error) {
         console.error('Error loading user info:', error);
+    }
+}
+
+// ... existing code ...
+
+function renderTemplateList(list) {
+    const tbody = document.getElementById('templateTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">No templates found</td></tr>';
+        return;
+    }
+
+    list.forEach(t => {
+        const tr = document.createElement('tr');
+        const bankName = t.bank ? t.bank.name : (banks.find(b => b.id === t.bank_id)?.name || 'Unknown');
+        tr.innerHTML = `
+            <td>${t.id}</td>
+            <td><strong>${escapeHtml(t.name)}</strong></td>
+            <td>${escapeHtml(t.version)}</td>
+            <td>${escapeHtml(bankName)}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editExistingTemplate(${t.id})">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteExistingTemplate(${t.id})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+// ... existing code ...
+
+async function deleteExistingTemplate(id) {
+    if (!confirm('Are you sure you want to delete this template?')) return;
+    try {
+        await apiRequest(`/templates/${id}`, { method: 'DELETE' });
+        showToast('Template deleted', 'success');
+
+        // Remove from UI immediately
+        loadTemplates();
+    } catch (error) {
+        showToast(error.message || 'Error deleting template', 'error');
     }
 }
 
@@ -501,6 +541,7 @@ function renderTemplateList(list) {
         const tr = document.createElement('tr');
         const bankName = t.bank ? t.bank.name : (banks.find(b => b.id === t.bank_id)?.name || 'Unknown');
         tr.innerHTML = `
+            <td>${t.id}</td>
             <td><strong>${escapeHtml(t.name)}</strong></td>
             <td>${escapeHtml(t.version)}</td>
             <td>${escapeHtml(bankName)}</td>
@@ -579,7 +620,7 @@ async function deleteExistingTemplate(id) {
         showToast('Template deleted', 'success');
         loadTemplates();
     } catch (error) {
-        showToast('Error deleting template', 'error');
+        showToast(error.message || 'Error deleting template', 'error');
     }
 }
 

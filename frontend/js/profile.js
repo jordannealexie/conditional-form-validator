@@ -101,11 +101,11 @@ async function handleProfileUpdate(ev) {
     ev.preventDefault();
     const fd = new FormData(ev.target);
     const payload = {
-        first_name: fd.get('first_name') || null,
-        last_name: fd.get('last_name') || null,
+        first_name: fd.get('first_name') ? fd.get('first_name') : null,
+        last_name: fd.get('last_name') ? fd.get('last_name') : null,
         email: fd.get('email'),
-        department: fd.get('department') || null,
-        location: fd.get('location') || null
+        department: fd.get('department') ? fd.get('department') : null,
+        location: fd.get('location') ? fd.get('location') : null
     };
     try {
         const updated = await apiUpdateProfile(payload);

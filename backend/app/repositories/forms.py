@@ -166,8 +166,15 @@ class FormTemplateRepository:
                 )
             )
         )
+        result = await db.execute(query)
         count = result.scalar()
         return count > 0
+
+    @staticmethod
+    async def delete(db: AsyncSession, template: FormTemplate) -> None:
+        """Delete template"""
+        await db.delete(template)
+        await db.commit()
 
 
 class FormSubmissionRepository:

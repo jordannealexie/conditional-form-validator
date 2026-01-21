@@ -116,3 +116,33 @@ async def check_rebac_permission(
         relationship_path=relationship_path,
         reason=reason
     )
+
+@router.put("/relationships/{relationship_id}", response_model=ResourceRelationshipResponse)
+async def update_relationship(
+    relationship_id: int,
+    relationship_data: ResourceRelationshipCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_superuser)
+):
+    """Update a relationship (admin only)"""
+    service = REBACService(db)
+    
+    # Check existence
+    # We can add an update method to service
+    updated = await service.update_relationship(
+        relationship_id,
+        relationship_type=relationship_data.relationship_type,
+        # Potentially allow updating other fields if needed, but usually just type changes.
+        # However, the UI might send all fields.
+        subject_type=relationship_data.subject_type,
+        subject_id=relationship_data.subject_id,
+        resource_type=relationship_data.resource_type,
+        resource_id=relationship_data.resource_id,
+        parent_resource_type=relationship_data.parent_resource_type,
+        parent_resource_id=relationship_data.parent_resource_id
+    )
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Relationship not found")
+        
+    return create_response(data=ResourceRelationshipResponse.model_validate(updated))

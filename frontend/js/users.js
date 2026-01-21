@@ -13,11 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadUserInfo() {
     try {
         const u = await apiGetCurrentUser();
-        if (u) {
-            const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.username;
-            const el = document.getElementById('userName'); if (el) el.textContent = name;
-            const r = document.getElementById('userRole'); if (r) r.textContent = u.user_role || 'User';
-        }
+        updateAppUserDisplay(u);
     } catch (e) { console.error('loadUserInfo', e); }
 }
 
@@ -54,6 +50,7 @@ function createUserRow(user) {
     const roleHtml = user.user_role ? `<span class="badge ${roleCls}">${escapeHtml(user.user_role)}</span>` : '<span class="badge badge-secondary">—</span>';
     const statusHtml = user.active !== false ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-secondary">Inactive</span>';
     tr.innerHTML = `
+        <td>${user.id}</td>
         <td><strong>${escapeHtml(user.username)}</strong></td>
         <td>${escapeHtml(user.email || '—')}</td>
         <td>${escapeHtml(user.department || '—')}</td>

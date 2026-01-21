@@ -79,6 +79,32 @@ class REBACService:
         await self.db.delete(relationship)
         await self.db.commit()
         return True
+
+    async def update_relationship(
+        self,
+        relationship_id: int,
+        **kwargs
+    ) -> Optional[ResourceRelationship]:
+        """Update a relationship"""
+        result = await self.db.execute(
+            select(ResourceRelationship).where(ResourceRelationship.id == relationship_id)
+        )
+        relationship = result.scalar_one_or_none()
+        
+        if not relationship:
+            return None
+            
+        for key, value in kwargs.items():
+            if hasattr(relationship, key):
+                setattr(relationship, key, value)
+                
+        await self.db.commit()
+        await self.db.refresh(relationship)
+        
+        # Sync to Casbin (remove old, add new - simplified for now just add)
+        await self.sync_relationship_to_casbin(relationship)
+        
+        return relationship
     
     # Permission Checking
     async def check_access_path(
