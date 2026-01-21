@@ -77,9 +77,17 @@ async function register(userData) {
 }
 
 /**
- * Logout function
+ * Logout function with confirmation
  */
 function logout() {
+    const content = `<p>Are you sure you want to logout?</p>`;
+    createModal('Confirm Logout', content, [
+        { label: 'Cancel', type: 'secondary', onclick: 'closeModal()' },
+        { label: 'Logout', type: 'danger', onclick: 'confirmLogout()' }
+    ]);
+}
+
+function confirmLogout() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);

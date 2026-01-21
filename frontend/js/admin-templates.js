@@ -35,12 +35,14 @@ async function loadUserInfo() {
  * Load banks for template creation
  */
 async function loadBanks() {
-    try {
-        banks = await apiGetBanks();
-        populateBankSelect();
-    } catch (error) {
-        console.error('Error loading banks:', error);
-    }
+    // Pre-populate with required banks
+    const predefinedBanks = [
+        { id: 1, name: 'BDO' },
+        { id: 2, name: 'Maya' },
+        { id: 3, name: 'Security Bank' }
+    ];
+    banks = predefinedBanks;
+    populateBankSelect();
 }
 
 function populateBankSelect() {

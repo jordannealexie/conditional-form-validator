@@ -93,3 +93,47 @@ async def get_role_permissions(
     if not role:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     return create_response(data={"id": role.id, "name": role.name, "permissions": role.permissions or []})
+
+
+@router.get("/{id}/user-count")
+async def get_role_user_count(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+) -> Any:
+    """Get user count for a role. Admin only."""
+    result = await db.execute(select(Role).where(Role.id == id))
+    role = result.scalar_one_or_none()
+    if not role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    count = await db.execute(select(func.count()).select_from(user_roles).where(user_roles.c.role_id == id))
+    user_count = count.scalar() or 0
+    return create_response(data={"role_id": id, "user_count": user_count})
+
+
+@router.put("/{id}")
+async def update_role(
+    id: int,
+    body: RoleCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+) -> Any:
+    """Update a role. Admin only."""
+    result = await db.execute(select(Role).where(Role.id == id))
+    role = result.scalar_one_or_none()
+    if not role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    
+    # Check for duplicate name if changing
+    if body.name != role.name:
+        r = await db.execute(select(Role).where(Role.name == body.name))
+        if r.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role name already exists")
+    
+    role.name = body.name
+    role.description = body.description
+    role.permissions = body.permissions or []
+    
+    await db.commit()
+    await db.refresh(role)
+    return create_response(data=RoleResponse.model_validate(role))

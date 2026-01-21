@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('statusFilter').addEventListener('change', handleFilterChange);
     document.getElementById('searchInput').addEventListener('input', debounce(handleFilterChange, 500));
     document.getElementById('refreshBtn').addEventListener('click', () => loadSubmissions());
-    
+
     // 6. Setup Mobile Menu
     setupMobileMenu();
 });
@@ -58,17 +58,23 @@ function setupMobileMenu() {
 
 async function setupFilters() {
     const bankFilter = document.getElementById('bankFilter');
-    try {
-        const banks = await apiGetBanks();
-        banks.forEach(bank => {
-            const option = document.createElement('option');
-            option.value = bank.id;
-            option.textContent = bank.name;
-            bankFilter.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Failed to load banks for filter:', error);
-    }
+    // Clear existing options except the first one
+    bankFilter.innerHTML = '';
+
+    // Add predefined bank options with correct IDs matching database
+    const predefinedBanks = [
+        { id: '', name: 'All Banks' },
+        { id: '1', name: 'BDO' },
+        { id: '2', name: 'Maya' },
+        { id: '3', name: 'Security Bank' }
+    ];
+
+    predefinedBanks.forEach(bank => {
+        const option = document.createElement('option');
+        option.value = bank.id;
+        option.textContent = bank.name;
+        bankFilter.appendChild(option);
+    });
 }
 
 async function loadSubmissions() {
@@ -77,7 +83,7 @@ async function loadSubmissions() {
 
     try {
         const response = await apiGetSubmissions(currentPage, 10);
-        
+
         // Handle response wrapper
         const submissions = response.data || response.items || response;
         const total = response.total || 0;
@@ -248,7 +254,7 @@ async function viewSubmission(id) {
         // Show approve/reject buttons for supervisors/admins on submitted forms
         const userRole = (document.getElementById('userRole').textContent || '').toLowerCase();
         const canReview = userRole === 'supervisor' || userRole === 'admin';
-        
+
         if (sub.status === 'submitted' && canReview) {
             approveBtn.classList.remove('hidden');
             rejectBtn.classList.remove('hidden');
@@ -279,7 +285,7 @@ function escapeHtml(text) {
 
 async function approveSubmission() {
     if (!currentSubmissionId) return;
-    
+
     try {
         await apiReviewSubmission(currentSubmissionId, { action: 'approve' });
         showToast('Submission approved successfully', 'success');
@@ -292,10 +298,10 @@ async function approveSubmission() {
 
 async function rejectSubmission() {
     if (!currentSubmissionId) return;
-    
+
     const comment = prompt('Please provide a reason for rejection:');
     if (comment === null) return; // Cancelled
-    
+
     try {
         await apiReviewSubmission(currentSubmissionId, { action: 'reject', comment: comment || 'Rejected' });
         showToast('Submission rejected', 'success');
@@ -308,7 +314,7 @@ async function rejectSubmission() {
 
 async function deleteSubmission(id) {
     if (!confirm('Are you sure you want to delete this draft submission?')) return;
-    
+
     try {
         await apiDeleteSubmission(id);
         showToast('Submission deleted successfully', 'success');

@@ -37,7 +37,18 @@ async function loadProfileData() {
             document.getElementById('profile_email').value = user.email || '';
             document.getElementById('profile_first_name').value = user.first_name || '';
             document.getElementById('profile_last_name').value = user.last_name || '';
-            document.getElementById('profile_department').value = user.department || 'General';
+            
+            // Set department dropdown
+            const deptSelect = document.getElementById('profile_department');
+            if (user.department && deptSelect) {
+                deptSelect.value = user.department;
+            }
+            
+            // Set location dropdown
+            const locSelect = document.getElementById('profile_location');
+            if (user.location && locSelect) {
+                locSelect.value = user.location;
+            }
         }
     } catch (error) {
         showToast('Error loading profile data', 'error');
@@ -53,7 +64,9 @@ async function loadActivityLogs() {
 
     try {
         // Backend endpoint: GET /users/me/activity
-        const logs = await apiRequest('/users/me/activity');
+        const response = await apiRequest('/users/me/activity');
+        // Handle response format {data: [...]}
+        const logs = response?.data || response || [];
         tbody.innerHTML = '';
 
         if (!logs || logs.length === 0) {
@@ -67,9 +80,9 @@ async function loadActivityLogs() {
             const statusClass = log.status === 'success' ? 'badge-success' : 'badge-danger';
 
             tr.innerHTML = `
-                <td><strong>${log.action}</strong></td>
+                <td><strong>${log.action || 'N/A'}</strong></td>
                 <td>${log.resource_type || 'N/A'}</td>
-                <td><span class="badge ${statusClass}">${log.status}</span></td>
+                <td><span class="badge ${statusClass}">${log.status || 'N/A'}</span></td>
                 <td>${time}</td>
                 <td>${log.details || ''}</td>
             `;
@@ -90,7 +103,9 @@ async function handleProfileUpdate(event) {
     const userData = {
         email: document.getElementById('profile_email').value,
         first_name: document.getElementById('profile_first_name').value,
-        last_name: document.getElementById('profile_last_name').value
+        last_name: document.getElementById('profile_last_name').value,
+        department: document.getElementById('profile_department').value,
+        location: document.getElementById('profile_location').value
     };
 
     try {

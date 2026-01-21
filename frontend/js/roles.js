@@ -26,11 +26,14 @@ async function loadUserInfo() {
     } catch (e) { console.error(e); }
 }
 
-function renderPermissionsGrid() {
-    const el = document.getElementById('permissionsGrid');
+function renderPermissionsGrid(containerId = 'permissionsGrid', selectedPermissions = []) {
+    const el = document.getElementById(containerId);
     if (!el) return;
     el.innerHTML = AVAILABLE_PERMISSIONS.map(p => `
-        <label class="perm-check"><input type="checkbox" name="perm" value="${escapeHtml(p)}"> ${escapeHtml(p)}</label>
+        <label class="perm-check">
+            <input type="checkbox" name="perm" value="${escapeHtml(p)}" ${selectedPermissions.includes(p) ? 'checked' : ''}> 
+            ${escapeHtml(p)}
+        </label>
     `).join('');
 }
 
@@ -56,7 +59,10 @@ async function loadRoles() {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No roles found</td></tr>';
             return;
         }
-        list.forEach(role => tbody.appendChild(createRoleRow(role)));
+        for (const role of list) {
+            const userCount = await getRoleUserCount(role.id);
+            tbody.appendChild(createRoleRow(role, userCount));
+        }
     } catch (e) {
         console.error('loadRoles', e);
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);">Error loading roles</td></tr>';
@@ -64,19 +70,28 @@ async function loadRoles() {
     }
 }
 
-function createRoleRow(role) {
+async function getRoleUserCount(roleId) {
+    try {
+        const result = await apiRequest(`/roles/${roleId}/user-count`);
+        return result?.user_count || 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+function createRoleRow(role, userCount = 0) {
     const tr = document.createElement('tr');
     const perms = role.permissions || [];
     const permText = Array.isArray(perms) ? perms.join(', ') : (typeof perms === 'string' ? perms : '—');
     const permShort = permText.length > 60 ? permText.slice(0, 57) + '…' : permText;
-    const isSystem = ['admin', 'supervisor', 'fieldman'].includes((role.name || '').toLowerCase());
     tr.innerHTML = `
         <td><strong>${escapeHtml(role.name || '')}</strong></td>
         <td>${escapeHtml(role.description || '—')}</td>
         <td title="${escapeHtml(permText)}">${escapeHtml(permShort) || '—'}</td>
-        <td>—</td>
+        <td>${userCount}</td>
         <td class="table-actions">
-            ${isSystem ? '<span class="badge badge-secondary">system</span>' : `<button class="btn btn-sm btn-danger" onclick="deleteRole(${role.id}, '${escapeHtml(role.name || '').replace(/'/g, "\\'")}')">Delete</button>`}
+            <button class="btn btn-sm btn-primary" onclick="editRole(${role.id})">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRole(${role.id}, '${escapeHtml(role.name || '').replace(/'/g, "\\'")}')">Delete</button>
         </td>
     `;
     return tr;
@@ -98,6 +113,56 @@ async function handleCreateRole(ev) {
     }
 }
 
+async function editRole(roleId) {
+    try {
+        const roles = await apiGetRoles();
+        const roleList = Array.isArray(roles) ? roles : (roles && roles.data ? roles.data : []);
+        const role = roleList.find(r => r.id === roleId);
+        if (!role) return;
+
+        const currentPerms = role.permissions || [];
+        const content = `
+            <form id="editRoleForm" onsubmit="handleEditRole(event, ${roleId})">
+                <div class="form-group"><label>Role Name *</label><input type="text" name="name" value="${escapeHtml(role.name || '')}" required></div>
+                <div class="form-group"><label>Description</label><textarea name="description" rows="3">${escapeHtml(role.description || '')}</textarea></div>
+                <div class="form-group">
+                    <label>Permissions</label>
+                    <div class="permissions-grid" id="editPermissionsGrid"></div>
+                </div>
+            </form>
+        `;
+        createModal('Edit Role', content, [
+            { label: 'Cancel', type: 'secondary', onclick: 'closeModal()' },
+            { label: 'Save', type: 'primary', onclick: 'document.getElementById("editRoleForm").requestSubmit()' }
+        ]);
+        renderPermissionsGrid('editPermissionsGrid', currentPerms);
+    } catch (e) {
+        showToast('Error loading role', 'error');
+    }
+}
+
+async function handleEditRole(ev, roleId) {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+    const perms = Array.from(document.querySelectorAll('#editPermissionsGrid input[name=perm]:checked')).map(c => c.value);
+    const payload = {
+        name: fd.get('name'),
+        description: fd.get('description'),
+        permissions: perms
+    };
+    try {
+        await apiRequest(`/roles/${roleId}`, {
+            method: 'PUT',
+            body: payload
+        });
+        showToast('Role updated successfully', 'success');
+        closeModal();
+        loadRoles();
+    } catch (e) {
+        showToast(e.message || 'Error updating role', 'error');
+    }
+}
+
 function deleteRole(id, name) {
     const content = `<p>Delete role <strong>${escapeHtml(name)}</strong>? If it is assigned to users, the request will fail.</p>`;
     createModal('Delete Role', content, [
@@ -116,3 +181,4 @@ async function confirmDeleteRole(id) {
         showToast(e.message || 'Error deleting role', 'error');
     }
 }
+

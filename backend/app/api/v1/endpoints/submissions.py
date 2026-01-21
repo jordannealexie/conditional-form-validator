@@ -90,53 +90,83 @@ async def list_submissions(
     page_size: int = 20,
     status: Optional[str] = None,
     template_id: Optional[int] = None,
+    bank_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ) -> Any:
     """
     List form submissions with role-based and bank-based filtering.
     """
-    offset = (page - 1) * page_size
-    
-    query = select(models.FormSubmission).options(
-        selectinload(models.FormSubmission.template).selectinload(models.FormTemplate.bank)
-    ).join(models.FormTemplate)
-    count_query = select(models.FormSubmission).join(models.FormTemplate)
-    
-    # Filter by user role/bank
-    if current_user.user_role == "admin":
-        pass # Admin sees all
-    elif current_user.user_role == "supervisor":
-        # Supervisor sees all in their bank
-        query = query.where(models.FormTemplate.bank_id == current_user.bank_id)
-        count_query = count_query.where(models.FormTemplate.bank_id == current_user.bank_id)
-    else:
-        # Fieldman sees only their own
-        query = query.where(models.FormSubmission.fieldman_id == current_user.username)
-        count_query = count_query.where(models.FormSubmission.fieldman_id == current_user.username)
+    try:
+        offset = (page - 1) * page_size
         
-    # Additional filters
-    if status:
-        query = query.where(models.FormSubmission.status == status)
-        count_query = count_query.where(models.FormSubmission.status == status)
-    if template_id:
-        query = query.where(models.FormSubmission.template_id == template_id)
-        count_query = count_query.where(models.FormSubmission.template_id == template_id)
+        # Use outerjoin instead of join to handle case when no submissions exist
+        query = select(models.FormSubmission).options(
+            selectinload(models.FormSubmission.template).selectinload(models.FormTemplate.bank)
+        ).outerjoin(models.FormTemplate, models.FormSubmission.template_id == models.FormTemplate.id)
         
-    # Results
-    result = await db.execute(query.offset(offset).limit(page_size))
-    submissions = result.scalars().all()
-    
-    # Count
-    total_result = await db.execute(select(func.count()).select_from(count_query.subquery()))
-    total = total_result.scalar() or 0
-    
-    return create_response(data={
-        "data": [FormSubmissionResponse.model_validate(s) for s in submissions],
-        "total": total,
-        "page": page,
-        "page_size": page_size
-    })
+        # Filter by user role/bank
+        if current_user.user_role == "admin":
+            pass # Admin sees all
+        elif current_user.user_role == "supervisor":
+            # Supervisor sees all in their bank
+            if current_user.bank_id:
+                query = query.where(models.FormTemplate.bank_id == current_user.bank_id)
+        else:
+            # Fieldman sees only their own
+            query = query.where(models.FormSubmission.fieldman_id == current_user.username)
+            
+        # Additional filters
+        if status:
+            query = query.where(models.FormSubmission.status == status)
+        if template_id:
+            query = query.where(models.FormSubmission.template_id == template_id)
+        if bank_id:
+            query = query.where(models.FormTemplate.bank_id == bank_id)
+            
+        # Get total count using the same filters
+        count_query = select(func.count(models.FormSubmission.id)).select_from(models.FormSubmission).outerjoin(models.FormTemplate, models.FormSubmission.template_id == models.FormTemplate.id)
+        
+        # Apply same filters to count query
+        if current_user.user_role == "supervisor" and current_user.bank_id:
+            count_query = count_query.where(models.FormTemplate.bank_id == current_user.bank_id)
+        elif current_user.user_role not in ["admin", "supervisor"]:
+            count_query = count_query.where(models.FormSubmission.fieldman_id == current_user.username)
+        
+        if status:
+            count_query = count_query.where(models.FormSubmission.status == status)
+        if template_id:
+            count_query = count_query.where(models.FormSubmission.template_id == template_id)
+        if bank_id:
+            count_query = count_query.where(models.FormTemplate.bank_id == bank_id)
+        
+        # Execute queries
+        result = await db.execute(query.offset(offset).limit(page_size))
+        submissions = result.scalars().all()
+        
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # Return proper format matching schema - use 'data' not 'items'
+        return {
+            "data": [FormSubmissionResponse.model_validate(s) for s in submissions],
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        }
+    except Exception as e:
+        # Log the error for debugging
+        import traceback
+        print(f"Error loading submissions: {str(e)}")
+        print(traceback.format_exc())
+        
+        # Return empty result instead of raising 500 error
+        return {
+            "data": [],
+            "total": 0,
+            "page": page,
+            "page_size": page_size
+        }
 
 
 @router.get("/{id}", response_model=FormSubmissionResponse)

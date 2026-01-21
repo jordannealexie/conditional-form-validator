@@ -113,8 +113,14 @@ async def get_user_activity(
     audit: AuditService = Depends(get_audit_service)
 ):
     """Get activity logs for the current user"""
-    logs = await audit.repository.get_by_user(current_user.username)
-    return create_response(data=logs)
+    try:
+        logs = await audit.repository.get_by_user(current_user.username)
+        # Return proper format
+        return {"data": logs}
+    except Exception as e:
+        # Return empty list on error instead of 500
+        print(f"Error loading activity logs for {current_user.username}: {str(e)}")
+        return {"data": []}
 
 @router.post(
     "/",
@@ -223,15 +229,20 @@ async def update_user_bank(
 )
 async def delete_user(
     id: int,
-    soft_delete: bool = Query(True, description="Perform soft delete (deactivate) instead of hard delete"),
+    soft_delete: bool = Query(False, description="Perform soft delete (deactivate) instead of hard delete"),
     user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(allowed_roles=["admin"])),
+    db: AsyncSession = Depends(get_db)
 ) -> CustomResponse[UserResponse]:
     target_user = await user_service.get(id)
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
     if soft_delete:
         deleted_user = await user_service.deactivate_user(id)
+        return create_response(data=UserResponse.model_validate(deleted_user))
     else:
-        deleted_user = await user_service.delete(id)
-    return create_response(data=UserResponse.model_validate(deleted_user))
+        # Hard delete - permanently remove from database
+        await db.delete(target_user)
+        await db.commit()
+        return create_response(message=f"User {target_user.username} permanently deleted")

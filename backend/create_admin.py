@@ -13,21 +13,21 @@ async def create_admin():
     async with AsyncSessionLocal() as session:
         # Check if admin exists
         result = await session.execute(
-            select(User).where(User.username == "harrypotter")
+            select(User).where(User.username == "admin")
         )
         existing = result.scalar_one_or_none()
-        
+
         if not existing:
             admin = User(
-                email="harrypotter@example.com",
-                username="harrypotter",
-                password_hash=get_password_hash("harrypotter"),
-                first_name="Harry",
-                last_name="Potter",
-                full_name="Harry Potter",
-                department="Web Dev",
+                email="admin@example.com",
+                username="admin",
+                password_hash=get_password_hash("AdminPass123!"),
+                first_name="System",
+                last_name="Administrator",
+                full_name="System Administrator",
+                department="IT",
                 level=5,
-                location="Tower 2",
+                location="Makati",
                 user_role="admin",
                 active=True
             )
@@ -43,9 +43,9 @@ async def create_admin():
             
             session.add(admin)
             await session.commit()
-            print("Harry Potter admin user created")
+            print("Admin user created")
         else:
-            print("Harry Potter admin user already exists")
+            print("Admin user already exists")
             admin = existing
             
         # Ensure admin role functionality

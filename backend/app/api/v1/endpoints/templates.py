@@ -75,12 +75,19 @@ async def create_template(
     *,
     db: AsyncSession = Depends(get_db),
     template_in: FormTemplateCreate,
-    current_user: User = Depends(get_current_superuser)
+    current_user: User = Depends(get_current_active_user)
 ) -> Any:
     """
     Create a new Form Template.
-    Only superusers can create templates.
+    Admin users can create templates.
     """
+    # Check if user is admin
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can create templates"
+        )
+    
     # Check if bank exists
     bank = await BankRepository.get_by_id(db, template_in.bank_id)
     if not bank:
@@ -108,9 +115,16 @@ async def update_template(
     template_id: int,
     template_in: FormTemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser)
+    current_user: User = Depends(get_current_active_user)
 ) -> Any:
     """Update a form template. Admin only."""
+    # Check if user is admin
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can update templates"
+        )
+    
     template = await FormTemplateRepository.get_by_id(db, template_id)
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
@@ -125,9 +139,16 @@ async def update_template(
 async def delete_template(
     template_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser)
+    current_user: User = Depends(get_current_active_user)
 ) -> Any:
     """Delete a form template. Admin only."""
+    # Check if user is admin
+    if current_user.user_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin users can delete templates"
+        )
+    
     template = await FormTemplateRepository.get_by_id(db, template_id)
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")

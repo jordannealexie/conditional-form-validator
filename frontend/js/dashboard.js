@@ -24,14 +24,22 @@ async function loadDashboard() {
 
         // Update user info in sidebar
         const fullName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username;
+        const firstLetter = (currentUser.first_name || currentUser.username || 'U')[0].toUpperCase();
+
         document.getElementById('userName').textContent = fullName;
         document.getElementById('userRole').textContent = currentUser.user_role || 'User';
+
+        // Update user avatar with first letter
+        const userAvatar = document.getElementById('userAvatar');
+        if (userAvatar) {
+            userAvatar.textContent = firstLetter;
+        }
 
         // Update system info section
         if (document.getElementById('currentUserName')) {
             document.getElementById('currentUserName').textContent = currentUser.username;
             document.getElementById('currentUserRoles').textContent = currentUser.user_role || 'None';
-            document.getElementById('currentUserDept').textContent = currentUser.bank_id ? `Bank #${currentUser.bank_id}` : 'N/A';
+            document.getElementById('currentUserDept').textContent = currentUser.department || 'N/A';
             document.getElementById('currentUserLevel').textContent = currentUser.active ? 'Active' : 'Inactive';
         }
 
