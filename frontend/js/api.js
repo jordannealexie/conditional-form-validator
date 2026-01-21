@@ -463,6 +463,29 @@ async function apiDeleteRelationship(relationshipId) {
 }
 
 /**
+ * Update relationship
+ * Backend endpoint: PUT /rebac/relationships/{relationship_id}
+ * @param {number} relationshipId 
+ * @param {object} relationshipData 
+ * @returns {Promise<object>}
+ */
+async function apiUpdateRelationship(relationshipId, relationshipData) {
+    return await apiRequest(`/rebac/relationships/${relationshipId}`, {
+        method: 'PUT',
+        body: relationshipData
+    });
+}
+
+/**
+ * Get ABAC Policy Stats
+ * Backend endpoint: GET /abac/stats
+ * @returns {Promise<{total_policies: number, applied_policies: number}>}
+ */
+async function apiGetAbacStats() {
+    return await apiRequest('/abac/stats');
+}
+
+/**
  * Check relationship path
  * Backend endpoint: POST /rebac/check-path
  * @param {string} sourceId 

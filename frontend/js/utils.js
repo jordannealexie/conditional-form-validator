@@ -9,16 +9,16 @@
  */
 function showToast(message, type = 'info', duration = 3000) {
     const container = document.getElementById('toastContainer') || createToastContainer();
-    
+
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
         <span>${getToastIcon(type)}</span>
         <span>${message}</span>
     `;
-    
+
     container.appendChild(toast);
-    
+
     // Auto remove after duration
     setTimeout(() => {
         toast.style.opacity = '0';
@@ -70,7 +70,7 @@ async function confirm(message) {
  */
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    
+
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -88,7 +88,7 @@ function formatDate(dateString) {
  */
 function formatRelativeTime(dateString) {
     if (!dateString) return 'N/A';
-    
+
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
@@ -96,7 +96,7 @@ function formatRelativeTime(dateString) {
     const diffMins = Math.floor(diffSecs / 60);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffSecs < 60) return 'Just now';
     if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
@@ -185,16 +185,16 @@ function validatePassword(password) {
 function createModal(title, content, buttons = []) {
     // Remove existing modals
     document.querySelectorAll('.modal').forEach(m => m.remove());
-    
+
     const modal = document.createElement('div');
     modal.className = 'modal active';
-    
+
     const buttonsHtml = buttons.map(btn => `
         <button class="btn btn-${btn.type || 'secondary'}" onclick="${btn.onclick}">
             ${btn.label}
         </button>
     `).join('');
-    
+
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
@@ -209,16 +209,16 @@ function createModal(title, content, buttons = []) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Close on background click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             closeModal();
         }
     });
-    
+
     return modal;
 }
 
@@ -240,10 +240,10 @@ function closeModal() {
 function filterTable(tableId, searchValue) {
     const table = document.getElementById(tableId);
     if (!table) return;
-    
+
     const rows = table.querySelectorAll('tbody tr');
     const searchLower = searchValue.toLowerCase();
-    
+
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
         row.style.display = text.includes(searchLower) ? '' : 'none';
@@ -259,25 +259,25 @@ function filterTable(tableId, searchValue) {
 function sortTable(table, columnIndex, ascending = true) {
     const tbody = table.querySelector('tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    
+
     rows.sort((a, b) => {
         const aText = a.cells[columnIndex].textContent.trim();
         const bText = b.cells[columnIndex].textContent.trim();
-        
+
         // Try to parse as number
         const aNum = parseFloat(aText);
         const bNum = parseFloat(bText);
-        
+
         if (!isNaN(aNum) && !isNaN(bNum)) {
             return ascending ? aNum - bNum : bNum - aNum;
         }
-        
+
         // String comparison
-        return ascending 
+        return ascending
             ? aText.localeCompare(bText)
             : bText.localeCompare(aText);
     });
-    
+
     // Reappend rows in sorted order
     rows.forEach(row => tbody.appendChild(row));
 }
@@ -331,11 +331,11 @@ function setQueryParam(param, value) {
  */
 function formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
@@ -393,4 +393,32 @@ function groupBy(array, key) {
         result[group].push(item);
         return result;
     }, {});
+}
+
+/**
+ * Update application user display (Sidebar/Header)
+ * @param {object} user 
+ */
+function updateAppUserDisplay(user) {
+    if (!user) return;
+
+    // Sidebar Name
+    const nameEl = document.getElementById('userName');
+    if (nameEl) {
+        nameEl.textContent = user.username;
+    }
+
+    // Sidebar Role
+    const roleEl = document.getElementById('userRole');
+    if (roleEl) {
+        roleEl.textContent = (user.roles || []).join(', ') || user.user_role || 'User';
+    }
+
+    // Profile Avatar (First Letter)
+    const avatarEl = document.getElementById('userAvatar');
+    if (avatarEl) {
+        // Use first name or username
+        const source = user.first_name || user.username || 'U';
+        avatarEl.textContent = source.charAt(0).toUpperCase();
+    }
 }
