@@ -445,15 +445,20 @@ async function saveTemplate() {
 
         // Reset state
         currentTemplate = null;
-        document.getElementById('editingStatus').style.display = 'none';
+
+        const editingStatus = document.getElementById('editingStatus');
+        if (editingStatus) {
+            editingStatus.style.display = 'none';
+        }
 
         fields = [];
         selectedFieldId = null;
         renderCanvas();
         renderProperties();
 
-        if (document.getElementById('emptyState')) {
-            document.getElementById('emptyState').style.display = 'flex';
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) {
+            emptyState.style.display = 'flex';
         }
 
         // Reset form fields
@@ -555,7 +560,8 @@ async function editExistingTemplate(id) {
 
 function cancelEdit() {
     currentTemplate = null;
-    document.getElementById('editingStatus').style.display = 'none';
+    const editingStatus = document.getElementById('editingStatus');
+    if (editingStatus) editingStatus.style.display = 'none';
     fields = [];
     selectedFieldId = null;
     document.getElementById('templateName').value = '';
