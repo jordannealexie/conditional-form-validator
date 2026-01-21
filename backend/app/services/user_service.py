@@ -7,6 +7,8 @@ from app.repositories.user import UserRepository
 from app.schemas.user import UserCreate, UserUpdate
 from app.schemas.auth import UserCreate as AuthUserCreate
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from app.models.user import Role, user_roles
 
 class UserService:    
 
@@ -31,7 +33,28 @@ class UserService:
             "level": inp.level or 1,
             "location": inp.location,
         }
-        return await self.user_repo.create(obj_in=data)
+        user = await self.user_repo.create(obj_in=data)
+        
+        # Sync roles
+        if user.user_role:
+             stmt = select(Role).where(Role.name == user.user_role)
+             result = await self.db.execute(stmt)
+             role_obj = result.scalar_one_or_none()
+             if role_obj:
+                 # Check if association exists to avoid duplicates (though append might handle it, explicit is safer)
+                 # But for simplicity in this rescue op, we use append.
+                 # user.roles.append(role_obj) 
+                 # We need to commit to separate table.
+                 # Actually, user_repo.create commits. 
+                 # We need to add to the relation.
+                 # Since it's Many-to-Many, we can insert into user_roles if we can't load the relationship.
+                 # But let's try the direct insert approach which is robust.
+                 await self.db.execute(
+                     user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
+                 )
+                 await self.db.commit()
+
+        return user
 
     async def get(self, user_id: int) -> Optional[User]:
         """Get a user by ID"""
@@ -78,7 +101,21 @@ class UserService:
         db_obj["password_hash"] = hashed
         if "role" in db_obj:
             db_obj["user_role"] = db_obj.pop("role", None)
-        return await self.user_repo.create(obj_in=db_obj)
+            
+        user = await self.user_repo.create(obj_in=db_obj)
+        
+        # Sync roles
+        if user.user_role:
+             stmt = select(Role).where(Role.name == user.user_role)
+             result = await self.db.execute(stmt)
+             role_obj = result.scalar_one_or_none()
+             if role_obj:
+                 await self.db.execute(
+                     user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
+                 )
+                 await self.db.commit()
+                 
+        return user
 
     async def update(self, user_id: int, obj_in: Union[UserUpdate, dict]) -> Optional[User]:
         """Update a user"""
@@ -96,15 +133,42 @@ class UserService:
         if "role" in update_data and "user_role" not in update_data:
             update_data["user_role"] = update_data.pop("role")
 
-        # Filter out None values from update_data
-        filtered_update_data = {k: v for k, v in update_data.items() if v is not None}
+        # Filter out None values from update_data - REMOVED to allow clearing fields
+        # filtered_update_data = {k: v for k, v in update_data.items() if v is not None}
+        filtered_update_data = update_data
 
         # Handle password update separately
         if "password" in filtered_update_data and filtered_update_data["password"]:
             filtered_update_data["password_hash"] = get_password_hash(filtered_update_data["password"])
             del filtered_update_data["password"]  # remove plaintext password
         
-        return await self.user_repo.update(id=user_id, obj_in=filtered_update_data)
+        updated_user = await self.user_repo.update(id=user_id, obj_in=filtered_update_data)
+        
+        # Sync roles if user_role was changed
+        if "user_role" in filtered_update_data:
+             role_name = filtered_update_data["user_role"]
+             stmt = select(Role).where(Role.name == role_name)
+             result = await self.db.execute(stmt)
+             role_obj = result.scalar_one_or_none()
+             
+             if role_obj:
+                 # Clear existing roles logic could be complex (which to remove?). 
+                 # For now, we ADD the new role to ensure they have the permission.
+                 # Check if exists first
+                 check = await self.db.execute(
+                     select(user_roles).where(
+                         (user_roles.c.user_id == user_id) & 
+                         (user_roles.c.role_id == role_obj.id)
+                     )
+                 )
+                 if not check.scalar_one_or_none():
+                     await self.db.execute(
+                         user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
+                     )
+                     await self.db.commit()
+                     await self.db.refresh(updated_user)
+
+        return updated_user
 
     async def delete(self, user_id: int) -> Optional[User]:
         """Delete a user (hard delete)"""
