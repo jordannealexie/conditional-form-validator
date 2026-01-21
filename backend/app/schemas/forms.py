@@ -71,6 +71,8 @@ class FormTemplateUpdate(BaseModel):
     fields: Optional[List[Dict[str, Any]]] = None
     ui_schema: Optional[Dict[str, Any]] = None
     name: Optional[str] = Field(None, max_length=255)
+    version: Optional[str] = None
+    bank_id: Optional[int] = Field(None, description="Bank ID")
     description: Optional[str] = None
     active: Optional[bool] = None
 

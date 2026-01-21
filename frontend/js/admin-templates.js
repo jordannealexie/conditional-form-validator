@@ -456,6 +456,8 @@ async function saveTemplate() {
             url = `/templates/${currentTemplate.id}`;
             body = {
                 name: name,
+                version: templateVersion,
+                bank_id: bankId,
                 schema_json: schema,
                 fields: fields,
                 description: `Form template created with ${fields.length} fields`,
