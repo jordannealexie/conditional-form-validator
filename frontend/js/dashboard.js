@@ -44,8 +44,8 @@ async function loadDashboard() {
         // Update stats cards
         document.getElementById('totalUsers').textContent = users.length;
         document.getElementById('totalRoles').textContent = roles.length;
-        document.getElementById('totalPolicies').textContent = `${abacStats.total_policies} (${abacStats.applied_policies} Applied)`;
-        document.getElementById('totalRelationships').textContent = relationships.length;
+        // document.getElementById('totalPolicies').textContent = `${abacStats.total_policies} (${abacStats.applied_policies} Applied)`;
+        // document.getElementById('totalRelationships').textContent = relationships.length;
 
     } catch (error) {
         console.error('Error loading dashboard data:', error);
