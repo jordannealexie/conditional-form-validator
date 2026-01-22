@@ -405,7 +405,8 @@ function updateAppUserDisplay(user) {
     // Sidebar Name
     const nameEl = document.getElementById('userName');
     if (nameEl) {
-        nameEl.textContent = user.username;
+        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+        nameEl.textContent = fullName || user.username;
     }
 
     // Sidebar Role
