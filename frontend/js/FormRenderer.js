@@ -62,13 +62,13 @@ class FormRenderer {
             input.name = field.id;
             input.className = 'form-select';
             if (field.required) input.setAttribute('required', 'true');
-            
+
             // Add default empty option
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = `Select ${field.label}...`;
             input.appendChild(defaultOption);
-            
+
             field.options.forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt;
@@ -89,17 +89,17 @@ class FormRenderer {
             input.id = field.id;
             input.name = field.id;
             input.className = 'form-checkbox';
-            
+
             // Reset label for checkbox - checkbox comes before text
             const checkboxWrapper = document.createElement('div');
             checkboxWrapper.className = 'form-group-inline';
             checkboxWrapper.appendChild(input);
-            
+
             const checkboxLabel = document.createElement('label');
             checkboxLabel.htmlFor = field.id;
             checkboxLabel.textContent = field.label + (field.required ? ' *' : '');
             checkboxWrapper.appendChild(checkboxLabel);
-            
+
             wrapper.innerHTML = ''; // Clear wrapper
             wrapper.appendChild(checkboxWrapper);
             input = checkboxWrapper; // Reference for event listeners
@@ -107,7 +107,7 @@ class FormRenderer {
             input = document.createElement('div');
             input.className = 'file-upload-wrapper';
             input.id = `file-wrapper-${field.id}`;
-            
+
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
             fileInput.id = field.id;
@@ -115,21 +115,21 @@ class FormRenderer {
             fileInput.className = 'form-file';
             if (field.accept) fileInput.accept = field.accept;
             if (field.required) fileInput.setAttribute('required', 'true');
-            
+
             // Hidden input to store the token
             const tokenInput = document.createElement('input');
             tokenInput.type = 'hidden';
             tokenInput.id = `${field.id}_token`;
             tokenInput.name = field.id;
-            
+
             const uploadStatus = document.createElement('div');
             uploadStatus.id = `${field.id}_status`;
             uploadStatus.className = 'upload-status';
-            
+
             input.appendChild(fileInput);
             input.appendChild(tokenInput);
             input.appendChild(uploadStatus);
-            
+
             // File upload handler
             fileInput.addEventListener('change', async (e) => {
                 await this.handleFileUpload(field, e.target.files[0]);
@@ -183,29 +183,29 @@ class FormRenderer {
 
     async handleFileUpload(field, file) {
         if (!file) return;
-        
+
         const statusEl = document.getElementById(`${field.id}_status`);
         statusEl.innerHTML = '<span>Uploading...</span>';
         statusEl.className = 'upload-status uploading';
-        
+
         try {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('field_id', field.id);
-            
+
             const result = await apiUploadFile(formData);
-            
+
             // Store token
             this.uploadedFiles[field.id] = result.token;
             document.getElementById(`${field.id}_token`).value = result.token;
-            
+
             statusEl.innerHTML = `
                 <span class="upload-success">✓ ${result.original_filename} uploaded</span>
                 <button type="button" class="btn btn-sm btn-secondary" 
                     onclick="renderer.removeFile('${field.id}')">Remove</button>
             `;
             statusEl.className = 'upload-status success';
-            
+
             this.handleInputChange(field.id);
         } catch (error) {
             statusEl.innerHTML = `<span class="upload-error">✗ Upload failed: ${error.message}</span>`;
@@ -331,19 +331,19 @@ class FormRenderer {
     async validate() {
         this.clearErrors();
         const data = this.getData();
-        
+
         try {
             const result = await apiValidateSubmission(
                 window.currentTemplateId,
                 data.form_data
             );
-            
+
             if (!result.is_valid && result.errors) {
                 result.errors.forEach(error => {
                     this.showError(error.field, error.message);
                 });
             }
-            
+
             return result;
         } catch (error) {
             console.error('Validation error:', error);
@@ -353,7 +353,7 @@ class FormRenderer {
 
     async handleSubmit() {
         const validationResult = await this.validate();
-        
+
         if (validationResult.is_valid) {
             try {
                 const data = this.getData();
@@ -363,15 +363,15 @@ class FormRenderer {
                     data_json: data.form_data,
                     file_tokens: Object.values(this.uploadedFiles)
                 };
-                
+
                 const result = await apiSubmitForm(submitData);
                 showToast('Application submitted successfully!', 'success');
-                
+
                 // Redirect to submissions page after a delay
                 setTimeout(() => {
                     window.location.href = 'submissions.html';
                 }, 2000);
-                
+
             } catch (error) {
                 showToast(error.message || 'Error submitting application', 'error');
             }
@@ -389,10 +389,10 @@ class FormRenderer {
                 data_json: data.form_data,
                 file_tokens: Object.values(this.uploadedFiles)
             };
-            
+
             const result = await apiSubmitForm(submitData);
             showToast('Draft saved successfully!', 'success');
-            
+
         } catch (error) {
             showToast(error.message || 'Error saving draft', 'error');
         }
