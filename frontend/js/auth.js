@@ -4,7 +4,43 @@
 // Session storage keys
 const SESSION_KEY = 'rbac_session';
 const TOKEN_KEY = 'rbac_token';
-const REFRESH_TOKEN_KEY = 'rbac_refresh_token';
+const REFRESH_TOKEN_KEY = 'bac_refresh_token';
+
+// Cookie helper functions
+function setCookie(name, value, expires) {
+    let cookieString = `${name}=${encodeURIComponent(value)}; path=/`;
+    if (expires) {
+        cookieString += `; expires=${expires.toUTCString()}`;
+    }
+    document.cookie = cookieString;
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+    }
+    return null;
+}
+
+function deleteCookie(name) {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+}
+
+function getTokenExpiration(token) {
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const tokenData = JSON.parse(atob(base64));
+        return tokenData.exp ? new Date(tokenData.exp * 1000) : null;
+    } catch (error) {
+        return null;
+    }
+}
 
 /**
  * Login function
@@ -18,8 +54,10 @@ async function login(username, password) {
 
         if (result && result.access_token) {
             localStorage.setItem(TOKEN_KEY, result.access_token);
+            setCookie(TOKEN_KEY, result.access_token, getTokenExpiration(result.access_token));
             if (result.refresh_token) {
                 localStorage.setItem(REFRESH_TOKEN_KEY, result.refresh_token);
+                setCookie(REFRESH_TOKEN_KEY, result.refresh_token, getTokenExpiration(result.refresh_token));
             }
 
             const user = await apiGetCurrentUser();
@@ -38,6 +76,7 @@ async function login(username, password) {
             };
 
             localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+            setCookie(SESSION_KEY, JSON.stringify(sessionData));
 
             return {
                 success: true,
@@ -91,6 +130,9 @@ function confirmLogout() {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    deleteCookie(SESSION_KEY);
+    deleteCookie(TOKEN_KEY);
+    deleteCookie(REFRESH_TOKEN_KEY);
     window.location.href = 'index.html';
 }
 
@@ -99,8 +141,8 @@ function confirmLogout() {
  * @returns {boolean}
  */
 function isAuthenticated() {
-    const session = localStorage.getItem(SESSION_KEY);
-    const token = localStorage.getItem(TOKEN_KEY);
+    const session = localStorage.getItem(SESSION_KEY) || getCookie(SESSION_KEY);
+    const token = localStorage.getItem(TOKEN_KEY) || getCookie(TOKEN_KEY);
 
     if (!session || !token) {
         return false;
@@ -121,6 +163,10 @@ function isAuthenticated() {
             // Token expired
             localStorage.removeItem(SESSION_KEY);
             localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(REFRESH_TOKEN_KEY);
+            deleteCookie(SESSION_KEY);
+            deleteCookie(TOKEN_KEY);
+            deleteCookie(REFRESH_TOKEN_KEY);
             return false;
         }
 
@@ -136,7 +182,7 @@ function isAuthenticated() {
  * @returns {object|null}
  */
 function getCurrentUser() {
-    const session = localStorage.getItem(SESSION_KEY);
+    const session = localStorage.getItem(SESSION_KEY) || getCookie(SESSION_KEY);
     if (!session) return null;
 
     try {
@@ -151,7 +197,7 @@ function getCurrentUser() {
  * @returns {string|null}
  */
 function getAuthToken() {
-    return localStorage.getItem(TOKEN_KEY);
+    return localStorage.getItem(TOKEN_KEY) || getCookie(TOKEN_KEY);
 }
 
 /**
@@ -159,7 +205,7 @@ function getAuthToken() {
  * @returns {string|null}
  */
 function getRefreshToken() {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
+    return localStorage.getItem(REFRESH_TOKEN_KEY) || getCookie(REFRESH_TOKEN_KEY);
 }
 
 /**
@@ -234,6 +280,7 @@ function updateSession(userData) {
     };
 
     localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
+    setCookie(SESSION_KEY, JSON.stringify(updatedSession));
 }
 
 /**
@@ -256,4 +303,5 @@ function refreshSession(username) {
     };
 
     localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    setCookie(SESSION_KEY, JSON.stringify(sessionData));
 }
