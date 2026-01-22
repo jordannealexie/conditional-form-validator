@@ -166,7 +166,7 @@ class FormTemplateRepository:
                 )
             )
         )
-        result = await db.execute(query)
+
         count = result.scalar()
         return count > 0
 
