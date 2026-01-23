@@ -30,31 +30,70 @@ A comprehensive form management and validation platform built with FastAPI and V
 ### Installation
 
 1. **Clone the repository**
-2. **Setup Backend**
+   ```bash
+   git clone https://github.com/jordannealexie/conditional-form-validator-backend.git
+   cd conditional-form-validator-backend
+   ```
+
+2. **Create PostgreSQL Database**
+   ```bash
+   # Login to PostgreSQL
+   psql -U postgres
+   
+   # Create database
+   CREATE DATABASE form_db;
+   \q
+   ```
+
+3. **Setup Backend**
    ```bash
    cd backend
    python -m venv venv
+   
+   # Activate virtual environment
+   # On Windows: venv\Scripts\activate
+   # On Linux/Mac:
    source venv/bin/activate
+   
+   # Install dependencies
    pip install -r requirements.txt
    ```
-3. **Database Setup**
-   Ensure your `DATABASE_URL` is set in environment variables or `app/core/config.py`.
-   ```bash
-   python seed_data.py
+
+4. **Configure Environment (Optional)**
+   
+   If you need custom settings, create `.env` in the `backend/` directory:
+   ```env
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/form_db
+   SECRET_KEY=your-secret-key-here
    ```
-4. **Run Application**
+
+5. **Seed Database**
+   ```bash
+   # Run from backend/ directory with venv activated
+   python -m scripts.seed_data
+   ```
+
+6. **Run Application**
    ```bash
    uvicorn app.main:app --reload
    ```
 
-### Accessing the Frontend
+### Accessing the Application
 
-The frontend is built with vanilla JavaScript and is served directly by the FastAPI backend.
+Open your browser and navigate to: **[http://localhost:8000](http://localhost:8000)**
 
-- **URL**: [http://localhost:8000](http://localhost:8000)
-- **Directory**: All frontend files are located in the `/frontend` directory.
+**Default Login Credentials:**
 
-Once the backend server is running, you can open your browser and navigate to the URL above to access the dashboard and form submission system.
+| Role | Username | Password |
+|------|----------|----------|
+| Admin | `admin` | `admin123` |
+| Supervisor (BDO) | `supervisor_bdo` | `password123` |
+| Fieldman (BDO) | `user1` | `password123` |
+
+### API Documentation
+
+- Swagger UI: [http://localhost:8000/api/v1/docs](http://localhost:8000/api/v1/docs)
+- ReDoc: [http://localhost:8000/api/v1/redoc](http://localhost:8000/api/v1/redoc)
 
 ## Documentation
 - [Implementation Plan](.gemini/antigravity/brain/07899d65-236f-49d5-b6b7-08fca3e9483a/implementation_plan.md)
