@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Form Submission</title>
     <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/custom.css">
 </head>
 
 <body>
@@ -196,8 +197,14 @@
                 </div>
             </div>
 
-            <!-- Form Applications -->
-            <!-- Available Loan Applications section removed per requirements -->
+            <!-- Form Templates Section -->
+            <div class="content-section">
+                <h2>Available Form Templates</h2>
+                <div id="applicationsGrid" class="applications-grid">
+                    <!-- Templates will be loaded here dynamically by dashboard.js -->
+                    <div class="loading-state">Loading templates...</div>
+                </div>
+            </div>
 
             <!-- System Info -->
             <div class="content-section">

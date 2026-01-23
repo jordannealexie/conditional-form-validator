@@ -25,14 +25,11 @@ class FormRenderer {
             form.appendChild(fieldWrapper);
         });
 
-        // Add submit button
-        const submitSection = document.createElement('div');
-        submitSection.className = 'form-actions';
-        submitSection.innerHTML = `
-            <button type="submit" class="btn btn-primary">Submit Application</button>
-            <button type="button" class="btn btn-secondary" onclick="renderer.saveDraft()">Save as Draft</button>
-        `;
-        form.appendChild(submitSection);
+        // Add submit button - REMOVED: Buttons are now handled in the parent page (form-fill.html) to prevent duplication and improve layout control.
+        // const submitSection = document.createElement('div');
+        // submitSection.className = 'form-actions';
+        // ...
+        // form.appendChild(submitSection);
 
         // Form submit handler
         form.addEventListener('submit', (e) => {
@@ -238,6 +235,10 @@ class FormRenderer {
                     data[field.id] = input.checked;
                 } else if (field.type === 'file') {
                     data[field.id] = this.uploadedFiles[field.id] || null;
+                } else if (field.type === 'number' || field.type === 'integer') {
+                    // Convert to number if not empty
+                    const val = input.value;
+                    data[field.id] = val === '' ? null : Number(val);
                 } else {
                     data[field.id] = input.value;
                 }

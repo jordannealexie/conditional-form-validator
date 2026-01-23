@@ -86,9 +86,9 @@ async function loadApplications() {
 function createApplicationCard(template, bank) {
     const card = document.createElement('div');
     card.className = 'application-card';
-    card.onclick = () => {
-        window.location.href = `/form-fill.html?template_id=${template.id}`;
-    };
+    card.className = 'application-card';
+    // Removed card.onclick to prevent conflict with button click
+
 
     if (bank.primary_color) {
         card.style = `border-left: 5px solid ${bank.primary_color};`;
@@ -101,19 +101,52 @@ function createApplicationCard(template, bank) {
         card.style = bankColors[bank.code] || '';
     }
 
+    // Simplified Card for Dashboard (Text Only, No Logos)
+    const bankBadge = `<span class="bank-tag bank-${bank.code.toLowerCase()}">${bank.name}</span>`;
+
     card.innerHTML = `
         <div class="app-card-header">
-            <span class="bank-tag bank-${bank.code.toLowerCase()}">${bank.name}</span>
+            ${bankBadge}
             <span class="version-badge">v${template.version}</span>
         </div>
         <h3 class="app-title">${template.name}</h3>
         <p class="app-description">${template.description || 'Fill out your application details online.'}</p>
         <div class="app-card-footer">
-            <span class="action-link">Apply Now ➔</span>
+            <button class="btn-apply" onclick="handleTemplateClick(event, ${template.id}, '${template.bank_id}')">
+                Apply Now <i class="fas fa-arrow-right"></i>
+            </button>
         </div>
     `;
 
     return card;
+}
+
+async function handleTemplateClick(event, templateId, templateBankId) {
+    event.stopPropagation();
+
+    // 1. Check for submissions:create permission
+    // We can use the 'hasPermission' function from auth.js if available, or check manual list
+    if (typeof hasPermission === 'function' && !hasPermission('submissions:create')) {
+        showToast('You are not authorized to submit this form.', 'error');
+        return;
+    }
+
+    // 2. Check ReBAC (Bank matching) for consistency with backend
+    // Get current user details from API or local storage
+    try {
+        const user = await apiGetCurrentUser();
+        // If user is supervisor/user (fieldman) and has a bank_id, it must match
+        if (user.user_role !== 'admin' && !user.is_superuser && user.bank_id && user.bank_id != templateBankId) {
+            showToast('You can only submit forms for your assigned bank.', 'error');
+            return;
+        }
+    } catch (e) {
+        console.error("Error verifying bank access", e);
+        // Fallthrough - backend will catch it if we fail here, but better to let them try if we aren't sure
+    }
+
+    // 3. Navigate
+    window.location.href = `/form-fill.html?template_id=${templateId}`;
 }
 
 /**

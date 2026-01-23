@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 5. Setup Buttons
     document.getElementById('submitBtn').addEventListener('click', handleSubmit);
     document.getElementById('saveDraftBtn').addEventListener('click', handleSaveDraft);
-    
+
     // 6. Setup Mobile Menu
     setupMobileMenu();
 });
@@ -63,17 +63,27 @@ async function loadTemplate(templateId) {
         const templateBanner = document.getElementById('templateBanner');
         const bankLogo = document.getElementById('bankLogo');
         const bankBadge = document.getElementById('bankBadge');
-        
+
         templateBanner.style.display = 'flex';
-        
+
         if (currentTemplate.bank) {
             const bankName = currentTemplate.bank.name;
             const bankCode = currentTemplate.bank.code;
             const primaryColor = currentTemplate.bank.primary_color || '#133522';
-            
-            bankLogo.textContent = bankCode.substring(0, 2).toUpperCase();
-            bankLogo.style.background = primaryColor;
-            
+
+            // Check for logo URL
+            if (currentTemplate.bank.logo_url) {
+                // Clear text, use image
+                bankLogo.innerHTML = `<img src="${currentTemplate.bank.logo_url}" alt="${bankName}">`;
+                bankLogo.style.background = 'transparent'; // Remove background for image
+                bankLogo.style.border = '1px solid var(--off-white)'; // Optional border
+            } else {
+                // Fallback to text
+                bankLogo.innerHTML = bankCode.substring(0, 2).toUpperCase();
+                bankLogo.style.background = primaryColor;
+                bankLogo.style.border = 'none';
+            }
+
             bankBadge.textContent = bankName;
             bankBadge.style.background = `${primaryColor}20`;
             bankBadge.style.color = primaryColor;
@@ -117,10 +127,10 @@ async function loadTemplate(templateId) {
  */
 function generateFieldsFromSchema(schema) {
     if (!schema || !schema.properties) return [];
-    
+
     const fields = [];
     const required = schema.required || [];
-    
+
     Object.keys(schema.properties).forEach((key, index) => {
         const prop = schema.properties[key];
         const field = {
@@ -129,20 +139,20 @@ function generateFieldsFromSchema(schema) {
             required: required.includes(key),
             type: mapJsonSchemaType(prop.type)
         };
-        
+
         if (prop.enum) {
             field.options = prop.enum;
         }
-        
+
         if (prop.minLength) field.validation = { ...field.validation, minLength: prop.minLength };
         if (prop.maxLength) field.validation = { ...field.validation, maxLength: prop.maxLength };
         if (prop.minimum) field.validation = { ...field.validation, minimum: prop.minimum };
         if (prop.maximum) field.validation = { ...field.validation, maximum: prop.maximum };
         if (prop.pattern) field.validation = { ...field.validation, pattern: prop.pattern };
-        
+
         fields.push(field);
     });
-    
+
     return fields;
 }
 
@@ -167,7 +177,7 @@ async function handleSubmit() {
 
     // Validate first
     const validationResult = await renderer.validate();
-    
+
     if (!validationResult.is_valid) {
         showToast('Please fix the validation errors before submitting', 'error');
         return;
@@ -184,10 +194,10 @@ async function handleSubmit() {
 
         const result = await apiSubmitForm(payload);
         showToast('Application submitted successfully!', 'success');
-        
+
         // Show success modal
         document.getElementById('successModal').classList.add('active');
-        
+
     } catch (error) {
         console.error('Submission error:', error);
         showToast(error.message || 'Failed to submit application', 'error');
@@ -208,7 +218,7 @@ async function handleSaveDraft() {
 
         await apiSubmitForm(payload);
         showToast('Draft saved successfully!', 'success');
-        
+
     } catch (error) {
         console.error('Draft save error:', error);
         showToast(error.message || 'Failed to save draft', 'error');

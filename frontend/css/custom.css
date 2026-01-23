@@ -1,0 +1,151 @@
+/* Available Templates Card Styling */
+.application-card {
+    background: var(--white);
+    padding: var(--space-lg);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-subtle);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--off-white);
+    text-align: left;
+    /* Align text left like quick cards usually or centered? Quick cards seem centered in CSS but let's check */
+}
+
+.application-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.app-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.bank-logo-small {
+    height: 32px;
+    width: auto;
+    max-width: 100px;
+    object-fit: contain;
+}
+
+.bank-tag {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+/* Specific Bank Colors */
+.bank-bdo {
+    background-color: rgba(236, 28, 36, 0.1);
+    color: #ec1c24;
+}
+
+.bank-maya {
+    background-color: rgba(0, 255, 0, 0.1);
+    color: #00aa00;
+}
+
+.bank-secb {
+    background-color: rgba(0, 74, 153, 0.1);
+    color: #004a99;
+}
+
+.version-badge {
+    background: var(--off-white);
+    color: var(--gray);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.app-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-black);
+    margin-bottom: var(--space-xs);
+    line-height: 1.3;
+}
+
+.app-description {
+    font-size: 14px;
+    color: var(--gray);
+    margin-bottom: var(--space-lg);
+    line-height: 1.5;
+    flex-grow: 1;
+    /* Push footer down */
+}
+
+.app-card-footer {
+    margin-top: auto;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--off-white);
+    text-align: right;
+}
+
+/* Ensure Apply Now button is consistent */
+.btn-apply {
+    color: var(--accent-green);
+    font-weight: 600;
+    font-size: 14px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-apply:hover {
+    color: var(--dark-green);
+    transform: translateX(2px);
+}
+
+/* Form Fill Header Logo Fix */
+.template-info-banner {
+    background: var(--white);
+    padding: var(--space-lg);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.template-bank-logo {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--off-white);
+    border-radius: 50%;
+    /* Optional: if you want a circular container */
+    padding: 10px;
+    flex-shrink: 0;
+}
+
+.template-bank-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* CRITICAL FIX: Prevent cropping */
+}
+
+.template-details h2 {
+    margin: 0 0 4px 0;
+    color: var(--color-black);
+}
+
+.template-details p {
+    margin: 0;
+    color: var(--gray);
+}
