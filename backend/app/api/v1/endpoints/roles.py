@@ -35,9 +35,9 @@ class RoleResponse(BaseModel):
 @router.get("/", response_model=List[RoleResponse])
 async def list_roles(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(resource="roles", action="read"))
 ) -> Any:
-    """List all roles with permissions. Admin only."""
+    """List all roles with permissions. Enabled via rules."""
     result = await db.execute(select(Role).order_by(Role.name))
     roles = result.scalars().all()
     return create_response(data=[RoleResponse.model_validate(r) for r in roles])
@@ -47,9 +47,9 @@ async def list_roles(
 async def create_role(
     body: RoleCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(resource="roles", action="create"))
 ) -> Any:
-    """Create a new role. Admin only."""
+    """Create a new role. Enabled via rules."""
     r = await db.execute(select(Role).where(Role.name == body.name))
     if r.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role name already exists")
@@ -69,9 +69,9 @@ async def create_role(
 async def delete_role(
     id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(resource="roles", action="delete"))
 ) -> Any:
-    """Delete a role. Admin only. Fails if role is assigned to users."""
+    """Delete a role. Enabled via rules. Fails if role is assigned to users."""
     result = await db.execute(select(Role).where(Role.id == id))
     role = result.scalar_one_or_none()
     if not role:
@@ -96,9 +96,9 @@ async def delete_role(
 async def get_role_permissions(
     id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(resource="roles", action="read"))
 ) -> Any:
-    """Get permissions for a role. Admin only."""
+    """Get permissions for a role. Enabled via rules."""
     result = await db.execute(select(Role).where(Role.id == id))
     role = result.scalar_one_or_none()
     if not role:
@@ -110,9 +110,9 @@ async def get_role_permissions(
 async def get_role_user_count(
     id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(resource="roles", action="read"))
 ) -> Any:
-    """Get user count for a role. Admin only."""
+    """Get user count for a role. Enabled via rules."""
     result = await db.execute(select(Role).where(Role.id == id))
     role = result.scalar_one_or_none()
     if not role:
@@ -127,9 +127,9 @@ async def update_role(
     id: int,
     body: RoleCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(resource="roles", action="update"))
 ) -> Any:
-    """Update a role. Admin only."""
+    """Update a role. Enabled via rules."""
     result = await db.execute(select(Role).where(Role.id == id))
     role = result.scalar_one_or_none()
     if not role:

@@ -2,9 +2,12 @@
 // GET /roles, POST /roles, DELETE /roles/{id}
 
 const AVAILABLE_PERMISSIONS = [
-    'users:read', 'users:write', 'templates:read', 'templates:write',
-    'submissions:read', 'submissions:write', 'submissions:review',
-    'roles:read', 'roles:write', 'banks:read', 'banks:write'
+    'users:create', 'users:read', 'users:update', 'users:delete',
+    'roles:create', 'roles:read', 'roles:update', 'roles:delete',
+    'forms:create', 'forms:read', 'forms:update', 'forms:delete',
+    'templates:create', 'templates:read', 'templates:update', 'templates:delete',
+    'submissions:create', 'submissions:read', 'submissions:update', 'submissions:delete', 'submissions:review',
+    'banks:create', 'banks:read', 'banks:update', 'banks:delete'
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -97,12 +100,21 @@ function createRoleRow(role, userCount = 0) {
         <td title="${escapeHtml(permText)}">${escapeHtml(permShort) || '—'}</td>
         <td>${userCount}</td>
         <td class="table-actions">
-            <button class="btn btn-sm btn-primary" onclick="editRole(${role.id})">Edit</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteRole(${role.id}, '${escapeHtml(role.name || '').replace(/'/g, "\\'")}')">Delete</button>
+            <button class="btn btn-sm btn-primary" onclick="editRole(${role.id})" data-permission="roles" data-action="update">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRole(${role.id}, '${escapeHtml(role.name || '').replace(/'/g, "\\'")}')" data-permission="roles" data-action="delete">Delete</button>
         </td>
     `;
     return tr;
 }
+
+// Ensure loadRoles calls enforceUIPermissions after rendering
+const originalLoadRoles = loadRoles;
+loadRoles = async function () {
+    await originalLoadRoles();
+    if (typeof enforceUIPermissions === 'function') {
+        enforceUIPermissions();
+    }
+};
 
 async function handleCreateRole(ev) {
     ev.preventDefault();

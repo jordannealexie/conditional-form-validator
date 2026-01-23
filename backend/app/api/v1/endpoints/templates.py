@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.dependencies.auth import get_current_active_user, get_current_superuser
+from app.dependencies.auth import get_current_active_user, get_current_superuser, authorize
 from app.repositories.forms import FormTemplateRepository, BankRepository
 from app.schemas.forms import FormTemplateResponse, FormTemplateCreate, FormTemplateUpdate
 from app.utils.response import create_response
@@ -24,6 +24,9 @@ async def list_templates(
         if not bank:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank not found")
         bank_id = bank.id
+    
+    # If not admin/superuser, force bank_id filter for supervisor/fieldman
+    # This acts as data-level permission (ABAC/ReBAC lite)
     if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin" and current_user.bank_id:
         bank_id = current_user.bank_id
     if bank_id:
@@ -75,18 +78,13 @@ async def create_template(
     *,
     db: AsyncSession = Depends(get_db),
     template_in: FormTemplateCreate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(authorize(resource="forms", action="create"))
 ) -> Any:
     """
     Create a new Form Template.
-    Admin users can create templates.
+    Permission: forms:create
     """
-    # Check if user is admin
-    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can create templates"
-        )
+    # Authorization handled by dependency
     
     # Check if bank exists
     bank = await BankRepository.get_by_id(db, template_in.bank_id)
@@ -115,15 +113,10 @@ async def update_template(
     template_id: int,
     template_in: FormTemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(authorize(resource="forms", action="update"))
 ) -> Any:
-    """Update a form template. Admin only."""
-    # Check if user is admin
-    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can update templates"
-        )
+    """Update a form template. Permission: forms:update."""
+    # Authorization handled by dependency
     
     template = await FormTemplateRepository.get_by_id(db, template_id)
     if not template:
@@ -139,15 +132,10 @@ async def update_template(
 async def delete_template(
     template_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(authorize(resource="forms", action="delete"))
 ) -> Any:
-    """Delete a form template. Admin only."""
-    # Check if user is admin
-    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admin users can delete templates"
-        )
+    """Delete a form template. Permission: forms:delete."""
+    # Authorization handled by dependency
     
     template = await FormTemplateRepository.get_by_id(db, template_id)
     if not template:

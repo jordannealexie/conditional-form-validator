@@ -58,12 +58,21 @@ function createUserRow(user) {
         <td>${roleHtml}</td>
         <td>${statusHtml}</td>
         <td class="table-actions">
-            <button class="btn btn-sm btn-primary" onclick="editUser(${user.id})">Edit</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')">Delete</button>
+            <button class="btn btn-sm btn-primary" onclick="editUser(${user.id})" data-permission="users" data-action="update">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" data-permission="users" data-action="delete">Delete</button>
         </td>
     `;
     return tr;
 }
+
+// Ensure loadUsers calls enforceUIPermissions after rendering
+const originalLoadUsers = loadUsers;
+loadUsers = async function () {
+    await originalLoadUsers();
+    if (typeof enforceUIPermissions === 'function') {
+        enforceUIPermissions();
+    }
+};
 
 function showAddUserModal() {
     const roleOpts = ROLES.map(r => `<option value="${r}">${r}</option>`).join('');

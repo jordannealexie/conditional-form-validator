@@ -553,12 +553,17 @@ function renderTemplateList(list) {
             <td>${escapeHtml(t.version)}</td>
             <td>${escapeHtml(bankName)}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editExistingTemplate(${t.id})">Edit</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteExistingTemplate(${t.id})">Delete</button>
+                <button class="btn btn-sm btn-primary" onclick="editExistingTemplate(${t.id})" data-permission="forms" data-action="update">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteExistingTemplate(${t.id})" data-permission="forms" data-action="delete">Delete</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+
+    // Enforce UI permissions
+    if (typeof enforceUIPermissions === 'function') {
+        enforceUIPermissions();
+    }
 }
 
 function toggleTemplateList() {

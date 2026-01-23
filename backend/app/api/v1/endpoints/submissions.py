@@ -59,7 +59,7 @@ async def create_submission(
     submission_in: FormSubmissionCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(authorize(resource="submissions", action="create"))
 ) -> Any:
     """Create a new form submission (Draft or Final)."""
     template = await FormTemplateRepository.get_by_id(db, submission_in.template_id)
@@ -94,7 +94,7 @@ async def list_submissions(
     template_id: Optional[int] = None,
     bank_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: models.User = Depends(get_current_active_user)
+    current_user: models.User = Depends(authorize(resource="submissions", action="read"))
 ) -> Any:
     """
     List form submissions with role-based and bank-based filtering.
@@ -177,7 +177,7 @@ async def list_submissions(
 async def get_submission(
     id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(authorize(resource="submissions", action="read"))
 ) -> Any:
     """Get a single submission. Access: own (fieldman), same bank (supervisor), all (admin)."""
     submission = await FormSubmissionRepository.get_by_id(db, id)
@@ -193,7 +193,7 @@ async def update_submission(
     id: int,
     body: FormSubmissionUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(authorize(resource="submissions", action="update"))
 ) -> Any:
     """Update a draft. Only owner (fieldman) can update."""
     submission = await FormSubmissionRepository.get_by_id(db, id)
@@ -221,7 +221,7 @@ async def update_submission(
 async def delete_submission(
     id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(authorize(resource="submissions", action="delete"))
 ) -> Any:
     """Delete own draft only."""
     submission = await FormSubmissionRepository.get_by_id(db, id)
@@ -240,7 +240,7 @@ async def review_submission(
     id: int,
     body: SubmissionReviewRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(allowed_roles=["admin", "supervisor"]))
+    current_user: User = Depends(authorize(resource="submissions", action="review"))
 ) -> Any:
     """Approve or reject. Supervisor: same bank only; Admin: all."""
     submission = await FormSubmissionRepository.get_by_id(db, id)

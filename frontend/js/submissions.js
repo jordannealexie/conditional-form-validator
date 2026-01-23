@@ -175,11 +175,11 @@ function renderTable(submissions) {
             <td>${formatDate(sub.created_at)}</td>
             <td>
                 <div class="table-actions">
-                    <button class="btn btn-sm btn-outline" onclick="viewSubmission(${sub.id})">
+                    <button class="btn btn-sm btn-outline" onclick="viewSubmission(${sub.id})" data-permission="submissions" data-action="read">
                         <i class="fas fa-eye"></i> View
                     </button>
                     ${sub.status === 'draft' ? `
-                        <button class="btn btn-sm btn-danger" onclick="deleteSubmission(${sub.id})">
+                        <button class="btn btn-sm btn-danger" onclick="deleteSubmission(${sub.id})" data-permission="submissions" data-action="delete">
                             <i class="fas fa-trash"></i>
                         </button>
                     ` : ''}
@@ -188,6 +188,10 @@ function renderTable(submissions) {
         `;
         body.appendChild(row);
     });
+
+    if (typeof enforceUIPermissions === 'function') {
+        enforceUIPermissions();
+    }
 }
 
 function getStatusClass(status) {
