@@ -10,10 +10,12 @@ backend_path = Path(__file__).resolve().parent
 sys.path.insert(0, str(backend_path))
 
 from app.db.session import AsyncSessionLocal
-from app.models.user import User, Role, user_roles
+from app.models.user import User, Role, user_roles, RefreshToken, ResourceRelationship
 from app.models.forms import Bank, FormTemplate, FormSubmission, FormFile
 from app.models.audit import AuditLog
+from app.models.abac import UserAttribute, ResourceAttribute, ABACPolicy
 from app.core.security import get_password_hash
+from app.core.casbin_enforcer import casbin_enforcer, CasbinRule
 
 # --- FORM TEMPLATE DEFINITIONS ---
 
@@ -138,18 +140,26 @@ async def seed_data():
     print("🚀 Starting seed_data function...")
     async with AsyncSessionLocal() as session:
         print("🌱 Starting data seeding...")
-        print("🌱 Starting data seeding...")
-        # 0. Clean up existing data (optional but good for testing)
-        # Using raw SQL for cascade delete or just correct order
+        # 0. Clean up existing data in correct order to handle FKs
+        print("🧹 Cleaning up existing data...")
         await session.execute(delete(AuditLog))
-        await session.execute(delete(user_roles))
-        await session.execute(delete(User))
+        await session.execute(delete(FormFile))
         await session.execute(delete(FormSubmission))
+        await session.execute(delete(RefreshToken))
+        await session.execute(delete(UserAttribute))
+        await session.execute(delete(ResourceAttribute))
+        await session.execute(delete(ABACPolicy))
+        await session.execute(delete(ResourceRelationship))
+        await session.execute(delete(user_roles))
         await session.execute(delete(FormTemplate))
+        await session.execute(delete(User))
         await session.execute(delete(Bank))
         await session.execute(delete(Role))
+        await session.execute(delete(CasbinRule))
+        await session.commit()
         
         # 2. Seed Banks
+        print("🏦 Seeding banks...")
         banks_data = [
             {"name": "BDO Unibank", "code": "BDO", "logo_url": "https://www.bdo.com.ph/sites/default/files/styles/logo/public/bdo-logo.png", "primary_color": "#005baa", "description": "Leading bank in PH", "active": True},
             {"name": "Maya Bank", "code": "MAYA", "logo_url": "https://www.maya.ph/hubfs/Maya-Logo-2022.svg", "primary_color": "#2ecc71", "description": "Digital bank for the modern age", "active": True},
@@ -163,6 +173,7 @@ async def seed_data():
         await session.flush()
 
         # 3. Seed Roles (Consolidated JSONB format)
+        print("🔑 Seeding roles...")
         role_definitions = [
             {
                 "name": "admin", 
@@ -191,11 +202,16 @@ async def seed_data():
             roles[r_def["name"]] = role
         await session.flush()
         
-        # 4. Seed Users (27 users total)
-        # 3 per role per bank = 3 banks * 3 roles * 3 users = 27
-        # But wait, Admins usually aren't per bank in the logic, but the spec says "3 users per role per bank"
-        # I'll assign them a bank_id even if they are admins.
+        # Initialize Casbin Enforcer for seeding
+        await casbin_enforcer.initialize()
         
+        # Sync role permissions to Casbin
+        print("🔄 Syncing role permissions to Casbin...")
+        for r_name, role_obj in roles.items():
+            casbin_enforcer.sync_role_permissions(r_name, role_obj.permissions or [])
+        
+        # 4. Seed Users (27 users total)
+        print("👤 Seeding users...")
         password_hash = get_password_hash("password123")
         
         for bank in banks:
@@ -220,27 +236,26 @@ async def seed_data():
                     session.add(user)
          
         # 5. Seed Specific Admin (harrypotter)
-        hp_res = await session.execute(select(User).where(User.username == "harrypotter"))
-        if not hp_res.scalar_one_or_none():
-            hp = User(
-                username="harrypotter",
-                email="harrypotter@example.com",
-                password_hash=get_password_hash("harrypotter"),
-                user_role="admin",
-                first_name="Harry",
-                last_name="Potter",
-                full_name="Harry Potter",
-                department="IT",
-                level=5,
-                location="Parañaque",
-                active=True,
-                is_superuser=True
-            )
-            hp.roles = [roles["admin"]]
-            session.add(hp)
-            print("⚡ harrypotter added to session")
+        print("🧙 Seeding harrypotter...")
+        hp = User(
+            username="harrypotter",
+            email="harrypotter@example.com",
+            password_hash=get_password_hash("harrypotter"),
+            user_role="admin",
+            first_name="Harry",
+            last_name="Potter",
+            full_name="Harry Potter",
+            department="IT",
+            level=5,
+            location="Parañaque",
+            active=True,
+            is_superuser=True
+        )
+        hp.roles = [roles["admin"]]
+        session.add(hp)
 
         # 6. Seed Templates
+        print("📝 Seeding templates...")
         template_maps = [
             (banks[0].id, BDO_TEMPLATE),
             (banks[1].id, MAYA_TEMPLATE),
@@ -259,8 +274,19 @@ async def seed_data():
             )
             session.add(template)
 
+        await session.flush()
+
+        # Sync user roles to Casbin for all seeded users
+        print("🔄 Syncing user roles to Casbin...")
+        result = await session.execute(select(User))
+        seeded_users = result.scalars().all()
+        for u in seeded_users:
+            if u.user_role:
+                casbin_enforcer.sync_user_roles(u.username, [u.user_role])
+
         await session.commit()
         print("✅ Data seeding completed successfully!")
 
 if __name__ == "__main__":
     asyncio.run(seed_data())
+

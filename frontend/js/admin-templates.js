@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBanks();
     loadTemplates(); // Load existing templates
     setupMobileMenu();
+
+    // Enforce UI permissions
+    if (typeof enforceUIPermissions === 'function') {
+        setTimeout(enforceUIPermissions, 100);
+    }
 });
 
 /**

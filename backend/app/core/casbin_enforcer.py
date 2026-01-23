@@ -300,6 +300,45 @@ class CasbinEnforcer:
             raise Exception("RBAC enforcer not initialized")
         return self.rbac_enforcer.get_permissions_for_user(role)
     
+    def sync_role_permissions(self, role: str, permissions: list):
+        """
+        Synchronize role permissions from a list of strings (format: "resource:action")
+        """
+        if not self.rbac_enforcer:
+            raise Exception("RBAC enforcer not initialized")
+            
+        # 1. Remove all existing permissions for this role
+        self.rbac_enforcer.remove_filtered_policy(0, role)
+        
+        # 2. Add new permissions
+        for perm in permissions:
+            if ':' in perm:
+                resource, action = perm.split(':', 1)
+                self.rbac_enforcer.add_policy(role, resource, action)
+            else:
+                # Default to read if no action specified
+                self.rbac_enforcer.add_policy(role, perm, "read")
+        
+        # 3. Save policy
+        self.rbac_enforcer.save_policy()
+
+    def sync_user_roles(self, username: str, roles: list):
+        """
+        Synchronize user roles from a list of role names
+        """
+        if not self.rbac_enforcer:
+            raise Exception("RBAC enforcer not initialized")
+            
+        # 1. Remove all existing roles for this user
+        self.rbac_enforcer.remove_filtered_grouping_policy(0, username)
+        
+        # 2. Add new roles
+        for role in roles:
+            self.rbac_enforcer.add_grouping_policy(username, role)
+            
+        # 3. Save policy
+        self.rbac_enforcer.save_policy()
+    
     # ReBAC Management Methods
     def add_resource_relationship(self, resource: str, parent_resource: str) -> bool:
         """Add a resource relationship (for ReBAC)"""

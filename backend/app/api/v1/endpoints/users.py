@@ -32,8 +32,8 @@ router = APIRouter()
 )
 async def get_users(
     user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
-) -> CustomResponse[List[UserResponse]]:
+    current_user: User = Depends(authorize(resource="users", action="read"))
+):
     users = await user_service.get_all_users()
     if not users:
         return create_response(data=None)
@@ -136,7 +136,7 @@ async def get_user_activity(
 async def create_user(
     user_in: UserCreate,
     user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(allowed_roles=["admin"])),
+    current_user: User = Depends(authorize(resource="users", action="create")),
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new user. Admin only."""
@@ -175,7 +175,7 @@ async def update_user(
     id: int,
     user_in: UserAdminUpdate,
     user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(allowed_roles=["admin"]))
+    current_user: User = Depends(authorize(resource="users", action="update"))
 ) -> CustomResponse[UserResponse]:
     """Edit user: email, role, bank, active. Admin only."""
     user = await user_service.get(id)
@@ -235,7 +235,7 @@ async def delete_user(
     id: int,
     soft_delete: bool = Query(False, description="Perform soft delete (deactivate) instead of hard delete"),
     user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(allowed_roles=["admin"])),
+    current_user: User = Depends(authorize(resource="users", action="delete")),
     db: AsyncSession = Depends(get_db)
 ):
     target_user = await user_service.get(id)

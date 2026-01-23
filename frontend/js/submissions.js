@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 6. Setup Mobile Menu
     setupMobileMenu();
+
+    // 7. Enforce UI permissions
+    if (typeof enforceUIPermissions === 'function') {
+        setTimeout(enforceUIPermissions, 100);
+    }
 });
 
 async function loadUserInfo() {

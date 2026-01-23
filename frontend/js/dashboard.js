@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadDashboard();
     loadApplications();
     setupMobileMenu();
+
+    // Enforce UI permissions after a short delay to ensure everything is loaded
+    if (typeof enforceUIPermissions === 'function') {
+        setTimeout(enforceUIPermissions, 100);
+    }
 });
 
 /**

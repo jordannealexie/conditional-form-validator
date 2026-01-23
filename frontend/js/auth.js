@@ -62,16 +62,26 @@ async function login(username, password) {
 
             const user = await apiGetCurrentUser();
 
+            // Fetch effective permissions from backend
+            let permissions = [];
+            try {
+                const permData = await apiGetUserPermissions();
+                permissions = permData.permissions || [];
+            } catch (err) {
+                console.warn('Could not fetch permissions during login:', err);
+            }
+
             const sessionData = {
                 id: user.id,
                 username: user.username,
                 email: user.email,
                 first_name: user.first_name,
                 last_name: user.last_name,
-                roles: [user.user_role], // Wrap single role in array for compatibility
+                roles: [user.user_role],
                 user_role: user.user_role,
                 bank_id: user.bank_id,
-                is_admin: user.user_role === 'admin',
+                is_admin: user.user_role === 'admin' || user.is_superuser,
+                permissions: permissions, // Store synced permissions
                 loginTime: new Date().toISOString()
             };
 
@@ -243,18 +253,17 @@ function hasRole(roleName) {
  * @param {string} permission 
  * @returns {boolean}
  */
-function hasPermission(permission) {
+function hasPermission(resource, action) {
     const user = getCurrentUser();
     if (!user) return false;
 
     // Admin users have all permissions
     if (user.is_admin) return true;
 
-    // Check if any of user's roles have the permission
-    return user.roles.some(roleName => {
-        const role = getRoleByName(roleName);
-        return role && role.permissions.includes(permission);
-    });
+    if (!user.permissions || !Array.isArray(user.permissions)) return false;
+
+    // Check backend-synced permissions
+    return user.permissions.some(p => p.resource === resource && p.action === action);
 }
 
 /**

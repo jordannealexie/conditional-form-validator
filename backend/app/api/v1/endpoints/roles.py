@@ -57,6 +57,11 @@ async def create_role(
     db.add(role)
     await db.commit()
     await db.refresh(role)
+    
+    # Sync to Casbin
+    from app.core.casbin_enforcer import casbin_enforcer
+    casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
+    
     return create_response(data=RoleResponse.model_validate(role), status_code=status.HTTP_201_CREATED)
 
 
@@ -78,6 +83,12 @@ async def delete_role(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Role is assigned to {n} user(s). Remove assignments first.")
     await db.delete(role)
     await db.commit()
+    
+    # Remove from Casbin
+    from app.core.casbin_enforcer import casbin_enforcer
+    casbin_enforcer.rbac_enforcer.remove_filtered_policy(0, role.name)
+    casbin_enforcer.rbac_enforcer.save_policy()
+    
     return create_response(message="Role deleted")
 
 
@@ -136,4 +147,9 @@ async def update_role(
     
     await db.commit()
     await db.refresh(role)
+    
+    # Sync to Casbin
+    from app.core.casbin_enforcer import casbin_enforcer
+    casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
+    
     return create_response(data=RoleResponse.model_validate(role))

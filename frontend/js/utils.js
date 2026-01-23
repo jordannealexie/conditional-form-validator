@@ -28,6 +28,93 @@ function showToast(message, type = 'info', duration = 3000) {
 }
 
 /**
+ * Globally show access denied message
+ * @param {string} message 
+ */
+function showAccessDeniedMessage(message) {
+    const content = `
+        <div class="access-denied-content" style="text-align: center; padding: 20px;">
+            <div style="font-size: 48px; margin-bottom: 20px;">🚫</div>
+            <h3>Access Denied</h3>
+            <p>${message}</p>
+            <p style="margin-top: 20px; font-size: 0.9em; color: var(--text-muted);">
+                Please contact your administrator if you believe this is an error.
+            </p>
+        </div>
+    `;
+
+    // Check if modal system is available
+    if (typeof createModal === 'function') {
+        createModal('Access Restricted', content, [
+            { label: 'Close', type: 'secondary', onclick: 'closeModal()' }
+        ]);
+    } else {
+        alert('Access Denied: ' + message);
+    }
+}
+
+/**
+ * Scan DOM for data-permission and data-action attributes and hide elements
+ * that the user is not authorized for.
+ */
+function enforceUIPermissions() {
+    if (typeof hasPermission !== 'function') return;
+
+    const elements = document.querySelectorAll('[data-permission]');
+    elements.forEach(el => {
+        const resource = el.getAttribute('data-permission');
+        const action = el.getAttribute('data-action') || 'read'; // Default action is read
+
+        if (!hasPermission(resource, action)) {
+            el.style.display = 'none';
+            el.classList.add('permission-hidden');
+
+            // If it's a link or button, disable it just in case
+            if (el.tagName === 'A' || el.tagName === 'BUTTON') {
+                el.disabled = true;
+                el.setAttribute('disabled', 'disabled');
+                el.onclick = (e) => {
+                    e.preventDefault();
+                    showAccessDeniedMessage(`You do not have permission to ${action} ${resource}.`);
+                    return false;
+                };
+            }
+        }
+    });
+
+    // Also handle direct URL access protection
+    protectCurrentPage();
+}
+
+/**
+ * Protect specific pages based on metadata or path
+ */
+function protectCurrentPage() {
+    const path = window.location.pathname;
+    const user = getCurrentUser();
+    if (!user) return; // auth.js handleAuth will redirect anyway
+
+    // List of pages and required permissions
+    const routePermissions = {
+        'users.html': { resource: 'users', action: 'read' },
+        'roles.html': { resource: 'roles', action: 'read' },
+        'admin-templates.html': { resource: 'templates', action: 'read' },
+        'submissions.html': { resource: 'submissions', action: 'read' }
+    };
+
+    for (const [page, perm] of Object.entries(routePermissions)) {
+        if (path.includes(page)) {
+            if (!hasPermission(perm.resource, perm.action)) {
+                console.warn(`Redirecting unauthorized access to ${page}`);
+                // Redirect back to dashboard if possible, or index
+                window.location.href = 'dashboard.html?error=unauthorized';
+                break;
+            }
+        }
+    }
+}
+
+/**
  * Create toast container if it doesn't exist
  * @returns {HTMLElement}
  */

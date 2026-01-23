@@ -86,44 +86,33 @@ async def get_current_superuser(current_user: User = Depends(get_current_active_
     return current_user
 
 
-
-
-# Usage example:
-
-# @router.get("/admin")
-# async def read_admin_data(current_user: UserResponse = Depends(authorize(allowed_roles=["admin"]))):
-#     return {"message": "Welcome, admin!"}
-#
-
-# @router.get("/user")
-# async def read_user_data(current_user: UserResponse = Depends(authorize(allowed_roles=["user"]))):
-#     return {"message": "Welcome, user!"}
-
-#multiple roles
-# @router.get("/admin_or_user")
-# async def read_admin_or_user_data(current_user: UserResponse = Depends(authorize(allowed_roles=["admin", "user"]))):
-#     return {"message": "Welcome, admin or user!"}
-
-# @router.get("/any")
-# async def read_any_data(current_user: UserResponse = Depends(authorize())):
-#     return {"message": "Welcome, any authenticated user!"}
-
-# This allows you to specify which roles are allowed to access certain endpoints.
-# You can also create a route that is accessible to any authenticated user by not passing any roles to the authorize function.
-def authorize(allowed_roles: Optional[List[str]] = None):
+def authorize(resource: Optional[str] = None, action: Optional[str] = None, allowed_roles: Optional[List[str]] = None):
     """
-    Dependency for role-based access control.
-    If no roles are provided, any authenticated active user is allowed.
+    Dependency for unified access control (RBAC, ABAC, ReBAC).
+    Resource and action are used for Casbin enforcement.
+    allowed_roles is kept for backward compatibility and simpler role-based checks.
     """
-    async def role_checker(current_user: User = Depends(get_current_active_user)):
+    async def access_checker(current_user: User = Depends(get_current_active_user)):
+        # 1. Superuser/Admin bypass
+        if current_user.is_superuser or current_user.user_role == "admin":
+            return current_user
+
+        # 2. Casbin Unified Enforcement (if resource and action are provided)
+        if resource and action:
+            from app.core.casbin_enforcer import casbin_enforcer
+            has_access = await casbin_enforcer.enforce_unified_async(current_user, resource, action)
+            if has_access:
+                return current_user
+
+        # 3. Backward Compatibility: Role-based check
         if allowed_roles:
-            # Check if current user has one of the allowed roles
-            if not current_user.is_superuser and current_user.user_role not in allowed_roles and current_user.user_role != "admin":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access forbidden: insufficient role"
-                )
-            
-        return current_user
+            if current_user.user_role in allowed_roles:
+                return current_user
+        
+        # 4. If nothing grants access, return 403
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied: you are not authorized to perform '{action}' on '{resource}'" if action and resource else "Access forbidden: insufficient permissions"
+        )
 
-    return role_checker
+    return access_checker

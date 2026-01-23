@@ -82,6 +82,22 @@ async function apiRequest(endpoint, options = {}) {
             } catch (_) {
                 errorPayload = null;
             }
+
+            // Handle 403 Forbidden
+            if (response.status === 403) {
+                console.warn('Access Denied (403):', errorPayload);
+                const errorMessage = (errorPayload && (errorPayload.detail || errorPayload.message)) || 'You are not authorized to perform this action.';
+
+                // Show friendly message if UI utility is available
+                if (typeof showAccessDeniedMessage === 'function') {
+                    showAccessDeniedMessage(errorMessage);
+                } else {
+                    alert('Access Denied: ' + errorMessage);
+                }
+
+                throw new Error('ACCESS_DENIED');
+            }
+
             const errorMessage = (errorPayload && (errorPayload.detail || errorPayload.message)) || `HTTP ${response.status}: ${response.statusText}`;
             console.error('API Error Response:', errorPayload || response.statusText);
             throw new Error(errorMessage);
@@ -381,6 +397,14 @@ async function apiCheckPermission(username, resource, action) {
         method: 'POST',
         body: { username, resource, action }
     });
+}
+
+/**
+ * Get all effective permissions for current user
+ * @returns {Promise<object>}
+ */
+async function apiGetUserPermissions() {
+    return await apiRequest('/authorization/permissions');
 }
 
 // ============ ABAC Endpoints ============

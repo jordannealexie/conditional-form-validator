@@ -41,18 +41,13 @@ class UserService:
              result = await self.db.execute(stmt)
              role_obj = result.scalar_one_or_none()
              if role_obj:
-                 # Check if association exists to avoid duplicates (though append might handle it, explicit is safer)
-                 # But for simplicity in this rescue op, we use append.
-                 # user.roles.append(role_obj) 
-                 # We need to commit to separate table.
-                 # Actually, user_repo.create commits. 
-                 # We need to add to the relation.
-                 # Since it's Many-to-Many, we can insert into user_roles if we can't load the relationship.
-                 # But let's try the direct insert approach which is robust.
                  await self.db.execute(
                      user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
                  )
                  await self.db.commit()
+                 
+                 # Sync to Casbin
+                 casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
 
         return user
 
@@ -115,6 +110,9 @@ class UserService:
                  )
                  await self.db.commit()
                  
+                 # Sync to Casbin
+                 casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
+                 
         return user
 
     async def update(self, user_id: int, obj_in: Union[UserUpdate, dict]) -> Optional[User]:
@@ -133,8 +131,7 @@ class UserService:
         if "role" in update_data and "user_role" not in update_data:
             update_data["user_role"] = update_data.pop("role")
 
-        # Filter out None values from update_data - REMOVED to allow clearing fields
-        # filtered_update_data = {k: v for k, v in update_data.items() if v is not None}
+        # Filter out None values from update_data
         filtered_update_data = update_data
 
         # Handle password update separately
@@ -152,21 +149,18 @@ class UserService:
              role_obj = result.scalar_one_or_none()
              
              if role_obj:
-                 # Clear existing roles logic could be complex (which to remove?). 
-                 # For now, we ADD the new role to ensure they have the permission.
-                 # Check if exists first
-                 check = await self.db.execute(
-                     select(user_roles).where(
-                         (user_roles.c.user_id == user_id) & 
-                         (user_roles.c.role_id == role_obj.id)
-                     )
+                 # Clear existing roles and add new one in association table
+                 await self.db.execute(
+                     user_roles.delete().where(user_roles.c.user_id == user_id)
                  )
-                 if not check.scalar_one_or_none():
-                     await self.db.execute(
-                         user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
-                     )
-                     await self.db.commit()
-                     await self.db.refresh(updated_user)
+                 await self.db.execute(
+                     user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
+                 )
+                 await self.db.commit()
+                 await self.db.refresh(updated_user)
+                 
+                 # Sync to Casbin
+                 casbin_enforcer.sync_user_roles(updated_user.username, [role_obj.name])
 
         return updated_user
 
@@ -178,9 +172,8 @@ class UserService:
 
         # Remove policies from Casbin
         if db_obj.username:
-            casbin_enforcer.delete_role_for_user(db_obj.username, "user") # Remove basic role
-            # Ideally remove all roles, but we need to know them. 
-            # casbin_enforcer.delete_user(db_obj.username) # If such method exists or implement loop
+            casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy(0, db_obj.username)
+            casbin_enforcer.rbac_enforcer.save_policy()
             
         await self.user_repo.delete(id=user_id)
 
@@ -191,7 +184,6 @@ class UserService:
         Soft delete a user:
         - Set is_active = False
         - Remove roles from Casbin (access revocation)
-        - Clear sensitive relationships if needed
         """
         user = await self.user_repo.get(user_id)
         if not user:
@@ -203,18 +195,13 @@ class UserService:
         
         # 2. Remove permissions/roles from Casbin
         try:
-            # Get all roles and remove them
-            roles = casbin_enforcer.get_roles_for_user(user.username)
-            for role in roles:
-                casbin_enforcer.delete_role_for_user(user.username, role)
+            casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy(0, user.username)
+            casbin_enforcer.rbac_enforcer.save_policy()
         except Exception as e:
             print(f"Error cleaning up Casbin for user {user.username}: {e}")
             
         # 3. Commit changes
         await self.db.commit()
         await self.db.refresh(user)
-        
-        # Set transient property to avoid lazy load error in Pydantic model
-        user._casbin_role = "user"
         
         return user

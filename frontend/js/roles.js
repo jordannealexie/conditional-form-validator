@@ -14,6 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPermissionsGrid();
     const form = document.getElementById('addRoleForm');
     if (form) form.addEventListener('submit', handleCreateRole);
+
+    // Enforce UI permissions
+    if (typeof enforceUIPermissions === 'function') {
+        setTimeout(enforceUIPermissions, 100);
+    }
 });
 
 async function loadUserInfo() {
