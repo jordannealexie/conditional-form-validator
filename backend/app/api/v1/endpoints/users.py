@@ -235,19 +235,45 @@ async def delete_user(
     id: int,
     soft_delete: bool = Query(False, description="Perform soft delete (deactivate) instead of hard delete"),
     user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(resource="users", action="delete")),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(authorize(resource="users", action="delete"))
 ):
+    """
+    Delete a user account.
+    - Soft delete: Deactivates user, removes permissions.
+    - Hard delete: Removes user from DB (if possible).
+    """
+    # 1. Prevent canceling self
+    if current_user.id == id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="You cannot delete your own account."
+        )
+
     target_user = await user_service.get(id)
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
+    # 2. Prevent deleting superuser or special users (optional logic, can be ABAC'd but good safety net)
+    if target_user.is_superuser:
+         raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Cannot delete a superuser."
+        )
+
     if soft_delete:
         deleted_user = await user_service.deactivate_user(id)
+        if not deleted_user:
+             raise HTTPException(status_code=500, detail="Failed to deactivate user")
         return create_response(data=UserResponse.model_validate(deleted_user), message="User deactivated successfully")
     else:
-        # Hard delete - permanently remove from database
-        username = target_user.username
-        await db.delete(target_user)
-        await db.commit()
-        return create_response(data=None, message=f"User {username} permanently deleted")
+        # Hard delete uses the service logic with error checking
+        result = await user_service.delete(id)
+        
+        if not result["success"]:
+            # Return 400 for logic/integrity errors, avoiding 500s
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result["error"]
+            )
+            
+        return create_response(data=None, message=f"User {target_user.username} permanently deleted")

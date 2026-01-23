@@ -7,8 +7,10 @@ from app.repositories.user import UserRepository
 from app.schemas.user import UserCreate, UserUpdate
 from app.schemas.auth import UserCreate as AuthUserCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update, delete
 from app.models.user import Role, user_roles
+from app.models.audit import AuditLog
+from sqlalchemy.exc import IntegrityError
 
 class UserService:    
 
@@ -164,21 +166,55 @@ class UserService:
 
         return updated_user
 
-    async def delete(self, user_id: int) -> Optional[User]:
-        """Delete a user (hard delete)"""
-        db_obj = await self.user_repo.get(user_id)
-        if not db_obj:
-            return None
+    async def delete(self, user_id: int) -> dict:
+        """
+        Delete a user (hard delete) with proper relationship formatting.
+        Returns {"success": True/False, "error": str}
+        """
+        user = await self.user_repo.get(user_id)
+        if not user:
+            return {"success": False, "error": "User not found"}
 
-        # Remove policies from Casbin
-        if db_obj.username:
-            casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy(0, db_obj.username)
-            casbin_enforcer.rbac_enforcer.save_policy()
+        try:
+            username = user.username
             
-        await self.user_repo.delete(id=user_id)
+            # 1. Remove policies from Casbin
+            if username:
+                casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy(0, username)
+                casbin_enforcer.rbac_enforcer.save_policy()
 
-        return db_obj
+            # 2. Nullify User ID in Audit Logs (Audit trails must remain, but user link broken)
+            await self.db.execute(
+                update(AuditLog).where(AuditLog.user_id == user_id).values(user_id=None)
+            )
 
+            # 3. Remove User Roles (Association table cleanup)
+            await self.db.execute(
+                user_roles.delete().where(user_roles.c.user_id == user_id)
+            )
+
+            # 4. Attempt to delete generic relations if any (e.g., refresh tokens are cascade delete)
+            # The repository delete call will cascade usually, but explicit cleanups help avoid 500s 
+            
+            # 5. Delete User
+            await self.user_repo.delete(id=user_id)
+            
+            return {"success": True}
+            
+        except IntegrityError as e:
+            await self.db.rollback()
+            # Check for common constraints
+            err_msg = str(e).lower()
+            if "form_submissions" in err_msg:
+                return {"success": False, "error": "User cannot be deleted because they have form submissions. Deactivate them instead."}
+            if "role" in err_msg:
+                return {"success": False, "error": "User cannot be deleted due to role assignments."}
+            return {"success": False, "error": f"Database integrity error: {str(e)}"}
+            
+        except Exception as e:
+            await self.db.rollback()
+            return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+   
     async def deactivate_user(self, user_id: int) -> Optional[User]:
         """
         Soft delete a user:
