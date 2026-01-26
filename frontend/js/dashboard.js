@@ -124,28 +124,15 @@ function createApplicationCard(template, bank) {
 async function handleTemplateClick(event, templateId, templateBankId) {
     event.stopPropagation();
 
-    // 1. Check for submissions:create permission
-    // We can use the 'hasPermission' function from auth.js if available, or check manual list
-    if (typeof hasPermission === 'function' && !hasPermission('submissions:create')) {
+    // Check for submissions:create permission
+    // The backend will handle all authorization including bank restrictions if needed
+    if (typeof hasPermission === 'function' && !hasPermission('submissions', 'create')) {
         showToast('You are not authorized to submit this form.', 'error');
         return;
     }
 
-    // 2. Check ReBAC (Bank matching) for consistency with backend
-    // Get current user details from API or local storage
-    try {
-        const user = await apiGetCurrentUser();
-        // If user is supervisor/user (fieldman) and has a bank_id, it must match
-        if (user.user_role !== 'admin' && !user.is_superuser && user.bank_id && user.bank_id != templateBankId) {
-            showToast('You can only submit forms for your assigned bank.', 'error');
-            return;
-        }
-    } catch (e) {
-        console.error("Error verifying bank access", e);
-        // Fallthrough - backend will catch it if we fail here, but better to let them try if we aren't sure
-    }
-
-    // 3. Navigate
+    // Navigate to form fill page
+    // Backend will perform final authorization checks
     window.location.href = `/form-fill.html?template_id=${templateId}`;
 }
 
