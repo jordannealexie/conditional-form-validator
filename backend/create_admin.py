@@ -21,7 +21,7 @@ async def create_admin():
             admin = User(
                 email="admin@example.com",
                 username="admin",
-                password_hash=get_password_hash("AdminPass123!"),
+                password_hash=get_password_hash("Admin123!"),
                 first_name="System",
                 last_name="Administrator",
                 full_name="System Administrator",

@@ -39,7 +39,7 @@ class CasbinEnforcer:
             # For now, use default adapter - policies will be separated by ptype
             rbac_adapter = Adapter(engine)
             self.rbac_enforcer = casbin.Enforcer(
-                'app/casbin/rbac_model.conf',
+                'backend/app/casbin/rbac_model.conf',
                 rbac_adapter
             )
             # Set auto-save
@@ -49,7 +49,7 @@ class CasbinEnforcer:
             # ABAC Enforcer
             abac_adapter = Adapter(engine)
             self.abac_enforcer = casbin.Enforcer(
-                'app/casbin/abac_model.conf',
+                'backend/app/casbin/abac_model.conf',
                 abac_adapter
             )
             self.abac_enforcer.enable_auto_save(True)

@@ -82,15 +82,19 @@ async def login(
         select(User).where(User.username == form_data.username)
     )
     user = result.scalar_one_or_none()
-    
+    print(f"DEBUG: After username lookup, user: {user is not None}, id: {user.id if user else None}")
+
     # If username not found, try email
     if not user:
         result = await db.execute(
             select(User).where(User.email == form_data.username)
         )
         user = result.scalar_one_or_none()
-    
+        print(f"DEBUG: After email lookup, user: {user is not None}, id: {user.id if user else None}")
+
     if not user or not verify_password(form_data.password, user.password_hash):
+        print(f"DEBUG: Login failed for user {form_data.username}, entered password: {form_data.password}")
+        print(f"DEBUG: User found: {user is not None}, hash: {user.password_hash if user else None}")
         await audit.log("login_attempt", user_id=user.id if user else None, status="failure", details="Incorrect credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
