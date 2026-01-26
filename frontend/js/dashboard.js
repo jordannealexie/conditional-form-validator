@@ -39,16 +39,23 @@ async function loadDashboard() {
         }
 
         // Fetch counts from various APIs
+        // Only call admin APIs if user has permission to avoid unnecessary 403 errors
+        const isAdmin = currentUser.is_admin || currentUser.is_superuser || currentUser.user_role === 'admin';
+        const canReadUsers = isAdmin || (typeof hasPermission === 'function' && hasPermission('users:read'));
+        const canReadRoles = isAdmin || (typeof hasPermission === 'function' && hasPermission('roles:read'));
+        
         const [users, roles, abacStats, relationships] = await Promise.all([
-            apiGetUsers().catch(() => []),
-            apiGetRoles().catch(() => []),
-            apiGetAbacStats().catch(() => ({ total_policies: 0, applied_policies: 0 })),
-            apiGetRelationships().catch(() => [])
+            canReadUsers ? apiGetUsers().catch(() => []) : Promise.resolve([]),
+            canReadRoles ? apiGetRoles().catch(() => []) : Promise.resolve([]),
+            isAdmin ? apiGetAbacStats().catch(() => ({ total_policies: 0, applied_policies: 0 })) : Promise.resolve({ total_policies: 0, applied_policies: 0 }),
+            isAdmin ? apiGetRelationships().catch(() => []) : Promise.resolve([])
         ]);
 
-        // Update stats cards
-        document.getElementById('totalUsers').textContent = users.length;
-        document.getElementById('totalRoles').textContent = roles.length;
+        // Update stats cards (show '-' for unavailable data)
+        const totalUsersEl = document.getElementById('totalUsers');
+        const totalRolesEl = document.getElementById('totalRoles');
+        if (totalUsersEl) totalUsersEl.textContent = canReadUsers ? users.length : '-';
+        if (totalRolesEl) totalRolesEl.textContent = canReadRoles ? roles.length : '-';
         // document.getElementById('totalPolicies').textContent = `${abacStats.total_policies} (${abacStats.applied_policies} Applied)`;
         // document.getElementById('totalRelationships').textContent = relationships.length;
 

@@ -285,15 +285,50 @@ async function viewSubmission(id) {
 
         content.innerHTML = html;
 
-        // Approver logic (kept original)
-        if (sub.status === 'submitted' || sub.status === 'validated') {
-            // Logic for buttons - kept as is, dependent on permission/role in future if needed
-            // Currently hidden by default in HTML, showing logic would require checking user role
-            // But user asked strictly for UI enhancements, not logic changes.
-            // The HTML has them hidden. Currently JS doesn't show them?
-            // Ah, previous file content showed "approved/reject" buttons.
-            // I'll leave them hidden unless the user implementation wants them shown. 
-            // The requirement was "Application Details UI/UX", not approval logic.
+        // Show approve/reject buttons if user has submissions:review permission
+        // Only show for submitted or validated submissions
+        const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        
+        console.log('Button visibility check:', {
+            user: currentUser?.username,
+            status: sub.status,
+            is_admin: currentUser?.is_admin,
+            is_superuser: currentUser?.is_superuser,
+            permissions: currentUser?.permissions,
+            hasPermissionFunc: typeof hasPermission === 'function'
+        });
+        
+        // Check permission using both formats for compatibility
+        let hasReviewPerm = false;
+        if (typeof hasPermission === 'function') {
+            // Try format 1: 'submissions:review'
+            hasReviewPerm = hasPermission('submissions:review');
+            console.log('hasPermission("submissions:review"):', hasReviewPerm);
+            
+            // Try format 2: resource, action separately
+            if (!hasReviewPerm) {
+                hasReviewPerm = hasPermission('submissions', 'review');
+                console.log('hasPermission("submissions", "review"):', hasReviewPerm);
+            }
+        }
+        
+        const canReview = currentUser && (
+            currentUser.is_admin || 
+            currentUser.is_superuser ||
+            hasReviewPerm
+        );
+        
+        console.log('Can review?', canReview, 'Status check:', (sub.status === 'submitted' || sub.status === 'validated'));
+        
+        if ((sub.status === 'submitted' || sub.status === 'validated') && canReview) {
+            console.log('Showing approve/reject buttons');
+            approveBtn.style.display = 'inline-block';
+            rejectBtn.style.display = 'inline-block';
+        } else {
+            console.log('Hiding approve/reject buttons. Reason:', 
+                !canReview ? 'No review permission' : 'Status not submitted/validated');
+            approveBtn.style.display = 'none';
+            rejectBtn.style.display = 'none';
         }
 
     } catch (error) {

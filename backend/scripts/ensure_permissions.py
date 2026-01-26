@@ -59,7 +59,11 @@ async def ensure_permissions():
         "templates:read",
         "forms:read",
         "submissions:read",
-        "submissions:review"
+        "submissions:viewDetails",
+        "submissions:review",
+        "applications:access",
+        "applications:apply",
+        "applications:submit"
     ]
     
     fieldman_permissions = [
@@ -68,7 +72,11 @@ async def ensure_permissions():
         "submissions:create",
         "submissions:read",
         "submissions:update", # own only, enforced by backend logic too
-        "submissions:delete"  # own only
+        "submissions:delete",  # own only
+        "submissions:viewDetails",  # view own submission details
+        "applications:access",  # can open/view fill form page
+        "applications:apply",   # can click Apply Now
+        "applications:submit"   # can submit completed forms
     ]
     
     async with AsyncSessionLocal() as session:

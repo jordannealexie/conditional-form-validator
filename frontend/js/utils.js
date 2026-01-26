@@ -32,24 +32,12 @@ function showToast(message, type = 'info', duration = 3000) {
  * @param {string} message 
  */
 function showAccessDeniedMessage(message) {
-    const content = `
-        <div class="access-denied-content" style="text-align: center; padding: 20px;">
-            <div style="font-size: 48px; margin-bottom: 20px;">🚫</div>
-            <h3>Access Denied</h3>
-            <p>${message}</p>
-            <p style="margin-top: 20px; font-size: 0.9em; color: var(--text-muted);">
-                Please contact your administrator if you believe this is an error.
-            </p>
-        </div>
-    `;
-
-    // Check if modal system is available
-    if (typeof createModal === 'function') {
-        createModal('Access Restricted', content, [
-            { label: 'Close', type: 'secondary', onclick: 'closeModal()' }
-        ]);
+    // Use non-blocking toast notification instead of modal
+    // This provides subtle feedback without interrupting user flow
+    if (typeof showToast === 'function') {
+        showToast(message, 'warning');
     } else {
-        alert('Access Denied: ' + message);
+        console.warn('Access Denied:', message);
     }
 }
 

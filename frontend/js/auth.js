@@ -258,11 +258,18 @@ function hasPermission(resource, action) {
     if (!user) return false;
 
     // Admin users have all permissions
-    if (user.is_admin) return true;
+    if (user.is_admin || user.is_superuser) return true;
 
     if (!user.permissions || !Array.isArray(user.permissions)) return false;
 
-    // Check backend-synced permissions
+    // Support both formats: "resource:action" string OR {resource, action} object
+    // If called with single argument like hasPermission('submissions:review')
+    if (arguments.length === 1 && typeof resource === 'string' && resource.includes(':')) {
+        const [res, act] = resource.split(':');
+        return user.permissions.some(p => p.resource === res && p.action === act);
+    }
+
+    // Check backend-synced permissions with resource and action separately
     return user.permissions.some(p => p.resource === resource && p.action === action);
 }
 

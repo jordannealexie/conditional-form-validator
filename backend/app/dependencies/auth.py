@@ -86,11 +86,12 @@ async def get_current_superuser(current_user: User = Depends(get_current_active_
     return current_user
 
 
-def authorize(resource: Optional[str] = None, action: Optional[str] = None, allowed_roles: Optional[List[str]] = None):
+def authorize(resource: Optional[str] = None, action: Optional[str] = None, allowed_roles: Optional[List[str]] = None, alternate_actions: Optional[List[str]] = None):
     """
     Dependency for unified access control (RBAC, ABAC, ReBAC).
     Resource and action are used for Casbin enforcement.
     allowed_roles is kept for backward compatibility and simpler role-based checks.
+    alternate_actions allows checking multiple actions (e.g., ['read', 'viewDetails', 'review'])
     """
     async def access_checker(current_user: User = Depends(get_current_active_user)):
         # 1. Superuser/Admin bypass
@@ -103,6 +104,13 @@ def authorize(resource: Optional[str] = None, action: Optional[str] = None, allo
             has_access = await casbin_enforcer.enforce_unified_async(current_user, resource, action)
             if has_access:
                 return current_user
+            
+            # Check alternate actions if primary action failed
+            if alternate_actions:
+                for alt_action in alternate_actions:
+                    has_access = await casbin_enforcer.enforce_unified_async(current_user, resource, alt_action)
+                    if has_access:
+                        return current_user
 
         # 3. Backward Compatibility: Role-based check
         if allowed_roles:
