@@ -1,13 +1,16 @@
 """
 Repository layer for form system database operations
-Follows existing repository pattern in the codebase
+Follows existing repository pattern with caching and eager loading
 """
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from app.models.forms import Bank, FormTemplate, FormSubmission, FormFile, SubmissionStatus
 from datetime import datetime
+
+# Import cache layer
+from app.core.cache import template_cache
 
 
 class BankRepository:
@@ -68,26 +71,128 @@ class BankRepository:
 
 
 class FormTemplateRepository:
-    """Repository for FormTemplate model CRUD operations"""
+    """Repository for FormTemplate model CRUD operations with caching"""
     
     @staticmethod
     async def create(db: AsyncSession, **kwargs) -> FormTemplate:
-        """Create a new form template"""
+        """Create a new form template and invalidate cache"""
         template = FormTemplate(**kwargs)
         db.add(template)
         await db.commit()
-        await db.refresh(template)
+        await db.refresh(template, attribute_names=["bank"])  # Eager load bank
+        
+        # Cache the new template
+        FormTemplateRepository._cache_template(template)
+        
         return template
     
     @staticmethod
-    async def get_by_id(db: AsyncSession, template_id: int) -> Optional[FormTemplate]:
-        """Get template by ID"""
+    async def get_by_id(db: AsyncSession, template_id: int, use_cache: bool = False) -> Optional[FormTemplate]:
+        """
+        Get template by ID with optional caching (disabled by default for updates)
+        
+        Performance optimization: Checks cache first, preventing N+1 queries
+        """
+        # Try cache first
+        if use_cache:
+            cached = template_cache.get(template_id)
+            if cached:
+                # Reconstruct model from cache (simplified - in production use proper deserialization)
+                return FormTemplateRepository._from_cache(cached)
+        
+        # Not in cache - fetch with eager loading (single query)
         result = await db.execute(
             select(FormTemplate)
-            .options(joinedload(FormTemplate.bank))
+            .options(joinedload(FormTemplate.bank))  # Eager load bank - NO N+1
             .where(FormTemplate.id == template_id)
         )
-        return result.unique().scalar_one_or_none()
+        template = result.unique().scalar_one_or_none()
+        
+        # Cache result
+        if template and use_cache:
+            FormTemplateRepository._cache_template(template)
+        
+        return template
+    
+    @staticmethod
+    def _cache_template(template: FormTemplate) -> None:
+        """Store template in cache"""
+        cache_data = {
+            "id": template.id,
+            "bank_id": template.bank_id,
+            "name": template.name,
+            "version": template.version,
+            "form_type": template.form_type,
+            "schema_json": template.schema_json,
+            "fields": template.fields,
+            "ui_schema": template.ui_schema,
+            "description": template.description,
+            "active": template.active,
+            "created_at": template.created_at.isoformat() if template.created_at else None,
+            "updated_at": template.updated_at.isoformat() if template.updated_at else None,
+            "created_by": template.created_by,
+            "bank": {
+                "id": template.bank.id,
+                "name": template.bank.name,
+                "code": template.bank.code,
+                "logo_url": template.bank.logo_url,
+                "primary_color": template.bank.primary_color,
+                "description": template.bank.description,
+                "active": template.bank.active,
+                "created_at": template.bank.created_at.isoformat() if template.bank.created_at else None,
+                "updated_at": template.bank.updated_at.isoformat() if template.bank.updated_at else None
+            } if template.bank else None
+        }
+        template_cache.set(template.id, cache_data)
+    
+    @staticmethod
+    def _from_cache(cached: dict) -> FormTemplate:
+        """
+        Reconstruct template from cache
+        Note: Returns a detached object - don't use for updates without reattaching
+        """
+        from datetime import datetime
+        from app.models.forms import Bank
+        
+        template = FormTemplate(
+            id=cached["id"],
+            bank_id=cached["bank_id"],
+            name=cached["name"],
+            version=cached["version"],
+            form_type=cached["form_type"],
+            schema_json=cached["schema_json"],
+            fields=cached["fields"],
+            ui_schema=cached["ui_schema"],
+            description=cached["description"],
+            active=cached["active"],
+            created_by=cached.get("created_by")
+        )
+        
+        # Set datetime fields
+        if cached.get("created_at"):
+            template.created_at = datetime.fromisoformat(cached["created_at"])
+        if cached.get("updated_at"):
+            template.updated_at = datetime.fromisoformat(cached["updated_at"])
+        
+        # Attach bank data
+        if cached.get("bank"):
+            bank_data = cached["bank"]
+            bank = Bank(
+                id=bank_data["id"],
+                name=bank_data["name"],
+                code=bank_data["code"],
+                logo_url=bank_data.get("logo_url"),
+                primary_color=bank_data.get("primary_color"),
+                description=bank_data.get("description"),
+                active=bank_data.get("active", True)
+            )
+            if bank_data.get("created_at"):
+                bank.created_at = datetime.fromisoformat(bank_data["created_at"])
+            if bank_data.get("updated_at"):
+                bank.updated_at = datetime.fromisoformat(bank_data["updated_at"])
+            template.bank = bank
+        
+        return template
     
     @staticmethod
     async def get_by_bank_and_type(
@@ -111,7 +216,7 @@ class FormTemplateRepository:
             query = query.where(FormTemplate.active == True).order_by(FormTemplate.created_at.desc())
         
         result = await db.execute(query)
-        return result.scalar_first()
+        return result.scalar_one_or_none()
     
     @staticmethod
     async def get_all_by_bank(
@@ -119,19 +224,31 @@ class FormTemplateRepository:
         bank_id: int, 
         active_only: bool = False
     ) -> List[FormTemplate]:
-        """Get all templates for a bank"""
-        query = select(FormTemplate).where(FormTemplate.bank_id == bank_id)
+        """
+        Get all templates for a bank with eager loading
+        
+        Performance: Single query with eager loading - NO N+1
+        """
+        query = (
+            select(FormTemplate)
+            .options(joinedload(FormTemplate.bank))  # Eager load bank
+            .where(FormTemplate.bank_id == bank_id)
+        )
         
         if active_only:
             query = query.where(FormTemplate.active == True)
         
         result = await db.execute(query.order_by(FormTemplate.name, FormTemplate.version.desc()))
-        return list(result.scalars().all())
+        return list(result.unique().scalars().all())
     
     @staticmethod
     async def get_all(db: AsyncSession, active_only: bool = False) -> List[FormTemplate]:
-        """Get all templates"""
-        query = select(FormTemplate).options(joinedload(FormTemplate.bank))
+        """
+        Get all templates with eager loading
+        
+        Performance: Single query with eager loading - NO N+1
+        """
+        query = select(FormTemplate).options(joinedload(FormTemplate.bank))  # Eager load
         
         if active_only:
             query = query.where(FormTemplate.active == True)
@@ -141,13 +258,37 @@ class FormTemplateRepository:
     
     @staticmethod
     async def update(db: AsyncSession, template: FormTemplate, **kwargs) -> FormTemplate:
-        """Update template"""
+        """Update template and invalidate cache"""
         for key, value in kwargs.items():
             if value is not None and hasattr(template, key):
                 setattr(template, key, value)
         await db.commit()
-        await db.refresh(template)
-        return template
+        
+        # Invalidate cache on update
+        template_cache.invalidate(template.id)
+        
+        # Refetch with eager loading to avoid lazy-load issues
+        result = await db.execute(
+            select(FormTemplate)
+            .options(joinedload(FormTemplate.bank))
+            .where(FormTemplate.id == template.id)
+        )
+        updated = result.unique().scalar_one()
+        
+        # Re-cache updated template
+        FormTemplateRepository._cache_template(updated)
+        
+        return updated
+    
+    @staticmethod
+    async def delete(db: AsyncSession, template: FormTemplate) -> None:
+        """Delete template and invalidate cache"""
+        template_id = template.id
+        await db.delete(template)
+        await db.commit()
+        
+        # Invalidate cache on delete
+        template_cache.invalidate(template_id)
     
     @staticmethod
     async def check_version_exists(

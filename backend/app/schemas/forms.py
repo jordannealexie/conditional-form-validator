@@ -53,6 +53,7 @@ class FormTemplateBase(BaseModel):
     bank_id: int = Field(..., description="Bank ID this template belongs to")
     name: str = Field(..., min_length=1, max_length=255, description="Template name (unique per bank)")
     version: str = Field(..., description="Semantic version (e.g., 1.0.0)")
+    form_type: Optional[str] = Field(None, max_length=100, description="Form type category (e.g., 'credit_card', 'loan')")
     schema_json: Dict[str, Any] = Field(..., description="JSONSchema for validation")
     fields: Optional[List[Dict[str, Any]]] = Field(None, description="Fields array for UI rendering and conditional logic")
     ui_schema: Optional[Dict[str, Any]] = Field(None, description="UI rendering hints")
@@ -72,6 +73,7 @@ class FormTemplateUpdate(BaseModel):
     ui_schema: Optional[Dict[str, Any]] = None
     name: Optional[str] = Field(None, max_length=255)
     version: Optional[str] = None
+    form_type: Optional[str] = Field(None, max_length=100)
     bank_id: Optional[int] = Field(None, description="Bank ID")
     description: Optional[str] = None
     active: Optional[bool] = None

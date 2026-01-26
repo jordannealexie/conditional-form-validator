@@ -11,7 +11,7 @@ from app.models.user import User
 router = APIRouter()
 
 
-@router.get("/", response_model=List[FormTemplateResponse])
+@router.get("/")
 async def list_templates(
     bank_id: Optional[int] = Query(None, description="Filter by bank ID"),
     bank_code: Optional[str] = Query(None, description="Filter by bank code"),
@@ -19,24 +19,32 @@ async def list_templates(
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
     """List templates. Admin: all or by bank. Others: only their bank."""
-    if bank_code:
-        bank = await BankRepository.get_by_code(db, bank_code)
-        if not bank:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank not found")
-        bank_id = bank.id
-    
-    # If not admin/superuser, force bank_id filter for supervisor/fieldman
-    # This acts as data-level permission (ABAC/ReBAC lite)
-    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin" and current_user.bank_id:
-        bank_id = current_user.bank_id
-    if bank_id:
-        templates = await FormTemplateRepository.get_all_by_bank(db, bank_id, active_only=True)
-    else:
-        templates = await FormTemplateRepository.get_all(db, active_only=True)
-    return create_response(data=[FormTemplateResponse.model_validate(t) for t in templates])
+    try:
+        if bank_code:
+            bank = await BankRepository.get_by_code(db, bank_code)
+            if not bank:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank not found")
+            bank_id = bank.id
+        
+        # If not admin/superuser, force bank_id filter for supervisor/fieldman
+        # This acts as data-level permission (ABAC/ReBAC lite)
+        if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin" and current_user.bank_id:
+            bank_id = current_user.bank_id
+        if bank_id:
+            templates = await FormTemplateRepository.get_all_by_bank(db, bank_id, active_only=True)
+        else:
+            templates = await FormTemplateRepository.get_all(db, active_only=True)
+        return create_response(data=[FormTemplateResponse.model_validate(t) for t in templates])
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list templates: {str(e)}"
+        )
 
 
-@router.get("/bank/{bank_id}", response_model=List[FormTemplateResponse])
+@router.get("/bank/{bank_id}")
 async def read_templates_by_bank(
     bank_id: int,
     db: AsyncSession = Depends(get_db),
@@ -45,18 +53,26 @@ async def read_templates_by_bank(
     """
     Retrieve form templates for a specific bank.
     """
-    bank = await BankRepository.get_by_id(db, bank_id)
-    if not bank:
+    try:
+        bank = await BankRepository.get_by_id(db, bank_id)
+        if not bank:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Bank not found"
+            )
+            
+        templates = await FormTemplateRepository.get_all_by_bank(db, bank_id, active_only=True)
+        data = [FormTemplateResponse.model_validate(t) for t in templates]
+        return create_response(data=data)
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bank not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve templates: {str(e)}"
         )
-        
-    templates = await FormTemplateRepository.get_all_by_bank(db, bank_id, active_only=True)
-    data = [FormTemplateResponse.model_validate(t) for t in templates]
-    return create_response(data=data)
 
-@router.get("/{template_id}", response_model=FormTemplateResponse)
+@router.get("/{template_id}")
 async def read_template(
     template_id: int,
     db: AsyncSession = Depends(get_db),
@@ -65,15 +81,23 @@ async def read_template(
     """
     Get a specific Form Template by ID.
     """
-    template = await FormTemplateRepository.get_by_id(db, template_id)
-    if not template:
+    try:
+        template = await FormTemplateRepository.get_by_id(db, template_id)
+        if not template:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Form template not found"
+            )
+        return create_response(data=FormTemplateResponse.model_validate(template))
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Form template not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve template: {str(e)}"
         )
-    return create_response(data=FormTemplateResponse.model_validate(template))
 
-@router.post("/", response_model=FormTemplateResponse)
+@router.post("/")
 async def create_template(
     *,
     db: AsyncSession = Depends(get_db),
@@ -84,31 +108,37 @@ async def create_template(
     Create a new Form Template.
     Permission: forms:create
     """
-    # Authorization handled by dependency
-    
-    # Check if bank exists
-    bank = await BankRepository.get_by_id(db, template_in.bank_id)
-    if not bank:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bank not found"
+    try:
+        # Check if bank exists
+        bank = await BankRepository.get_by_id(db, template_in.bank_id)
+        if not bank:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Bank not found"
+            )
+            
+        # Check if version exists
+        exists = await FormTemplateRepository.check_version_exists(
+            db, template_in.bank_id, template_in.name, template_in.version
         )
-        
-    # Check if version exists
-    exists = await FormTemplateRepository.check_version_exists(
-        db, template_in.bank_id, template_in.name, template_in.version
-    )
-    if exists:
+        if exists:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Template with this version already exists for the bank"
+            )
+            
+        template = await FormTemplateRepository.create(db, **template_in.model_dump())
+        return create_response(data=FormTemplateResponse.model_validate(template))
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Template with this version already exists for the bank"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create template: {str(e)}"
         )
-        
-    template = await FormTemplateRepository.create(db, **template_in.model_dump())
-    return create_response(data=FormTemplateResponse.model_validate(template))
 
 
-@router.put("/{template_id}", response_model=FormTemplateResponse)
+@router.put("/{template_id}")
 async def update_template(
     template_id: int,
     template_in: FormTemplateUpdate,
@@ -116,16 +146,23 @@ async def update_template(
     current_user: User = Depends(authorize(resource="forms", action="update"))
 ) -> Any:
     """Update a form template. Permission: forms:update."""
-    # Authorization handled by dependency
-    
-    template = await FormTemplateRepository.get_by_id(db, template_id)
-    if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
-    upd = template_in.model_dump(exclude_unset=True)
-    if upd:
-        updated = await FormTemplateRepository.update(db, template, **upd)
-        return create_response(data=FormTemplateResponse.model_validate(updated))
-    return create_response(data=FormTemplateResponse.model_validate(template))
+    try:
+        template = await FormTemplateRepository.get_by_id(db, template_id)
+        if not template:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
+        
+        upd = template_in.model_dump(exclude_unset=True)
+        if upd:
+            updated = await FormTemplateRepository.update(db, template, **upd)
+            return create_response(data=FormTemplateResponse.model_validate(updated))
+        return create_response(data=FormTemplateResponse.model_validate(template))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update template: {str(e)}"
+        )
 
 
 @router.delete("/{template_id}")
@@ -135,17 +172,17 @@ async def delete_template(
     current_user: User = Depends(authorize(resource="forms", action="delete"))
 ) -> Any:
     """Delete a form template. Permission: forms:delete."""
-    # Authorization handled by dependency
-    
-    template = await FormTemplateRepository.get_by_id(db, template_id)
-    if not template:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
     try:
+        template = await FormTemplateRepository.get_by_id(db, template_id)
+        if not template:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
+        
         await FormTemplateRepository.delete(db, template)
+        return create_response(message="Template deleted")
+    except HTTPException:
+        raise
     except Exception as e:
-        # In case of foreign key constraints or other DB errors
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Could not delete template. It may have associated submissions. Error: {str(e)}"
         )
-    return create_response(message="Template deleted")

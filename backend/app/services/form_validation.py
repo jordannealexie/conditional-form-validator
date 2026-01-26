@@ -2,34 +2,52 @@ from typing import Dict, Any, List, Optional, Tuple
 import jsonschema
 from jsonschema import ValidationError as JsonSchemaValidationError
 from app.core.validator import FormValidator
+from app.core.json_schema_validator import JSONSchemaValidator
 from app.schemas.forms import ValidationResult, ValidationError as ValidationErrorSchema
 
 class FormValidationService:
     """
-    Service for validating form submissions against JSONSchema
-    Supports conditional validation, dependencies, and custom business rules
+    Service for validating form submissions against JSON Schema
+    Supports conditional validation, dependencies, nested logic, and custom business rules
+    
+    Uses standard JSON Schema Draft-07 specification
     """
     
     @staticmethod
     def validate_submission(data: Dict[str, Any], template: Dict[str, Any]) -> ValidationResult:
         """
-        Validate submission data against a JSONSchema and UI-level conditional logic
-        """
-        result_dict = FormValidator.validate(data, template)
+        Validate submission data against JSON Schema with conditional logic
         
-        errors = [
+        Args:
+            data: Form submission data
+            template: Template dict containing schema_json
+            
+        Returns:
+            ValidationResult with validation status and errors
+        """
+        # Extract schema from template
+        schema = template.get("schema_json", {})
+        
+        # Evaluate conditionals first (if/then/else)
+        effective_schema = JSONSchemaValidator.evaluate_conditionals(data, schema)
+        
+        # Validate against effective schema
+        is_valid, errors = JSONSchemaValidator.validate_data(data, effective_schema)
+        
+        # Convert to ValidationErrorSchema format
+        error_objects = [
             ValidationErrorSchema(
                 field=e["field"],
                 message=e["message"],
-                constraint=e["code"]
+                constraint=e["constraint"]
             )
-            for e in result_dict["errors"]
+            for e in errors
         ]
         
         return ValidationResult(
-            is_valid=result_dict["valid"],
-            errors=errors,
-            message="Validation successful" if result_dict["valid"] else "Validation failed"
+            is_valid=is_valid,
+            errors=error_objects,
+            message="Validation successful" if is_valid else f"Validation failed with {len(errors)} error(s)"
         )
     
     @staticmethod
