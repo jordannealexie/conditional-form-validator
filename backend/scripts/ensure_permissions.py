@@ -94,7 +94,16 @@ async def ensure_permissions():
              supervisor_role.permissions = supervisor_permissions
 
         # 3. Update Fieldman Role
-        result = await session.execute(select(Role).where(Role.name == "user")) # Assuming 'user' is default role
+        result = await session.execute(select(Role).where(Role.name == "fieldman"))
+        fieldman_role = result.scalar_one_or_none()
+        if not fieldman_role:
+             fieldman_role = Role(name="fieldman", description="Fieldman", permissions=fieldman_permissions)
+             session.add(fieldman_role)
+        else:
+             fieldman_role.permissions = fieldman_permissions
+        
+        # Also check for "user" role (legacy)
+        result = await session.execute(select(Role).where(Role.name == "user"))
         user_role = result.scalar_one_or_none()
         if not user_role:
              user_role = Role(name="user", description="Regular User", permissions=fieldman_permissions)
@@ -108,7 +117,8 @@ async def ensure_permissions():
         print("🔄 Syncing to Casbin...")
         casbin_enforcer.sync_role_permissions("admin", admin_permissions)
         casbin_enforcer.sync_role_permissions("supervisor", supervisor_permissions)
-        casbin_enforcer.sync_role_permissions("user", fieldman_permissions)
+        casbin_enforcer.sync_role_permissions("fieldman", fieldman_permissions)
+        casbin_enforcer.sync_role_permissions("user", fieldman_permissions)  # Legacy role
         
         print("✅ Permissions enforced successfully.")
 

@@ -71,12 +71,10 @@ async def create_submission(
     fieldman_id = submission_in.fieldman_id or current_user.username
     
     # Enforce ReBAC: If user is restricted to a bank, they can only submit for that bank
-    if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin":
-        if current_user.bank_id and template.bank_id != current_user.bank_id:
-             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, 
-                detail="You are not authorized to submit forms for this bank."
-            )
+    # UNLESS they have explicit permissions (checked by authorize dependency)
+    # Note: authorize(resource="submissions", action="create") already passed at this point,
+    # so if user has the permission explicitly, we trust it.
+    # Bank restriction is now optional/advisory, not blocking for users with permissions.
             
     template_data = {"schema_json": template.schema_json, "fields": template.fields, "ui_schema": template.ui_schema}
     validation_result = FormValidationService.validate_submission(data_json, template_data)

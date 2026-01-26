@@ -109,13 +109,43 @@ async def login(
             detail="Inactive user"
         )
     
-    # Get user permissions from Casbin (simplified representation for token)
+    # Sync user roles to Casbin on login to ensure fresh permissions
     from app.core.casbin_enforcer import casbin_enforcer
+    from sqlalchemy.orm import selectinload
+    
+    try:
+        # Reload user with roles relationship
+        result = await db.execute(
+            select(User).options(selectinload(User.roles)).where(User.id == user.id)
+        )
+        user = result.scalar_one_or_none()
+        
+        # Sync user roles to Casbin
+        if user and user.user_role:
+            role_names = [user.user_role]
+            print(f"DEBUG: Syncing roles for user {user.username}: {role_names}")
+            casbin_enforcer.sync_user_roles(user.username, role_names)
+    except Exception as e:
+        print(f"Warning: Could not sync roles to Casbin: {e}")
+    
+    # Get user permissions from Casbin (through roles)
     permissions = []
     try:
-        # Example format: ["submissions:read", "templates:create"]
+        # Get direct permissions for user
         policy = casbin_enforcer.get_permissions_for_user(user.username)
-        permissions = [f"{p[1]}:{p[2]}" for p in policy]
+        permissions = [f"{p[1]}:{p[2]}" for p in policy if len(p) >= 3]
+        
+        # Also get implicit permissions through roles
+        roles = casbin_enforcer.get_roles_for_user(user.username)
+        print(f"DEBUG: User {user.username} has roles in Casbin: {roles}")
+        for role in roles:
+            role_perms = casbin_enforcer.get_permissions_for_role(role)
+            print(f"DEBUG: Role {role} has permissions: {role_perms}")
+            for p in role_perms:
+                if len(p) >= 3:
+                    perm_str = f"{p[1]}:{p[2]}"
+                    if perm_str not in permissions:
+                        permissions.append(perm_str)
     except Exception as e:
         print(f"Warning: Could not get permissions from Casbin: {e}")
     

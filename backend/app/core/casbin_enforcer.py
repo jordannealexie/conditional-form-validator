@@ -119,9 +119,23 @@ class CasbinEnforcer:
         if not self.rbac_enforcer:
             raise Exception("RBAC enforcer not initialized")
         try:
-            return self.rbac_enforcer.enforce(user, resource, action)
+            # Get user's roles first
+            roles = self.rbac_enforcer.get_roles_for_user(user)
+            print(f"  User {user} has roles: {roles}")
+            
+            # Get permissions for each role
+            for role in roles:
+                role_perms = self.rbac_enforcer.get_permissions_for_user(role)
+                print(f"  Role {role} has permissions: {role_perms}")
+            
+            # Check if user has permission
+            result = self.rbac_enforcer.enforce(user, resource, action)
+            print(f"  Enforce result for ({user}, {resource}, {action}): {result}")
+            return result
         except Exception as e:
             print(f"Error checking RBAC permission: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     async def check_rbac_permission_async(self, user: str, resource: str, action: str) -> bool:
@@ -193,9 +207,11 @@ class CasbinEnforcer:
         """
         # 0. Superuser check
         if hasattr(user, 'is_superuser') and user.is_superuser:
+            print(f"✓ Access granted for {user.username}: is_superuser")
             return True
             
         username = user.username
+        print(f"🔍 Checking permissions for user: {username}, resource: {resource}, action: {action}")
         
         # 1. Self Check (if resource is the user itself)
         # Assuming resource format "user:{id}" or similar, OR passing resource_obj
@@ -204,30 +220,41 @@ class CasbinEnforcer:
             # For strictness, let's say Self is allowed unless blocked, but let's use the explicit check
             # Simple self-check:
              if action in ["read", "update", "delete", "get"]:
+                 print(f"✓ Access granted for {username}: self-access")
                  return True
 
         # 2. RBAC Check
-        if self.check_rbac_permission(username, resource, action):
+        rbac_result = self.check_rbac_permission(username, resource, action)
+        print(f"  RBAC check result: {rbac_result}")
+        if rbac_result:
+            print(f"✓ Access granted for {username}: RBAC")
             return True
             
         # 3. ABAC Check
         # Convert user model to dict for attributes
         user_attrs = {
-            "department": user.department,
-            "level": user.level,
-            "location": user.location,
-            "is_superuser": user.is_superuser,
-            "username": user.username
+            "department": getattr(user, 'department', None),
+            "level": getattr(user, 'level', 1),
+            "location": getattr(user, 'location', None),
+            "is_superuser": getattr(user, 'is_superuser', False),
+            "username": username
         }
-        if self.check_abac_permission(user_attrs, resource, action):
+        abac_result = self.check_abac_permission(user_attrs, resource, action)
+        print(f"  ABAC check result: {abac_result}")
+        if abac_result:
+            print(f"✓ Access granted for {username}: ABAC")
             return True
             
         # 4. ReBAC Check
         # ReBAC typically checks if User is related to Resource
         # e.g. (user1, doc1, owner)
-        if self.check_rebac_permission(username, resource, action):
+        rebac_result = self.check_rebac_permission(username, resource, action)
+        print(f"  ReBAC check result: {rebac_result}")
+        if rebac_result:
+            print(f"✓ Access granted for {username}: ReBAC")
             return True
-            
+        
+        print(f"✗ Access denied for {username}: no matching policy")
         return False
 
     async def enforce_unified_async(self, user: any, resource: str, action: str, resource_obj: any = None) -> bool:
