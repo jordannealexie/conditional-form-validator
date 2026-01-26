@@ -1,7 +1,7 @@
 """add_field_types_and_enums_tables
 
 Revision ID: 20260126_add_field_types
-Revises: 20260121_143018
+Revises: 21e8f7fff520
 Create Date: 2026-01-26 14:30:00.000000
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '20260126_add_field_types'
-down_revision: Union[str, None] = '20260121_143018'
+down_revision: Union[str, None] = '21e8f7fff520'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

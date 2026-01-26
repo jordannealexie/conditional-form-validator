@@ -78,23 +78,26 @@ class FormSubmission(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey('form_templates.id'), nullable=False, index=True)
-    fieldman_id = Column(String(100), nullable=False, index=True) # Spec says 'fieldman_id' (rename submitted_by)
+    fieldman_id = Column(String(100), nullable=False, index=True)  # Legacy field
+    submitted_by = Column(String(100), nullable=True, index=True, comment="Username of submitter (replaces fieldman_id)")
     
     # Submission metadata
     status = Column(String(20), default=SubmissionStatus.DRAFT, nullable=False, index=True)
     
     # Actual form data (validated against schema_json)
-    data_json = Column(JSON, nullable=False) # Spec says 'data_json'
-    file_tokens = Column(JSON, nullable=True) # Spec says 'file_tokens'
+    data_json = Column(JSON, nullable=False)
+    file_tokens = Column(JSON, nullable=True)
     
     # Validation results
     validation_errors = Column(JSON, nullable=True)
     is_valid = Column(Boolean, default=False, nullable=False)
     
-    # Review fields
-    reviewed_by = Column(String(100), nullable=True)
+    # Review/Validation audit fields
+    reviewed_by = Column(String(100), nullable=True, comment="Username of reviewer (approval/rejection)")
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
-    reviewed_comment = Column(Text, nullable=True)  # Reviewer's comment for approval/rejection
+    reviewed_comment = Column(Text, nullable=True)
+    validated_by = Column(String(100), nullable=True, index=True, comment="Username who validated/approved")
+    validated_on = Column(DateTime(timezone=True), nullable=True, index=True, comment="Timestamp of validation/approval")
     
     # Timestamps
     submitted_at = Column(DateTime(timezone=True), nullable=True)

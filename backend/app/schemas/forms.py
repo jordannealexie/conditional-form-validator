@@ -2,9 +2,10 @@
 Pydantic schemas for form system API requests and responses
 """
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime
 import uuid
+from app.utils.validators import validate_template_version
 
 
 # ============================================================================
@@ -52,13 +53,19 @@ class BankResponse(BankBase):
 class FormTemplateBase(BaseModel):
     bank_id: int = Field(..., description="Bank ID this template belongs to")
     name: str = Field(..., min_length=1, max_length=255, description="Template name (unique per bank)")
-    version: str = Field(..., description="Semantic version (e.g., 1.0.0)")
+    version: str = Field(..., description="Semantic version as FLOAT (e.g., '1.0', '2.5')")
     form_type: Optional[str] = Field(None, max_length=100, description="Form type category (e.g., 'credit_card', 'loan')")
     schema_json: Dict[str, Any] = Field(..., description="JSONSchema for validation")
     fields: Optional[List[Dict[str, Any]]] = Field(None, description="Fields array for UI rendering and conditional logic")
     ui_schema: Optional[Dict[str, Any]] = Field(None, description="UI rendering hints")
     description: Optional[str] = Field(None, description="Form description")
     active: bool = Field(True, description="Whether this template version is active")
+    
+    @field_validator('version')
+    @classmethod
+    def validate_version_format(cls, v: str) -> str:
+        """Validate version is FLOAT format only (e.g., '1.0', '2.5')"""
+        return validate_template_version(v)
 
 
 class FormTemplateCreate(FormTemplateBase):

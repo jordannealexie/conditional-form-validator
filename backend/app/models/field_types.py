@@ -114,6 +114,11 @@ class FieldTypeDefinition(Base):
     # JSONSchema definition for this field type
     schema_definition = Column(JSON, nullable=False)
     
+    # Validation rules (NEW)
+    validation_rules = Column(JSON, nullable=True, comment="JSON schema validation rules for strict type checking")
+    strict_type_checking = Column(Boolean, nullable=False, server_default='true', 
+                                  comment="Whether to enforce strict data type validation")
+    
     # UI configuration
     ui_widget = Column(String(100), nullable=True)  # Widget to use for rendering
     ui_options = Column(JSON, nullable=True)  # Additional UI configuration
