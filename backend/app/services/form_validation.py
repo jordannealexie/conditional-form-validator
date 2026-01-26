@@ -1,4 +1,5 @@
 from typing import Dict, Any, List, Optional, Tuple
+import copy
 import jsonschema
 from jsonschema import ValidationError as JsonSchemaValidationError
 from app.core.validator import FormValidator
@@ -14,13 +15,52 @@ class FormValidationService:
     """
     
     @staticmethod
-    def validate_submission(data: Dict[str, Any], template: Dict[str, Any]) -> ValidationResult:
+    def _filter_required_by_visibility(
+        schema: Dict[str, Any], 
+        visible_fields: List[str]
+    ) -> Dict[str, Any]:
+        """
+        Create a modified schema that only requires visible fields.
+        Hidden fields are removed from the 'required' array.
+        
+        Args:
+            schema: Original JSON Schema
+            visible_fields: List of currently visible field IDs
+            
+        Returns:
+            Modified schema with filtered required fields
+        """
+        if not schema:
+            return schema
+            
+        # Deep copy to avoid modifying original
+        filtered_schema = copy.deepcopy(schema)
+        
+        # Filter the required array to only include visible fields
+        if "required" in filtered_schema:
+            original_required = filtered_schema["required"]
+            filtered_schema["required"] = [
+                field for field in original_required 
+                if field in visible_fields
+            ]
+        
+        return filtered_schema
+    
+    @staticmethod
+    def validate_submission(
+        data: Dict[str, Any], 
+        template: Dict[str, Any],
+        visible_fields: Optional[List[str]] = None
+    ) -> ValidationResult:
         """
         Validate submission data against JSON Schema with conditional logic
         
         Args:
             data: Form submission data
             template: Template dict containing schema_json
+            visible_fields: Optional list of currently visible field IDs.
+                           If provided, only these fields will be validated as required.
+                           Hidden fields are excluded from required validation.
             
         Returns:
             ValidationResult with validation status and errors
@@ -28,11 +68,23 @@ class FormValidationService:
         # Extract schema from template
         schema = template.get("schema_json", {})
         
+        # If visible_fields provided, create a modified schema that only requires visible fields
+        if visible_fields is not None:
+            schema = FormValidationService._filter_required_by_visibility(schema, visible_fields)
+        
         # Evaluate conditionals first (if/then/else)
         effective_schema = JSONSchemaValidator.evaluate_conditionals(data, schema)
         
         # Validate against effective schema
         is_valid, errors = JSONSchemaValidator.validate_data(data, effective_schema)
+        
+        # Filter out errors for hidden fields if visible_fields provided
+        if visible_fields is not None:
+            errors = [
+                e for e in errors 
+                if e["field"].split(".")[0] in visible_fields or e["field"] == "root"
+            ]
+            is_valid = len(errors) == 0
         
         # Convert to ValidationErrorSchema format
         error_objects = [

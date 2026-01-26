@@ -115,6 +115,7 @@ class FormSubmissionCreate(BaseModel):
     submission_data: Optional[Dict[str, Any]] = Field(None, description="Alias for data_json (API compatibility)")
     file_tokens: Optional[List[str]] = Field(None, description="List of file tokens from uploads")
     status: Optional[str] = Field("draft", description="Submission status")
+    visible_fields: Optional[List[str]] = Field(None, description="List of currently visible field IDs (for conditional validation)")
 
 
 class FormSubmissionUpdate(BaseModel):
@@ -128,15 +129,20 @@ class FormSubmissionResponse(BaseModel):
     id: int
     template_id: int
     fieldman_id: str
+    submitted_by: Optional[str] = None  # New audit field: who submitted
     data_json: Dict[str, Any]
     status: str
     validation_errors: Optional[List[Dict[str, Any]]] = None
     is_valid: bool
     template: Optional[FormTemplateResponse] = None
     submitted_at: Optional[datetime] = None
+    # Legacy review fields (backwards compatible)
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[datetime] = None
     reviewed_comment: Optional[str] = None
+    # New validation audit fields
+    validated_by: Optional[str] = None  # Who approved/rejected
+    validated_on: Optional[datetime] = None  # When approved/rejected
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -204,6 +210,7 @@ class ValidateSubmissionRequest(BaseModel):
     """Schema for submission validation request"""
     template_id: int
     submission_data: Dict[str, Any] # Request uses submission_data for flexibility
+    visible_fields: Optional[List[str]] = Field(None, description="List of currently visible field IDs (for conditional validation)")
 
 
 # ============================================================================
