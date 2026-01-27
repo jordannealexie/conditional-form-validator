@@ -20,6 +20,19 @@ A comprehensive form management and validation platform built with FastAPI and V
 - **Background Fallback**: Automatic failover to FastAPI `BackgroundTasks` if Redis is offline.
 - **Async DB**: Fully asynchronous database operations with SQLAlchemy and PostgreSQL.
 
+## Architecture
+
+The application follows a modular architecture with clear separation of concerns:
+
+- **API Layer** (`app/api/`): FastAPI routers and endpoints
+- **Services Layer** (`app/services/`): Business logic and data processing
+- **Repositories Layer** (`app/repositories/`): Data access and database queries
+- **Models Layer** (`app/models/`): SQLAlchemy database models
+- **Schemas Layer** (`app/schemas/`): Pydantic request/response models
+- **Core Layer** (`app/core/`): Configuration, security, and utilities
+- **Dependencies** (`app/dependencies/`): Dependency injection functions
+- **Middlewares** (`app/middlewares/`): Custom middleware for authentication and logging
+
 ## Getting Started
 
 ### Prerequisites
@@ -78,6 +91,27 @@ A comprehensive form management and validation platform built with FastAPI and V
    uvicorn app.main:app --reload
    ```
 
+### Docker Setup (Recommended)
+
+For easier setup with all dependencies (PostgreSQL, Redis), use Docker Compose:
+
+1. **Navigate to backend directory**
+   ```bash
+   cd backend
+   ```
+
+2. **Copy environment file**
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Start services with Docker Compose**
+   ```bash
+   docker-compose up --build
+   ```
+
+The application will be available at: **[http://localhost:8000](http://localhost:8000)**
+
 ### Accessing the Application
 
 Open your browser and navigate to: **[http://localhost:8000](http://localhost:8000)**
@@ -94,6 +128,31 @@ Open your browser and navigate to: **[http://localhost:8000](http://localhost:80
 
 - Swagger UI: [http://localhost:8000/api/v1/docs](http://localhost:8000/api/v1/docs)
 - ReDoc: [http://localhost:8000/api/v1/redoc](http://localhost:8000/api/v1/redoc)
+
+### Frontend
+
+The project includes a Vanilla JavaScript frontend for form management and submission. The frontend files are located in the `frontend/` directory and are served statically by the FastAPI backend.
+
+Key frontend features:
+- User authentication and authorization
+- Dynamic form rendering with conditional logic
+- Admin panel for template management
+- Role-based UI components
+
+## Testing
+
+Run the test suite using pytest:
+
+```bash
+cd backend
+python -m pytest tests/
+```
+
+For coverage report:
+
+```bash
+python -m pytest --cov=app tests/
+```
 
 ## Documentation
 - [Implementation Plan](.gemini/antigravity/brain/07899d65-236f-49d5-b6b7-08fca3e9483a/implementation_plan.md)
