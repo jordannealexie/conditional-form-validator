@@ -1,5 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
+from datetime import datetime
+
 
 class RoleAssignment(BaseModel):
     username: str
@@ -16,6 +18,11 @@ class RoleResponse(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
+    permissions: Optional[List[str]] = None
+    created_at: Optional[datetime] = None
+    created_by: Optional[int] = Field(None, description="User ID of creator")
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[int] = Field(None, description="User ID of last updater")
     
     class Config:
         from_attributes = True

@@ -128,8 +128,8 @@ class FormSubmissionResponse(BaseModel):
     """Schema for form submission response"""
     id: int
     template_id: int
-    fieldman_id: str
-    submitted_by: Optional[str] = None  # New audit field: who submitted
+    fieldman_id: Optional[str] = None
+    submitted_by: Optional[int] = Field(None, description="User ID of submitter")  # User ID, not username
     data_json: Dict[str, Any]
     status: str
     validation_errors: Optional[List[Dict[str, Any]]] = None
@@ -137,11 +137,11 @@ class FormSubmissionResponse(BaseModel):
     template: Optional[FormTemplateResponse] = None
     submitted_at: Optional[datetime] = None
     # Legacy review fields (backwards compatible)
-    reviewed_by: Optional[str] = None
+    reviewed_by: Optional[int] = Field(None, description="User ID of reviewer")  # User ID, not username
     reviewed_at: Optional[datetime] = None
     reviewed_comment: Optional[str] = None
     # New validation audit fields
-    validated_by: Optional[str] = None  # Who approved/rejected
+    validated_by: Optional[int] = Field(None, description="User ID who validated/approved")  # User ID, not username
     validated_on: Optional[datetime] = None  # When approved/rejected
     created_at: datetime
     updated_at: Optional[datetime] = None

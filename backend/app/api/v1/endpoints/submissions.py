@@ -125,7 +125,7 @@ async def create_submission(
     data = {
         "template_id": submission_in.template_id,
         "fieldman_id": fieldman_id,
-        "submitted_by": current_user.username,  # New audit field
+        "submitted_by": current_user.id,  # New audit field - User ID
         "data_json": data_json,
         "file_tokens": submission_in.file_tokens,
         "status": requested_status,
@@ -376,11 +376,11 @@ async def review_submission(
         submission, 
         status=new_status,
         # Legacy audit fields (backwards compatible)
-        reviewed_by=current_user.username,
+        reviewed_by=current_user.id,
         reviewed_at=current_time,
         reviewed_comment=body.comment,
         # New audit fields (per requirements)
-        validated_by=current_user.username,
+        validated_by=current_user.id,
         validated_on=current_time
     )
     submission = await FormSubmissionRepository.get_by_id(db, id)

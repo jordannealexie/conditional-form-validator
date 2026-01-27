@@ -70,6 +70,7 @@ class UserResponse(UserBase):
     attributes: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    updated_by: Optional[int] = None  # Audit field: user ID who last updated this user
 
     @validator('roles', pre=True)
     def extract_role_names(cls, v):

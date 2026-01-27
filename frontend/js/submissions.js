@@ -111,7 +111,7 @@ async function handleBankChange() {
 
 async function loadSubmissions() {
     const body = document.getElementById('submissionsBody');
-    body.innerHTML = '<tr><td colspan="7" class="text-center"><div class="loading-spinner">Loading submissions...</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="9" class="text-center"><div class="loading-spinner">Loading submissions...</div></td></tr>';
 
     try {
         const response = await apiGetSubmissions(currentPage, 10, currentFilters);
@@ -135,6 +135,7 @@ async function loadSubmissions() {
             const q = currentFilters.search.toLowerCase();
             filtered = filtered.filter(s =>
                 (s.fieldman_id && s.fieldman_id.toLowerCase().includes(q)) ||
+                (s.submitted_by && s.submitted_by.toLowerCase().includes(q)) ||
                 (s.template && s.template.name && s.template.name.toLowerCase().includes(q)) ||
                 s.id.toString().includes(q)
             );
@@ -145,7 +146,7 @@ async function loadSubmissions() {
 
     } catch (error) {
         console.error('Failed to load submissions:', error);
-        body.innerHTML = '<tr><td colspan="7" class="text-center error-message">Error loading submissions. Please try again.</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" class="text-center error-message">Error loading submissions. Please try again.</td></tr>';
     }
 }
 
@@ -154,7 +155,7 @@ function renderTable(submissions) {
     body.innerHTML = '';
 
     if (!submissions || submissions.length === 0) {
-        body.innerHTML = '<tr><td colspan="7" class="text-center empty-state"><p>No submissions found</p></td></tr>';
+        body.innerHTML = '<tr><td colspan="9" class="text-center empty-state"><p>No submissions found</p></td></tr>';
         return;
     }
 
@@ -165,14 +166,23 @@ function renderTable(submissions) {
         const statusClass = getStatusClass(sub.status);
         const bankName = sub.template && sub.template.bank ? sub.template.bank.name : 'Unknown';
         const templateName = sub.template ? sub.template.name : 'Unknown Template';
+        
+        // Use submitted_by if available, fallback to fieldman_id
+        const submittedBy = sub.submitted_by || sub.fieldman_id || '-';
+        
+        // Format validation audit fields
+        const validatedBy = sub.validated_by ? escapeHtml(sub.validated_by) : '-';
+        const validatedOn = sub.validated_on ? formatDateTime(sub.validated_on) : '-';
 
         row.innerHTML = `
-            <td><strong>#${sub.id}</strong></td>
-            <td>${sub.fieldman_id || 'N/A'}</td>
+            <td class="sticky-col"><strong>#${sub.id}</strong></td>
+            <td>${escapeHtml(submittedBy)}</td>
             <td>${templateName}</td>
             <td>${bankName}</td>
             <td><span class="badge ${statusClass}">${(sub.status || '').toUpperCase()}</span></td>
             <td>${formatDate(sub.created_at)}</td>
+            <td>${validatedBy}</td>
+            <td>${validatedOn}</td>
             <td>
                 <div class="table-actions">
                     <button class="btn btn-sm btn-outline" onclick="viewSubmission(${sub.id})" data-permission="submissions" data-action="read">

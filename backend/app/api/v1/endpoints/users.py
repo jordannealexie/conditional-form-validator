@@ -140,13 +140,55 @@ async def create_user(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new user. Admin only."""
-    if await user_service.get_by_email(user_in.email):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    r = await db.execute(select(User).where(User.username == user_in.username))
-    if r.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken")
-    user = await user_service.create_admin_user(user_in)
-    return create_response(data=UserResponse.model_validate(user), status_code=status.HTTP_201_CREATED)
+    try:
+        # Validate input
+        if not user_in.username or not user_in.username.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username is required"
+            )
+        if not user_in.email or not user_in.email.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is required"
+            )
+        if not user_in.password or len(user_in.password) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 8 characters"
+            )
+        
+        # Check for existing email
+        if await user_service.get_by_email(user_in.email):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Check for existing username
+        r = await db.execute(select(User).where(User.username == user_in.username))
+        if r.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+        
+        # Create user
+        user = await user_service.create_admin_user(user_in)
+        return create_response(
+            data=UserResponse.model_validate(user),
+            status_code=status.HTTP_201_CREATED
+        )
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log and return proper error
+        print(f"Error creating user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user: {str(e)}"
+        )
 
 
 @router.get(
@@ -178,12 +220,47 @@ async def update_user(
     current_user: User = Depends(authorize(resource="users", action="update"))
 ) -> CustomResponse[UserResponse]:
     """Edit user: email, role, bank, active. Admin only."""
-    user = await user_service.get(id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    upd = user_in.model_dump(exclude_unset=True)
-    updated = await user_service.update(id, upd)
-    return create_response(data=UserResponse.model_validate(updated))
+    try:
+        # Get existing user
+        user = await user_service.get(id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Get update data
+        upd = user_in.model_dump(exclude_unset=True)
+        
+        # Validate if there's anything to update
+        if not upd:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No fields to update"
+            )
+        
+        # Set audit field
+        upd['updated_by'] = current_user.id
+        
+        # Update user
+        updated = await user_service.update(id, upd)
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update user"
+            )
+        
+        return create_response(data=UserResponse.model_validate(updated))
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log and return proper error
+        print(f"Error updating user {id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update user: {str(e)}"
+        )
 
 
 @router.put(

@@ -155,7 +155,24 @@ function formatDate(dateString) {
         minute: '2-digit'
     });
 }
+/**
+ * Format date string with timezone
+ * @param {string} dateString 
+ * @returns {string}
+ */
+function formatDateTime(dateString) {
+    if (!dateString) return '-';
 
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+    });
+}
 /**
  * Format relative time (e.g., "2 hours ago")
  * @param {string} dateString 

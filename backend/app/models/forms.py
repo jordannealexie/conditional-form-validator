@@ -78,8 +78,8 @@ class FormSubmission(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(Integer, ForeignKey('form_templates.id'), nullable=False, index=True)
-    fieldman_id = Column(String(100), nullable=False, index=True)  # Legacy field
-    submitted_by = Column(String(100), nullable=True, index=True, comment="Username of submitter (replaces fieldman_id)")
+    fieldman_id = Column(String(100), nullable=True, index=True)  # Legacy field
+    submitted_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True, comment="User ID of submitter (replaces fieldman_id)")
     
     # Submission metadata
     status = Column(String(20), default=SubmissionStatus.DRAFT, nullable=False, index=True)
@@ -92,11 +92,11 @@ class FormSubmission(Base):
     validation_errors = Column(JSON, nullable=True)
     is_valid = Column(Boolean, default=False, nullable=False)
     
-    # Review/Validation audit fields
-    reviewed_by = Column(String(100), nullable=True, comment="Username of reviewer (approval/rejection)")
+    # Review/Validation audit fields - User IDs (FKs to users.id)
+    reviewed_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, comment="User ID of reviewer (approval/rejection)")
     reviewed_at = Column(DateTime(timezone=True), nullable=True)
     reviewed_comment = Column(Text, nullable=True)
-    validated_by = Column(String(100), nullable=True, index=True, comment="Username who validated/approved")
+    validated_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True, comment="User ID who validated/approved")
     validated_on = Column(DateTime(timezone=True), nullable=True, index=True, comment="Timestamp of validation/approval")
     
     # Timestamps

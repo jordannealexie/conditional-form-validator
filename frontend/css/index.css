@@ -394,9 +394,74 @@ textarea:focus {
     box-shadow: var(--shadow-subtle);
 }
 
+/* Scrollable table wrapper for audit tables */
+.table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    position: relative;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
+}
+
+/* Audit tables with sticky columns */
+.audit-table {
+    min-width: 1200px;
+}
+
+.audit-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--black);
+}
+
+.audit-table .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    background: var(--black);
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.audit-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 9;
+    background: inherit;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.audit-table tbody tr:nth-child(even) td:first-child {
+    background: var(--off-white);
+}
+
+.audit-table tbody tr:hover td:first-child {
+    background: rgba(46, 204, 113, 0.05);
+}
+
+.audit-table .actions-col {
+    position: sticky;
+    right: 0;
+    background: var(--black);
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.audit-table tbody td:last-child {
+    position: sticky;
+    right: 0;
+    background: inherit;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.audit-table tbody tr:nth-child(even) td:last-child {
+    background: var(--off-white);
+}
+
+.audit-table tbody tr:hover td:last-child {
+    background: rgba(46, 204, 113, 0.05);
 }
 
 thead {
@@ -411,6 +476,7 @@ th {
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    white-space: nowrap;
 }
 
 td {

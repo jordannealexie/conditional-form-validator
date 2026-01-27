@@ -21,37 +21,50 @@ class UserService:
 
     async def create_admin_user(self, inp: AuthUserCreate) -> User:
         """Create user from admin (auth.UserCreate with user_role, bank_id)."""
-        data = {
-            "username": inp.username,
-            "email": inp.email,
-            "password_hash": get_password_hash(inp.password),
-            "user_role": inp.user_role or "fieldman",
-            "bank_id": inp.bank_id,
-            "active": True,
-            "first_name": inp.first_name,
-            "last_name": inp.last_name,
-            "full_name": inp.full_name or " ".join([p for p in [inp.first_name, inp.last_name] if p]).strip() or None,
-            "department": inp.department,
-            "level": inp.level or 1,
-            "location": inp.location,
-        }
-        user = await self.user_repo.create(obj_in=data)
-        
-        # Sync roles
-        if user.user_role:
-             stmt = select(Role).where(Role.name == user.user_role)
-             result = await self.db.execute(stmt)
-             role_obj = result.scalar_one_or_none()
-             if role_obj:
-                 await self.db.execute(
-                     user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
-                 )
-                 await self.db.commit()
-                 
-                 # Sync to Casbin
-                 casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
+        try:
+            data = {
+                "username": inp.username,
+                "email": inp.email,
+                "password_hash": get_password_hash(inp.password),
+                "user_role": inp.user_role or "fieldman",
+                "bank_id": inp.bank_id,
+                "active": True,
+                "first_name": inp.first_name,
+                "last_name": inp.last_name,
+                "full_name": inp.full_name or " ".join([p for p in [inp.first_name, inp.last_name] if p]).strip() or None,
+                "department": inp.department,
+                "level": inp.level or 1,
+                "location": inp.location,
+            }
+            user = await self.user_repo.create(obj_in=data)
+            
+            # Sync roles
+            if user.user_role:
+                stmt = select(Role).where(Role.name == user.user_role)
+                result = await self.db.execute(stmt)
+                role_obj = result.scalar_one_or_none()
+                if role_obj:
+                    await self.db.execute(
+                        user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
+                    )
+                    await self.db.commit()
+                    
+                    # Sync to Casbin
+                    casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
 
-        return user
+            return user
+        except IntegrityError as e:
+            await self.db.rollback()
+            error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
+            if "unique constraint" in error_msg.lower():
+                if "email" in error_msg.lower():
+                    raise Exception("Email already registered")
+                elif "username" in error_msg.lower():
+                    raise Exception("Username already taken")
+            raise Exception(f"Failed to create user: {error_msg}")
+        except Exception as e:
+            await self.db.rollback()
+            raise
 
     async def get(self, user_id: int) -> Optional[User]:
         """Get a user by ID"""
@@ -119,52 +132,65 @@ class UserService:
 
     async def update(self, user_id: int, obj_in: Union[UserUpdate, dict]) -> Optional[User]:
         """Update a user"""
-        # Get current user
-        db_obj = await self.user_repo.get(user_id)
-        if not db_obj:
-            return None
+        try:
+            # Get current user
+            db_obj = await self.user_repo.get(user_id)
+            if not db_obj:
+                return None
 
-        # Convert to dict if it's a Pydantic model
-        update_data = obj_in if isinstance(obj_in, dict) else (obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, "model_dump") else obj_in.dict(exclude_unset=True))
+            # Convert to dict if it's a Pydantic model
+            update_data = obj_in if isinstance(obj_in, dict) else (obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, "model_dump") else obj_in.dict(exclude_unset=True))
 
-        # Normalize common aliases
-        if "is_active" in update_data:
-            update_data["active"] = update_data.pop("is_active")
-        if "role" in update_data and "user_role" not in update_data:
-            update_data["user_role"] = update_data.pop("role")
+            # Normalize common aliases
+            if "is_active" in update_data:
+                update_data["active"] = update_data.pop("is_active")
+            if "role" in update_data and "user_role" not in update_data:
+                update_data["user_role"] = update_data.pop("role")
 
-        # Filter out None values from update_data
-        filtered_update_data = update_data
+            # Filter out None values from update_data
+            filtered_update_data = update_data
 
-        # Handle password update separately
-        if "password" in filtered_update_data and filtered_update_data["password"]:
-            filtered_update_data["password_hash"] = get_password_hash(filtered_update_data["password"])
-            del filtered_update_data["password"]  # remove plaintext password
-        
-        updated_user = await self.user_repo.update(id=user_id, obj_in=filtered_update_data)
-        
-        # Sync roles if user_role was changed
-        if "user_role" in filtered_update_data:
-             role_name = filtered_update_data["user_role"]
-             stmt = select(Role).where(Role.name == role_name)
-             result = await self.db.execute(stmt)
-             role_obj = result.scalar_one_or_none()
-             
-             if role_obj:
-                 # Clear existing roles and add new one in association table
-                 await self.db.execute(
-                     user_roles.delete().where(user_roles.c.user_id == user_id)
-                 )
-                 await self.db.execute(
-                     user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
-                 )
-                 await self.db.commit()
-                 await self.db.refresh(updated_user)
-                 
-                 # Sync to Casbin
-                 casbin_enforcer.sync_user_roles(updated_user.username, [role_obj.name])
+            # Handle password update separately
+            if "password" in filtered_update_data and filtered_update_data["password"]:
+                filtered_update_data["password_hash"] = get_password_hash(filtered_update_data["password"])
+                del filtered_update_data["password"]  # remove plaintext password
+            
+            updated_user = await self.user_repo.update(id=user_id, obj_in=filtered_update_data)
+            
+            # Sync roles if user_role was changed
+            if "user_role" in filtered_update_data:
+                role_name = filtered_update_data["user_role"]
+                stmt = select(Role).where(Role.name == role_name)
+                result = await self.db.execute(stmt)
+                role_obj = result.scalar_one_or_none()
+                
+                if role_obj:
+                    # Clear existing roles and add new one in association table
+                    await self.db.execute(
+                        user_roles.delete().where(user_roles.c.user_id == user_id)
+                    )
+                    await self.db.execute(
+                        user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
+                    )
+                    await self.db.commit()
+                    await self.db.refresh(updated_user)
+                    
+                    # Sync to Casbin
+                    casbin_enforcer.sync_user_roles(updated_user.username, [role_obj.name])
 
-        return updated_user
+            return updated_user
+        except IntegrityError as e:
+            await self.db.rollback()
+            error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
+            if "unique constraint" in error_msg.lower():
+                if "email" in error_msg.lower():
+                    raise Exception("Email already in use")
+                elif "username" in error_msg.lower():
+                    raise Exception("Username already taken")
+            raise Exception(f"Failed to update user: {error_msg}")
+        except Exception as e:
+            await self.db.rollback()
+            raise
 
     async def delete(self, user_id: int) -> dict:
         """

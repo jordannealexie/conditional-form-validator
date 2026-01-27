@@ -10,6 +10,7 @@ from app.core.casbin_enforcer import casbin_enforcer
 from app.api.v1.api import api_router
 from app.db.session import engine
 from app.db.base_class import Base
+from app.exceptions.handlers import add_exception_handlers
 
 port = int(os.getenv("PORT", "8000"))
 
@@ -90,6 +91,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register exception handlers
+add_exception_handlers(app)
 
 # Include API router (includes all endpoint routers)
 # Include API router (includes all endpoint routers)
