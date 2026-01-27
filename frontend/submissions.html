@@ -119,26 +119,30 @@
 
             <!-- Submissions Table -->
             <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Applicant</th>
-                            <th>Form Template</th>
-                            <th>Bank</th>
-                            <th>Status</th>
-                            <th>Submitted On</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="submissionsBody">
-                        <tr>
-                            <td colspan="7" class="text-center">
-                                <div class="loading-spinner">Loading submissions...</div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table class="audit-table">
+                        <thead>
+                            <tr>
+                                <th class="sticky-col">ID</th>
+                                <th>Submitted By</th>
+                                <th>Form Template</th>
+                                <th>Bank</th>
+                                <th>Status</th>
+                                <th>Submitted On</th>
+                                <th>Validated By</th>
+                                <th>Validated On</th>
+                                <th class="actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="submissionsBody">
+                            <tr>
+                                <td colspan="9" class="text-center">
+                                    <div class="loading-spinner">Loading submissions...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- Pagination -->
                 <div class="pagination">
@@ -170,10 +174,10 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <script src="js/utils.js?v=5"></script>
-    <script src="js/api.js?v=5"></script>
-    <script src="js/auth.js?v=5"></script>
-    <script src="js/submissions.js"></script>
+    <script src="js/utils.js?v=6"></script>
+    <script src="js/api.js?v=6"></script>
+    <script src="js/auth.js?v=6"></script>
+    <script src="js/submissions.js?v=4"></script>
     <script src="js/users.js?v=3"></script>
 </body>
 

@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.exceptions.http_exceptions import BaseCustomError
 from app.utils.response import create_response
 from fastapi import status
 from starlette.exceptions import HTTPException as StarletteHTTPException  # Import Starlette's HTTPException
+import traceback
 
 def add_exception_handlers(app: FastAPI) -> None:
     """Add exception handlers to the FastAPI application."""
@@ -19,6 +21,54 @@ def add_exception_handlers(app: FastAPI) -> None:
             errors=[str(exc.detail)],
             error_code="NOT_FOUND" if exc.status_code == status.HTTP_404_NOT_FOUND else f"HTTP_ERROR_{exc.status_code}",
             status_code=exc.status_code
+        )
+    
+    @app.exception_handler(IntegrityError)
+    async def integrity_error_handler(request: Request, exc: IntegrityError):
+        """Handle database integrity errors"""
+        error_msg = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
+        
+        # Parse common integrity errors
+        if "unique constraint" in error_msg.lower():
+            detail = "A record with this value already exists"
+            status_code_val = status.HTTP_409_CONFLICT
+            error_code = "DUPLICATE_ENTRY"
+        elif "foreign key constraint" in error_msg.lower():
+            detail = "Cannot perform this operation due to related records"
+            status_code_val = status.HTTP_400_BAD_REQUEST
+            error_code = "FOREIGN_KEY_VIOLATION"
+        elif "not null constraint" in error_msg.lower():
+            detail = "Required field is missing"
+            status_code_val = status.HTTP_400_BAD_REQUEST
+            error_code = "MISSING_REQUIRED_FIELD"
+        else:
+            detail = "Database integrity error"
+            status_code_val = status.HTTP_400_BAD_REQUEST
+            error_code = "INTEGRITY_ERROR"
+        
+        print(f"Database integrity error: {error_msg}")
+        
+        return create_response(
+            success=False,
+            message=detail,
+            errors=[detail],
+            error_code=error_code,
+            status_code=status_code_val
+        )
+    
+    @app.exception_handler(SQLAlchemyError)
+    async def sqlalchemy_error_handler(request: Request, exc: SQLAlchemyError):
+        """Handle SQLAlchemy errors"""
+        error_msg = str(exc)
+        print(f"Database error: {error_msg}")
+        print(traceback.format_exc())
+        
+        return create_response(
+            success=False,
+            message="Database operation failed",
+            errors=["Database operation failed"],
+            error_code="DATABASE_ERROR",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     
     @app.exception_handler(ValidationError)
@@ -69,10 +119,14 @@ def add_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
         """Handle unhandled exceptions"""
+        error_msg = str(exc)
+        print(f"Unhandled exception: {error_msg}")
+        print(traceback.format_exc())
+        
         return create_response(
             success=False,
             message="Internal server error",
-            errors=["Internal server error"],
+            errors=["An unexpected error occurred. Please contact support."],
             error_code="INTERNAL_ERROR",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

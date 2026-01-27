@@ -36,6 +36,13 @@ async def validate_submission(
     """
     Validate a form submission against its template schema.
     Does not save to database.
+    
+    STRICT VALIDATION RULES:
+    - Required fields MUST have non-empty values
+    - Empty values rejected: null, "", [], {}
+    - Text fields CANNOT accept integers or floats
+    - Numeric fields CANNOT accept strings
+    - Date fields CANNOT accept numbers
     """
     template = await FormTemplateRepository.get_by_id(db, request.template_id)
     if not template:
@@ -50,8 +57,14 @@ async def validate_submission(
         "fields": template.fields,
         "ui_schema": template.ui_schema
     }
-        
-    result = FormValidationService.validate_submission(request.submission_data, template_data)
+    
+    # Pass visible_fields to validation service if provided
+    # This allows conditional fields to be excluded from required validation    
+    result = FormValidationService.validate_submission(
+        request.submission_data, 
+        template_data,
+        visible_fields=request.visible_fields
+    )
     return create_response(data=result)
 
 @router.post("/", response_model=FormSubmissionResponse)
@@ -61,7 +74,14 @@ async def create_submission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(authorize(resource="submissions", action="create"))
 ) -> Any:
-    """Create a new form submission (Draft or Final)."""
+    """Create a new form submission (Draft or Final).
+    
+    VALIDATION RULES (Backend-Enforced):
+    - Required fields MUST have non-empty values
+    - Empty values rejected: null, "", [], {}
+    - Type mismatches rejected: text field cannot accept numbers
+    - Submissions MUST pass validation to be saved as 'submitted'
+    """
     template = await FormTemplateRepository.get_by_id(db, submission_in.template_id)
     if not template:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
@@ -70,6 +90,9 @@ async def create_submission(
         data_json = {}
     fieldman_id = submission_in.fieldman_id or current_user.username
     
+    # Determine if this is a draft or final submission
+    requested_status = (submission_in.status or "draft").lower()
+    
     # Enforce ReBAC: If user is restricted to a bank, they can only submit for that bank
     # UNLESS they have explicit permissions (checked by authorize dependency)
     # Note: authorize(resource="submissions", action="create") already passed at this point,
@@ -77,15 +100,38 @@ async def create_submission(
     # Bank restriction is now optional/advisory, not blocking for users with permissions.
             
     template_data = {"schema_json": template.schema_json, "fields": template.fields, "ui_schema": template.ui_schema}
-    validation_result = FormValidationService.validate_submission(data_json, template_data)
+    
+    # Pass visible_fields to validation service if provided
+    # This allows conditional fields to be excluded from required validation
+    validation_result = FormValidationService.validate_submission(
+        data_json, 
+        template_data,
+        visible_fields=submission_in.visible_fields
+    )
+    
+    # CRITICAL: For non-draft submissions, validation MUST pass
+    # Backend MUST reject submissions with empty required fields
+    if requested_status != "draft":
+        if not validation_result.is_valid:
+            error_details = [{"field": e.field, "message": e.message} for e in validation_result.errors]
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "Submission validation failed. Required fields are missing or have invalid values.",
+                    "errors": error_details
+                }
+            )
+    
     data = {
         "template_id": submission_in.template_id,
         "fieldman_id": fieldman_id,
+        "submitted_by": current_user.id,  # New audit field - User ID
         "data_json": data_json,
         "file_tokens": submission_in.file_tokens,
-        "status": submission_in.status or "draft",
+        "status": requested_status,
         "is_valid": validation_result.is_valid,
-        "validation_errors": [e.model_dump() for e in validation_result.errors] if validation_result.errors else []
+        "validation_errors": [e.model_dump() for e in validation_result.errors] if validation_result.errors else [],
+        "submitted_at": datetime.now(timezone.utc) if requested_status == "submitted" else None
     }
     submission = await FormSubmissionRepository.create(db, **data)
     # Reload with relationships for the response
@@ -218,7 +264,14 @@ async def update_submission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(authorize(resource="submissions", action="update"))
 ) -> Any:
-    """Update a draft. Only owner (fieldman) can update."""
+    """Update a draft submission.
+    
+    VALIDATION RULES (Backend-Enforced):
+    - Only drafts can be updated
+    - Only owner (fieldman) can update
+    - If changing status to 'submitted', validation MUST pass
+    - Required fields MUST have non-empty values
+    """
     submission = await FormSubmissionRepository.get_by_id(db, id)
     if not submission:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
@@ -228,13 +281,37 @@ async def update_submission(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can update this draft")
     upd = body.model_dump(exclude_unset=True)
     if upd:
-        # Re-validate if data_json changed
-        if "data_json" in upd and submission.template_id:
+        # Check if status is changing to submitted
+        new_status = upd.get("status", submission.status)
+        is_submitting = new_status and new_status.lower() == "submitted"
+        
+        # Re-validate if data_json changed or if submitting
+        if ("data_json" in upd or is_submitting) and submission.template_id:
             t = await FormTemplateRepository.get_by_id(db, submission.template_id)
             if t:
-                res = FormValidationService.validate_submission(upd["data_json"], {"schema_json": t.schema_json, "fields": t.fields, "ui_schema": t.ui_schema})
+                data_to_validate = upd.get("data_json", submission.data_json)
+                res = FormValidationService.validate_submission(
+                    data_to_validate, 
+                    {"schema_json": t.schema_json, "fields": t.fields, "ui_schema": t.ui_schema}
+                )
                 upd["is_valid"] = res.is_valid
                 upd["validation_errors"] = [e.model_dump() for e in res.errors] if res.errors else []
+                
+                # CRITICAL: If submitting, validation MUST pass
+                if is_submitting and not res.is_valid:
+                    error_details = [{"field": e.field, "message": e.message} for e in res.errors]
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={
+                            "message": "Cannot submit: validation failed. Required fields are missing or have invalid values.",
+                            "errors": error_details
+                        }
+                    )
+                
+                # Set submitted_at timestamp when submitting
+                if is_submitting:
+                    upd["submitted_at"] = datetime.now(timezone.utc)
+        
         updated = await FormSubmissionRepository.update(db, submission, **upd)
         return create_response(data=FormSubmissionResponse.model_validate(updated))
     return create_response(data=FormSubmissionResponse.model_validate(submission))
@@ -265,7 +342,16 @@ async def review_submission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(authorize(resource="submissions", action="review"))
 ) -> Any:
-    """Approve or reject. Permission-based: anyone with submissions:review can approve/reject any submission."""
+    """Approve or reject a submission.
+    
+    AUDIT FIELDS:
+    - validated_by: Set to current user's username on approve/reject
+    - validated_on: Set to current timestamp on approve/reject
+    - reviewed_by: Also set for backwards compatibility
+    - reviewed_at: Also set for backwards compatibility
+    
+    Permission-based: anyone with submissions:review can approve/reject any submission.
+    """
     submission = await FormSubmissionRepository.get_by_id(db, id)
     if not submission:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
@@ -275,13 +361,28 @@ async def review_submission(
     # No bank restrictions - permission is sufficient
     
     action = (body.action or "").lower()
+    current_time = datetime.now(timezone.utc)
+    
     if action == "approve":
         new_status = SubmissionStatus.VALIDATED.value
     elif action == "reject":
         new_status = SubmissionStatus.REJECTED.value
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="action must be 'approve' or 'reject'")
-    await FormSubmissionRepository.update(db, submission, status=new_status, reviewed_by=current_user.username, reviewed_at=datetime.now(timezone.utc), reviewed_comment=body.comment)
+    
+    # Update with all audit fields - both legacy and new
+    await FormSubmissionRepository.update(
+        db, 
+        submission, 
+        status=new_status,
+        # Legacy audit fields (backwards compatible)
+        reviewed_by=current_user.id,
+        reviewed_at=current_time,
+        reviewed_comment=body.comment,
+        # New audit fields (per requirements)
+        validated_by=current_user.id,
+        validated_on=current_time
+    )
     submission = await FormSubmissionRepository.get_by_id(db, id)
     return create_response(data=FormSubmissionResponse.model_validate(submission))
 

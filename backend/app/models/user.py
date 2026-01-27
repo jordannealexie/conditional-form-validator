@@ -43,7 +43,7 @@ class User(Base):
     # Audit fields
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_onupdate=func.now())
-    updated_by = Column(String(100), nullable=True, comment="Username of user who last updated this record")
+    updated_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, comment="User ID who last updated this record")
     
     # Relationships
     roles = relationship("Role", secondary=user_roles, back_populates="users")
@@ -60,13 +60,13 @@ class Role(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True, nullable=False)
     description = Column(String)
+    permissions = Column(JSON, nullable=True)  # JSONB permissions as per spec
     
     # Audit fields
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True)
-    created_by = Column(String(100), nullable=True, comment="Username of creator")
+    created_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, comment="User ID of creator")
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
-    updated_by = Column(String(100), nullable=True, comment="Username of last updater")
-    permissions = Column(JSON, nullable=True)  # JSONB permissions as per spec
+    updated_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, comment="User ID of last updater")
     
     # Relationships
     users = relationship("User", secondary=user_roles, back_populates="roles")

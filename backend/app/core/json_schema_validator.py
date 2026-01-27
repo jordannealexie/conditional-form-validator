@@ -14,12 +14,143 @@ class JSONSchemaValidator:
     
     Supports:
     - type validation
-    - required fields
+    - required fields (strict empty check)
     - nested conditions (if/then/else)
     - dependencies
     - default values
     - data type enforcement
     """
+    
+    @staticmethod
+    def is_empty_value(value: Any) -> bool:
+        """
+        Check if a value should be considered 'empty' for required field validation.
+        
+        Empty values include:
+        - None / null
+        - Empty string ""
+        - Empty array []
+        - Empty object {} (for Address/JSON fields)
+        - Whitespace-only string "   "
+        
+        Returns:
+            True if value is considered empty
+        """
+        if value is None:
+            return True
+        if isinstance(value, str) and value.strip() == "":
+            return True
+        if isinstance(value, list) and len(value) == 0:
+            return True
+        if isinstance(value, dict) and len(value) == 0:
+            return True
+        return False
+    
+    @staticmethod
+    def validate_required_fields(data: Dict[str, Any], schema: Dict[str, Any]) -> List[Dict[str, str]]:
+        """
+        Strictly validate required fields - reject empty values.
+        
+        Args:
+            data: Data to validate
+            schema: JSON Schema with required fields
+            
+        Returns:
+            List of errors for missing/empty required fields
+        """
+        errors = []
+        required_fields = schema.get("required", [])
+        properties = schema.get("properties", {})
+        
+        for field_name in required_fields:
+            value = data.get(field_name)
+            field_schema = properties.get(field_name, {})
+            field_type = field_schema.get("type", "string")
+            
+            # Check if value is empty
+            if JSONSchemaValidator.is_empty_value(value):
+                errors.append({
+                    "field": field_name,
+                    "message": f"Required field '{field_name}' is missing or empty",
+                    "constraint": "required"
+                })
+                continue
+            
+            # For object types (like Address), validate nested required fields
+            if field_type == "object" and isinstance(value, dict):
+                nested_required = field_schema.get("required", [])
+                nested_properties = field_schema.get("properties", {})
+                for nested_field in nested_required:
+                    nested_value = value.get(nested_field)
+                    if JSONSchemaValidator.is_empty_value(nested_value):
+                        errors.append({
+                            "field": f"{field_name}.{nested_field}",
+                            "message": f"Required field '{field_name}.{nested_field}' is missing or empty",
+                            "constraint": "required"
+                        })
+        
+        return errors
+    
+    @staticmethod
+    def validate_type_strict(value: Any, expected_type: str, field_name: str) -> Optional[Dict[str, str]]:
+        """
+        Strictly validate that value type matches expected type.
+        
+        Rules:
+        - Text fields: CANNOT accept integers or floats
+        - Numeric fields: CANNOT accept strings
+        - Date fields: CANNOT accept numbers (must be string in date format)
+        - Boolean fields: CANNOT accept strings or numbers
+        
+        Args:
+            value: Value to check
+            expected_type: Expected JSON Schema type
+            field_name: Name of field for error message
+            
+        Returns:
+            Error dict if type mismatch, None if valid
+        """
+        if value is None:
+            return None  # Let required validation handle this
+        
+        type_mapping = {
+            'string': (str,),
+            'number': (int, float),
+            'integer': (int,),
+            'boolean': (bool,),
+            'array': (list,),
+            'object': (dict,)
+        }
+        
+        forbidden_types = {
+            'string': (int, float, bool, list, dict),  # Text fields reject numbers/booleans
+            'number': (str, bool, list, dict),          # Number fields reject strings
+            'integer': (str, float, bool, list, dict),  # Integer fields reject strings and floats
+            'boolean': (str, int, float, list, dict),   # Boolean fields reject everything else
+            'array': (str, int, float, bool, dict),
+            'object': (str, int, float, bool, list)
+        }
+        
+        # Check if value is of a forbidden type
+        forbidden = forbidden_types.get(expected_type, ())
+        if isinstance(value, forbidden):
+            actual_type = type(value).__name__
+            return {
+                "field": field_name,
+                "message": f"Field '{field_name}' expects type '{expected_type}' but received '{actual_type}'. Type mismatch is not allowed.",
+                "constraint": "type"
+            }
+        
+        # Special check: Integer field should reject floats with decimals
+        if expected_type == 'integer' and isinstance(value, float):
+            if not value.is_integer():
+                return {
+                    "field": field_name,
+                    "message": f"Field '{field_name}' expects integer but received float with decimal: {value}",
+                    "constraint": "type"
+                }
+        
+        return None
     
     @staticmethod
     def validate_schema(schema: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
@@ -41,7 +172,12 @@ class JSONSchemaValidator:
     @staticmethod
     def validate_data(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, List[Dict[str, str]]]:
         """
-        Validate data against JSON Schema
+        Validate data against JSON Schema with STRICT validation.
+        
+        This method:
+        1. Validates required fields (rejects empty values)
+        2. Validates type strictness (text fields reject numbers, etc.)
+        3. Runs standard JSONSchema validation
         
         Args:
             data: Data to validate
@@ -51,15 +187,48 @@ class JSONSchemaValidator:
             Tuple of (is_valid, errors)
             errors format: [{"field": "...", "message": "...", "constraint": "..."}]
         """
-        validator = Draft7Validator(schema)
         errors = []
         
         # Apply default values first
         data_with_defaults = JSONSchemaValidator._apply_defaults(data, schema)
         
-        # Validate
+        # 1. STRICT Required Field Validation - Check for empty values
+        required_errors = JSONSchemaValidator.validate_required_fields(data_with_defaults, schema)
+        errors.extend(required_errors)
+        
+        # 2. STRICT Type Validation - Reject type mismatches
+        properties = schema.get("properties", {})
+        for field_name, field_schema in properties.items():
+            if field_name in data_with_defaults:
+                value = data_with_defaults[field_name]
+                expected_type = field_schema.get("type")
+                if expected_type:
+                    type_error = JSONSchemaValidator.validate_type_strict(value, expected_type, field_name)
+                    if type_error:
+                        errors.append(type_error)
+                
+                # Validate nested object types
+                if field_schema.get("type") == "object" and isinstance(value, dict):
+                    nested_properties = field_schema.get("properties", {})
+                    for nested_name, nested_schema in nested_properties.items():
+                        if nested_name in value:
+                            nested_value = value[nested_name]
+                            nested_type = nested_schema.get("type")
+                            if nested_type:
+                                nested_error = JSONSchemaValidator.validate_type_strict(
+                                    nested_value, nested_type, f"{field_name}.{nested_name}"
+                                )
+                                if nested_error:
+                                    errors.append(nested_error)
+        
+        # 3. Standard JSONSchema Validation
+        validator = Draft7Validator(schema)
         for error in validator.iter_errors(data_with_defaults):
             field_path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else "root"
+            
+            # Skip if we already have a required error for this field
+            if error.validator == "required":
+                continue  # Our strict validation already handles this
             
             errors.append({
                 "field": field_path or error.path[0] if error.path else "unknown",
@@ -67,7 +236,16 @@ class JSONSchemaValidator:
                 "constraint": error.validator
             })
         
-        return len(errors) == 0, errors
+        # Remove duplicate errors
+        seen = set()
+        unique_errors = []
+        for e in errors:
+            key = (e["field"], e["constraint"])
+            if key not in seen:
+                seen.add(key)
+                unique_errors.append(e)
+        
+        return len(unique_errors) == 0, unique_errors
     
     @staticmethod
     def _apply_defaults(data: Dict[str, Any], schema: Dict[str, Any]) -> Dict[str, Any]:

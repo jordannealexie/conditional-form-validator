@@ -25,19 +25,19 @@ function setupMobileMenu() {
 async function loadUsers() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">Loading…</td></tr>';
     try {
         const users = await apiGetUsers();
         const list = Array.isArray(users) ? users : (users && users.data ? users.data : []);
         tbody.innerHTML = '';
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No users found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No users found</td></tr>';
             return;
         }
         list.forEach(u => tbody.appendChild(createUserRow(u)));
     } catch (e) {
         console.error('loadUsers', e);
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);">Error loading users</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--danger);">Error loading users</td></tr>';
         if (typeof showToast === 'function') showToast('Failed to load users', 'error');
     }
 }
@@ -49,14 +49,21 @@ function createUserRow(user) {
     const roleCls = (user.user_role || '').toLowerCase() === 'admin' ? 'badge-primary' : (user.user_role ? 'badge-success' : 'badge-secondary');
     const roleHtml = user.user_role ? `<span class="badge ${roleCls}">${escapeHtml(user.user_role)}</span>` : '<span class="badge badge-secondary">—</span>';
     const statusHtml = user.active !== false ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-secondary">Inactive</span>';
+    
+    // Format audit fields from database
+    const createdAt = user.created_at ? formatDateTime(user.created_at) : '-';
+    const updatedAt = user.updated_at ? formatDateTime(user.updated_at) : '-';
+    
     tr.innerHTML = `
+        <td class="sticky-col"><strong>${escapeHtml(user.username)}</strong></td>
         <td>${user.id}</td>
-        <td><strong>${escapeHtml(user.username)}</strong></td>
         <td>${escapeHtml(user.email || '—')}</td>
         <td>${escapeHtml(user.department || '—')}</td>
         <td>${escapeHtml(user.location || '—')}</td>
         <td>${roleHtml}</td>
         <td>${statusHtml}</td>
+        <td>${createdAt}</td>
+        <td>${updatedAt}</td>
         <td class="table-actions">
             <button class="btn btn-sm btn-primary" onclick="editUser(${user.id})" data-permission="users" data-action="update">Edit</button>
             <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" data-permission="users" data-action="delete">Delete</button>

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 from app.db.session import get_db
 from app.dependencies.auth import authorize
@@ -27,6 +28,10 @@ class RoleResponse(BaseModel):
     name: str
     description: Optional[str] = None
     permissions: Optional[List[str]] = None
+    created_at: Optional[datetime] = None
+    created_by: Optional[int] = Field(None, description="User ID of creator")
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[int] = Field(None, description="User ID of last updater")
 
     class Config:
         from_attributes = True
@@ -50,19 +55,40 @@ async def create_role(
     current_user: User = Depends(authorize(resource="roles", action="create"))
 ) -> Any:
     """Create a new role. Enabled via rules."""
-    r = await db.execute(select(Role).where(Role.name == body.name))
-    if r.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role name already exists")
-    role = Role(name=body.name, description=body.description, permissions=body.permissions or [])
-    db.add(role)
-    await db.commit()
-    await db.refresh(role)
-    
-    # Sync to Casbin
-    from app.core.casbin_enforcer import casbin_enforcer
-    casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
-    
-    return create_response(data=RoleResponse.model_validate(role), status_code=status.HTTP_201_CREATED)
+    try:
+        # Check for duplicate role name
+        r = await db.execute(select(Role).where(Role.name == body.name))
+        if r.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role name already exists")
+        
+        # Create role with proper audit fields
+        role = Role(
+            name=body.name,
+            description=body.description,
+            permissions=body.permissions or [],
+            created_by=current_user.id,
+            updated_by=current_user.id  # Set updated_by on creation
+        )
+        db.add(role)
+        await db.commit()
+        await db.refresh(role)
+        
+        # Sync to Casbin
+        from app.core.casbin_enforcer import casbin_enforcer
+        casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
+        
+        return create_response(data=RoleResponse.model_validate(role), status_code=status.HTTP_201_CREATED)
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log and return proper error instead of 500
+        await db.rollback()
+        print(f"Error creating role: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create role: {str(e)}"
+        )
 
 
 @router.delete("/{id}")
@@ -72,24 +98,43 @@ async def delete_role(
     current_user: User = Depends(authorize(resource="roles", action="delete"))
 ) -> Any:
     """Delete a role. Enabled via rules. Fails if role is assigned to users."""
-    result = await db.execute(select(Role).where(Role.id == id))
-    role = result.scalar_one_or_none()
-    if not role:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
-    # Check if any user has this role
-    count = await db.execute(select(func.count()).select_from(user_roles).where(user_roles.c.role_id == id))
-    n = count.scalar() or 0
-    if n > 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Role is assigned to {n} user(s). Remove assignments first.")
-    await db.delete(role)
-    await db.commit()
-    
-    # Remove from Casbin
-    from app.core.casbin_enforcer import casbin_enforcer
-    casbin_enforcer.rbac_enforcer.remove_filtered_policy(0, role.name)
-    casbin_enforcer.rbac_enforcer.save_policy()
-    
-    return create_response(message="Role deleted")
+    try:
+        # Get role
+        result = await db.execute(select(Role).where(Role.id == id))
+        role = result.scalar_one_or_none()
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        
+        # Check if any user has this role
+        count = await db.execute(select(func.count()).select_from(user_roles).where(user_roles.c.role_id == id))
+        n = count.scalar() or 0
+        if n > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Role is assigned to {n} user(s). Remove assignments first."
+            )
+        
+        # Delete role
+        await db.delete(role)
+        await db.commit()
+        
+        # Remove from Casbin
+        from app.core.casbin_enforcer import casbin_enforcer
+        casbin_enforcer.rbac_enforcer.remove_filtered_policy(0, role.name)
+        casbin_enforcer.rbac_enforcer.save_policy()
+        
+        return create_response(message="Role deleted")
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log and return proper error
+        await db.rollback()
+        print(f"Error deleting role {id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete role: {str(e)}"
+        )
 
 
 @router.get("/{id}/permissions")
@@ -130,26 +175,48 @@ async def update_role(
     current_user: User = Depends(authorize(resource="roles", action="update"))
 ) -> Any:
     """Update a role. Enabled via rules."""
-    result = await db.execute(select(Role).where(Role.id == id))
-    role = result.scalar_one_or_none()
-    if not role:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
-    
-    # Check for duplicate name if changing
-    if body.name != role.name:
-        r = await db.execute(select(Role).where(Role.name == body.name))
-        if r.scalar_one_or_none():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role name already exists")
-    
-    role.name = body.name
-    role.description = body.description
-    role.permissions = body.permissions or []
-    
-    await db.commit()
-    await db.refresh(role)
-    
-    # Sync to Casbin
-    from app.core.casbin_enforcer import casbin_enforcer
-    casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
-    
-    return create_response(data=RoleResponse.model_validate(role))
+    try:
+        # Validate input
+        if not body.name or not body.name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Role name is required"
+            )
+        
+        # Get existing role
+        result = await db.execute(select(Role).where(Role.id == id))
+        role = result.scalar_one_or_none()
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        
+        # Check for duplicate name if changing
+        if body.name != role.name:
+            r = await db.execute(select(Role).where(Role.name == body.name))
+            if r.scalar_one_or_none():
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Role name already exists")
+        
+        # Update role fields
+        role.name = body.name
+        role.description = body.description
+        role.permissions = body.permissions or []
+        role.updated_by = current_user.id
+        
+        await db.commit()
+        await db.refresh(role)
+        
+        # Sync to Casbin
+        from app.core.casbin_enforcer import casbin_enforcer
+        casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
+        
+        return create_response(data=RoleResponse.model_validate(role))
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log and return proper error
+        await db.rollback()
+        print(f"Error updating role {id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update role: {str(e)}"
+        )
