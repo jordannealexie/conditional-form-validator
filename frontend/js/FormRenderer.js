@@ -10,6 +10,7 @@ class FormRenderer {
         this.onChanged = options.onChanged || null;
         this.onValidated = options.onValidated || null;
         this.uploadedFiles = {}; // Store file tokens
+        this.inputValidationTimeout = null; // For debounced validation
     }
 
     render(fields) {
@@ -45,6 +46,15 @@ class FormRenderer {
         const wrapper = document.createElement('div');
         wrapper.id = `wrapper-${field.id}`;
         wrapper.className = 'field-wrapper';
+        
+        // Add special classes for specific field types
+        if (field.type === 'currency') {
+            wrapper.classList.add('field-currency-wrapper');
+        } else if (field.type === 'percentage') {
+            wrapper.classList.add('field-percentage-wrapper');  
+        } else if (field.type === 'phone') {
+            wrapper.classList.add('field-phone');
+        }
 
         const label = document.createElement('label');
         label.htmlFor = field.id;
@@ -133,7 +143,26 @@ class FormRenderer {
             });
         } else {
             input = document.createElement('input');
-            input.type = field.type || 'text';
+            
+            // Map field types to HTML input types
+            if (field.type === 'phone') {
+                input.type = 'tel';
+            } else if (field.type === 'currency' || field.type === 'percentage') {
+                input.type = 'number';
+                if (field.type === 'currency') {
+                    input.step = '0.01';
+                    input.min = '0';
+                } else if (field.type === 'percentage') {
+                    input.min = '0';
+                    input.max = '100';
+                    input.step = '1';
+                }
+            } else if (field.type === 'boolean') {
+                input.type = 'checkbox';
+            } else {
+                input.type = field.type || 'text';
+            }
+            
             input.id = field.id;
             input.name = field.id;
             input.className = 'form-input';
@@ -152,8 +181,23 @@ class FormRenderer {
 
         // Event listeners for non-checkbox, non-file inputs
         if (field.type !== 'checkbox' && field.type !== 'file') {
-            input.addEventListener('change', () => this.handleInputChange(field.id));
-            input.addEventListener('input', () => this.handleInputChange(field.id));
+            input.addEventListener('change', () => {
+                this.handleInputChange(field.id);
+                this.validateField(field);
+            });
+            input.addEventListener('input', () => {
+                this.handleInputChange(field.id);
+                // Add slight delay for input validation to avoid excessive validation
+                clearTimeout(this.inputValidationTimeout);
+                this.inputValidationTimeout = setTimeout(() => {
+                    this.validateField(field);
+                }, 300);
+            });
+        } else {
+            input.addEventListener('change', () => {
+                this.handleInputChange(field.id);
+                this.validateField(field);
+            });
         }
 
         if (field.type !== 'checkbox') {
@@ -231,11 +275,11 @@ class FormRenderer {
         this.fields.forEach(field => {
             const input = document.getElementById(field.id);
             if (input) {
-                if (field.type === 'checkbox') {
+                if (field.type === 'checkbox' || field.type === 'boolean') {
                     data[field.id] = input.checked;
                 } else if (field.type === 'file') {
                     data[field.id] = this.uploadedFiles[field.id] || null;
-                } else if (field.type === 'number' || field.type === 'integer') {
+                } else if (field.type === 'number' || field.type === 'integer' || field.type === 'currency' || field.type === 'percentage') {
                     // Convert to number if not empty
                     const val = input.value;
                     data[field.id] = val === '' ? null : Number(val);
@@ -257,7 +301,7 @@ class FormRenderer {
                     // Clear value when hidden
                     const input = document.getElementById(field.id);
                     if (input) {
-                        if (field.type === 'checkbox') {
+                        if (field.type === 'checkbox' || field.type === 'boolean') {
                             input.checked = false;
                         } else if (field.type === 'file') {
                             this.removeFile(field.id);
@@ -265,6 +309,13 @@ class FormRenderer {
                             input.value = '';
                         }
                     }
+                    // Clear validation errors for hidden fields
+                    this.clearFieldError(field.id);
+                } else {
+                    // Re-validate visible fields to ensure they're properly validated
+                    setTimeout(() => {
+                        this.validateField(field);
+                    }, 100);
                 }
             }
         });
@@ -302,6 +353,155 @@ class FormRenderer {
         }
     }
 
+    validateField(field) {
+        const input = document.getElementById(field.id);
+        if (!input) return;
+
+        const value = this.getFieldValue(field, input);
+        const isVisible = this.evaluateCondition(field.show_if);
+        
+        // Clear existing error first
+        this.clearFieldError(field.id);
+        
+        // Skip validation if field is not visible
+        if (!isVisible) return;
+        
+        // Skip validation if field is not required and empty
+        if (!field.required && (value === null || value === '' || value === undefined)) return;
+        
+        // Required field validation
+        if (field.required && (value === null || value === '' || value === undefined)) {
+            this.showError(field.id, `${field.label} is required`);
+            return;
+        }
+        
+        // Type-specific validation
+        const typeError = this.validateFieldType(field, value);
+        if (typeError) {
+            this.showError(field.id, typeError);
+            return;
+        }
+        
+        // Validation rules
+        if (field.validation) {
+            const ruleError = this.validateFieldRules(field, value);
+            if (ruleError) {
+                this.showError(field.id, ruleError);
+                return;
+            }
+        }
+    }
+    
+    getFieldValue(field, input) {
+        if (!input) return null;
+        
+        if (field.type === 'checkbox' || field.type === 'boolean') {
+            return input.checked;
+        } else if (field.type === 'file') {
+            return this.uploadedFiles[field.id] || null;
+        } else if (field.type === 'number' || field.type === 'currency' || field.type === 'percentage') {
+            return input.value === '' ? null : Number(input.value);
+        } else {
+            return input.value === '' ? null : input.value;
+        }
+    }
+    
+    validateFieldType(field, value) {
+        if (value === null || value === '' || value === undefined) return null;
+        
+        switch (field.type) {
+            case 'email':
+                const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!emailPattern.test(value)) {
+                    return `${field.label} must be a valid email address`;
+                }
+                break;
+                
+            case 'phone':
+                const phonePattern = /^(09|\+639)\d{9}$/;
+                if (!phonePattern.test(value.toString().trim())) {
+                    return `${field.label} must be a valid Philippines phone number (09XXXXXXXXX or +639XXXXXXXXX)`;
+                }
+                break;
+                
+            case 'number':
+            case 'currency':
+            case 'percentage':
+                if (isNaN(value) || !isFinite(value)) {
+                    return `${field.label} must be a valid number`;
+                }
+                if (field.type === 'currency' && value < 0) {
+                    return `${field.label} cannot be negative`;
+                }
+                if (field.type === 'percentage' && (value < 0 || value > 100)) {
+                    return `${field.label} must be between 0 and 100`;
+                }
+                break;
+                
+            case 'select':
+                if (field.options && !field.options.includes(value)) {
+                    return `${field.label} must be one of the allowed options`;
+                }
+                break;
+                
+            case 'date':
+                const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+                if (!datePattern.test(value)) {
+                    return `${field.label} must be a valid date in YYYY-MM-DD format`;
+                }
+                break;
+        }
+        
+        return null;
+    }
+    
+    validateFieldRules(field, value) {
+        const rules = field.validation;
+        if (!rules || value === null || value === '' || value === undefined) return null;
+        
+        // Length validations for string types
+        if (['text', 'textarea', 'email', 'phone'].includes(field.type) && typeof value === 'string') {
+            if (rules.minLength && value.length < rules.minLength) {
+                return `${field.label} must be at least ${rules.minLength} characters long`;
+            }
+            if (rules.maxLength && value.length > rules.maxLength) {
+                return `${field.label} must be no more than ${rules.maxLength} characters long`;
+            }
+        }
+        
+        // Numeric validations
+        if (['number', 'currency', 'percentage'].includes(field.type) && typeof value === 'number') {
+            if (rules.minimum !== undefined && value < rules.minimum) {
+                return `${field.label} must be at least ${rules.minimum}`;
+            }
+            if (rules.maximum !== undefined && value > rules.maximum) {
+                return `${field.label} must be no more than ${rules.maximum}`;
+            }
+        }
+        
+        // Pattern validation for string fields
+        if (rules.pattern && ['text', 'email', 'phone'].includes(field.type) && typeof value === 'string') {
+            const pattern = new RegExp(rules.pattern);
+            if (!pattern.test(value)) {
+                return `${field.label} format is not valid`;
+            }
+        }
+        
+        return null;
+    }
+    
+    clearFieldError(fieldId) {
+        const errorDiv = document.getElementById(`error-${fieldId}`);
+        const wrapper = document.getElementById(`wrapper-${fieldId}`);
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+        }
+        if (wrapper) {
+            wrapper.classList.remove('has-error');
+        }
+    }
+
     showError(fieldId, message) {
         const errorDiv = document.getElementById(`error-${fieldId}`);
         const wrapper = document.getElementById(`wrapper-${fieldId}`);
@@ -331,6 +531,26 @@ class FormRenderer {
 
     async validate() {
         this.clearErrors();
+        
+        // Run client-side validation first
+        let hasClientErrors = false;
+        this.fields.forEach(field => {
+            const isVisible = this.evaluateCondition(field.show_if);
+            if (isVisible) {
+                this.validateField(field);
+                const errorDiv = document.getElementById(`error-${field.id}`);
+                if (errorDiv && errorDiv.style.display !== 'none') {
+                    hasClientErrors = true;
+                }
+            }
+        });
+        
+        // If client-side validation fails, return early
+        if (hasClientErrors) {
+            return { is_valid: false, errors: [{ field: '__client__', message: 'Please fix the validation errors' }] };
+        }
+        
+        // Run server-side validation
         const data = this.getData();
 
         try {
@@ -410,7 +630,7 @@ class FormRenderer {
                     } else if (input.type === 'file') {
                         // File inputs can't be pre-populated
                     } else {
-                        input.value = data[key];
+                        input.value = data[key] !== null && data[key] !== undefined ? data[key] : '';
                     }
                 }
             });

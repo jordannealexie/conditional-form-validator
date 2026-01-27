@@ -42,8 +42,8 @@ class JSONSchemaBuilder:
             
             PredefinedFieldType.PHONE: {
                 "type": "string",
-                "pattern": r"^\+?[1-9]\d{1,14}$",  # E.164 format
-                "description": "Phone number in E.164 format"
+                "pattern": r"^(09|\+639)\d{9}$",  # Philippines format
+                "description": "Philippines phone number (09XXXXXXXXX or +639XXXXXXXXX)"
             },
             
             PredefinedFieldType.PASSWORD: {
@@ -73,7 +73,7 @@ class JSONSchemaBuilder:
                 "type": "number",
                 "minimum": 0,
                 "multipleOf": 0.01,
-                "description": "Currency amount (2 decimal places)"
+                "description": "Currency amount in Philippine Peso (₱)"
             },
             
             PredefinedFieldType.PERCENTAGE: {

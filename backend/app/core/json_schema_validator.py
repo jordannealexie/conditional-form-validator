@@ -158,6 +158,9 @@ class JSONSchemaValidator:
         forbidden = forbidden_types.get(expected_type, ())
         if isinstance(value, forbidden):
             actual_type = type(value).__name__
+            # Special handling for boolean types - Python bool is valid for JSON schema boolean
+            if expected_type == 'boolean' and isinstance(value, bool):
+                return None  # This is actually valid
             return {
                 "field": field_name,
                 "message": f"Field '{field_name}' expects type '{expected_type}' but received '{actual_type}'. Type mismatch is not allowed.",

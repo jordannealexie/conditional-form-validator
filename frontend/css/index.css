@@ -1060,12 +1060,26 @@ tbody tr:hover {
     color: var(--danger);
     font-size: 14px;
     margin-top: 4px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.field-error::before {
+    content: '⚠';
+    font-size: 12px;
 }
 
 .field-wrapper.has-error input,
 .field-wrapper.has-error select,
 .field-wrapper.has-error textarea {
     border-color: var(--danger);
+    background-color: rgba(231, 76, 60, 0.05);
+}
+
+.field-wrapper.has-error label {
+    color: var(--danger);
 }
 
 .form-help {
@@ -1124,6 +1138,49 @@ tbody tr:hover {
 
 .upload-status.error {
     color: var(--danger);
+}
+
+/* Field Type Specific Styles */
+.field-currency-wrapper {
+    position: relative;
+}
+
+.field-currency-wrapper::before {
+    content: '₱';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray);
+    font-weight: 500;
+    z-index: 2;
+}
+
+.field-currency-wrapper input {
+    padding-left: 28px;
+}
+
+.field-percentage-wrapper {
+    position: relative;
+}
+
+.field-percentage-wrapper::after {
+    content: '%';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray);
+    font-weight: 500;
+    z-index: 2;
+}
+
+.field-percentage-wrapper input {
+    padding-right: 28px;
+}
+
+.field-phone input[type="tel"] {
+    letter-spacing: 0.5px;
 }
 
 .upload-success {

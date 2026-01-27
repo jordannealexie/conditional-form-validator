@@ -2,7 +2,53 @@
 Prometheus metrics for monitoring and observability
 Tracks API performance, database queries, and cache hits
 """
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+try:
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    # Create dummy classes for when prometheus_client is not available
+    class Counter:
+        def __init__(self, *args, **kwargs):
+            pass
+        def labels(self, *args, **kwargs):
+            return self
+        def inc(self, *args, **kwargs):
+            pass
+    
+    class Histogram:
+        def __init__(self, *args, **kwargs):
+            pass
+        def labels(self, *args, **kwargs):
+            return self
+        def observe(self, *args, **kwargs):
+            pass
+        def time(self):
+            return DummyTimer()
+    
+    class Gauge:
+        def __init__(self, *args, **kwargs):
+            pass
+        def labels(self, *args, **kwargs):
+            return self
+        def inc(self, *args, **kwargs):
+            pass
+        def dec(self, *args, **kwargs):
+            pass
+        def set(self, *args, **kwargs):
+            pass
+    
+    class DummyTimer:
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+    
+    def generate_latest():
+        return b"# Prometheus client not available"
+    
+    CONTENT_TYPE_LATEST = "text/plain"
+
 from fastapi import Response
 import time
 from typing import Callable
@@ -185,10 +231,16 @@ def get_metrics_response() -> Response:
     Returns:
         FastAPI Response with metrics in Prometheus format
     """
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-    )
+    if PROMETHEUS_AVAILABLE:
+        return Response(
+            content=generate_latest(),
+            media_type=CONTENT_TYPE_LATEST
+        )
+    else:
+        return Response(
+            content=b"# Prometheus client not available\n# Install prometheus_client to enable metrics",
+            media_type="text/plain"
+        )
 
 
 # Decorator for automatic metric tracking

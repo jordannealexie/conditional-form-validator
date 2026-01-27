@@ -142,7 +142,23 @@ function handleDrop(event) {
  * Field Management
  */
 function addField(type) {
-    const defaultLabel = type.charAt(0).toUpperCase() + type.slice(1) + ' Field';
+    // Map field types to better default labels
+    const labelMap = {
+        'text': 'Text Input',
+        'textarea': 'Text Area', 
+        'number': 'Number Input',
+        'date': 'Date',
+        'boolean': 'Yes/No',
+        'checkbox': 'Checkbox',
+        'select': 'Dropdown',
+        'email': 'Email Address',
+        'phone': 'Phone Number',
+        'currency': 'Currency Amount',
+        'percentage': 'Percentage',
+        'file': 'File Upload'
+    };
+    
+    const defaultLabel = labelMap[type] || (type.charAt(0).toUpperCase() + type.slice(1) + ' Field');
     const fieldId = `field_${Date.now()}`;
 
     const newField = {
@@ -289,10 +305,27 @@ function renderProperties() {
         <div class="config-group">
             <label class="config-label">Validation Rules</label>
             <div class="validation-rules">
-                <input type="number" class="form-input" placeholder="Min length" 
-                       style="width: 48%;" onchange="updateValidation('minLength', this.value)">
-                <input type="number" class="form-input" placeholder="Max length" 
-                       style="width: 48%;" onchange="updateValidation('maxLength', this.value)">
+                ${field.type === 'text' || field.type === 'email' || field.type === 'phone' || field.type === 'textarea' ? `
+                    <input type="number" class="form-input" placeholder="Min length" 
+                           style="width: 48%;" onchange="updateValidation('minLength', this.value)" 
+                           value="${field.validation?.minLength || ''}">
+                    <input type="number" class="form-input" placeholder="Max length" 
+                           style="width: 48%;" onchange="updateValidation('maxLength', this.value)"
+                           value="${field.validation?.maxLength || ''}">
+                ` : ''}
+                ${field.type === 'number' || field.type === 'currency' || field.type === 'percentage' ? `
+                    <input type="number" class="form-input" placeholder="Minimum value" 
+                           style="width: 48%;" onchange="updateValidation('minimum', this.value)"
+                           value="${field.validation?.minimum || ''}">
+                    <input type="number" class="form-input" placeholder="Maximum value" 
+                           style="width: 48%;" onchange="updateValidation('maximum', this.value)"
+                           value="${field.validation?.maximum || ''}">
+                ` : ''}
+                ${field.type === 'text' || field.type === 'email' || field.type === 'phone' ? `
+                    <input type="text" class="form-input" placeholder="Pattern (regex)" 
+                           style="width: 100%; margin-top: 5px;" onchange="updateValidation('pattern', this.value)"
+                           value="${field.validation?.pattern || ''}">
+                ` : ''}
             </div>
         </div>
     `;
@@ -315,7 +348,14 @@ function updateValidation(rule, value) {
     if (field) {
         if (!field.validation) field.validation = {};
         if (value) {
-            field.validation[rule] = parseInt(value);
+            // Handle different validation rule types
+            if (rule === 'pattern') {
+                field.validation[rule] = value; // String
+            } else if (rule === 'minLength' || rule === 'maxLength' || rule === 'minimum' || rule === 'maximum') {
+                field.validation[rule] = parseInt(value); // Number
+            } else {
+                field.validation[rule] = value;
+            }
         } else {
             delete field.validation[rule];
         }
@@ -384,17 +424,42 @@ function generateJSONSchema(fields) {
 
     fields.forEach(f => {
         const prop = {
-            "type": f.type === 'number' ? 'number' : (f.type === 'checkbox' ? 'boolean' : 'string'),
             "title": f.label
         };
 
+        // Map field types to JSON Schema types
+        if (f.type === 'number' || f.type === 'currency' || f.type === 'percentage') {
+            prop.type = 'number';
+            if (f.type === 'currency') {
+                prop.minimum = 0;
+                prop.multipleOf = 0.01;
+            } else if (f.type === 'percentage') {
+                prop.minimum = 0;
+                prop.maximum = 100;
+            }
+        } else if (f.type === 'checkbox' || f.type === 'boolean') {
+            prop.type = 'boolean';
+        } else if (f.type === 'email') {
+            prop.type = 'string';
+            prop.format = 'email';
+        } else if (f.type === 'date') {
+            prop.type = 'string';
+            prop.format = 'date';
+        } else if (f.type === 'phone') {
+            prop.type = 'string';
+            prop.format = 'phone';
+            prop.pattern = '^(09|\\+639)\\d{9}$';
+        } else {
+            prop.type = 'string';
+        }
+
         // Add validation rules
         if (f.validation) {
-            if (f.validation.minLength) prop.minLength = f.validation.minLength;
-            if (f.validation.maxLength) prop.maxLength = f.validation.maxLength;
-            if (f.validation.minimum) prop.minimum = f.validation.minimum;
-            if (f.validation.maximum) prop.maximum = f.validation.maximum;
-            if (f.validation.pattern) prop.pattern = f.validation.pattern;
+            if (f.validation.minLength && (prop.type === 'string')) prop.minLength = f.validation.minLength;
+            if (f.validation.maxLength && (prop.type === 'string')) prop.maxLength = f.validation.maxLength;
+            if (f.validation.minimum && (prop.type === 'number')) prop.minimum = f.validation.minimum;
+            if (f.validation.maximum && (prop.type === 'number')) prop.maximum = f.validation.maximum;
+            if (f.validation.pattern && (prop.type === 'string')) prop.pattern = f.validation.pattern;
         }
 
         if (f.placeholder) prop.description = f.placeholder;

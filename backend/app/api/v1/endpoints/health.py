@@ -5,7 +5,16 @@ import time
 
 from app.db.session import get_db
 from app.core.cache import cache
-from app.core.metrics import get_metrics_response
+
+# Optional metrics import
+try:
+    from app.core.metrics import get_metrics_response
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    def get_metrics_response():
+        return "# Metrics not available\n"
+
 from app.utils.common import log_error
 from app.utils.response import create_response
 

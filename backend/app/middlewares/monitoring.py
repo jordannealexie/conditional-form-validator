@@ -9,7 +9,30 @@ from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
-from app.core.metrics import track_request_metrics, http_requests_in_progress, track_error
+
+# Optional imports for metrics
+try:
+    from app.core.metrics import track_request_metrics, http_requests_in_progress, track_error
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    # Create dummy functions when metrics are not available
+    def track_request_metrics(*args, **kwargs):
+        pass
+    
+    def track_error(*args, **kwargs):
+        pass
+    
+    class DummyMetric:
+        def labels(self, *args, **kwargs):
+            return self
+        def inc(self, *args, **kwargs):
+            pass
+        def dec(self, *args, **kwargs):
+            pass
+    
+    http_requests_in_progress = DummyMetric()
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -37,7 +60,7 @@ class RequestMonitoringMiddleware(BaseHTTPMiddleware):
         endpoint = self._normalize_path(path)
         
         # Track in-progress requests
-        if settings.METRICS_ENABLED:
+        if settings.METRICS_ENABLED and METRICS_AVAILABLE:
             http_requests_in_progress.labels(method=method, endpoint=endpoint).inc()
         
         # Start timing
@@ -60,7 +83,7 @@ class RequestMonitoringMiddleware(BaseHTTPMiddleware):
             status_code = response.status_code
         except Exception as e:
             # Track error
-            if settings.METRICS_ENABLED:
+            if settings.METRICS_ENABLED and METRICS_AVAILABLE:
                 track_error(error_type=type(e).__name__, endpoint=endpoint)
             
             logger.error(
@@ -79,11 +102,11 @@ class RequestMonitoringMiddleware(BaseHTTPMiddleware):
             duration = time.time() - start_time
             
             # Track completed request
-            if settings.METRICS_ENABLED:
+            if settings.METRICS_ENABLED and METRICS_AVAILABLE:
                 http_requests_in_progress.labels(method=method, endpoint=endpoint).dec()
             
         # Track metrics
-        if settings.METRICS_ENABLED:
+        if settings.METRICS_ENABLED and METRICS_AVAILABLE:
             track_request_metrics(method, endpoint, status_code, duration)
         
         # Log request completion
