@@ -1,123 +1,223 @@
 """
-Template Caching Layer for Performance Optimization
-Prevents N+1 queries and reduces RDS load
+Redis-based Caching Layer for Performance Optimization
+Prevents N+1 queries and reduces database load
+Supports distributed caching for horizontal scaling
 """
-from typing import Optional, Dict, Any
-from functools import lru_cache
+from typing import Optional, Dict, Any, List
 import json
-import hashlib
+import logging
 from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
+import redis.asyncio as redis
+from app.core.config import settings
 
-class TemplateCache:
+logger = logging.getLogger(__name__)
+
+
+class RedisCache:
     """
-    In-memory cache for form templates
-    
-    Use Redis in production for distributed caching:
-    - redis.Redis(host='localhost', port=6379, db=0)
-    - Set TTL for cache entries
-    - Invalidate on template updates
+    Redis-based cache with support for:
+    - Form templates
+    - Enum/reference data
+    - User sessions
+    - Compiled validators
     """
     
-    def __init__(self, ttl_seconds: int = 3600):
-        """Initialize cache with TTL (default 1 hour)"""
-        self._cache: Dict[str, Dict[str, Any]] = {}
-        self._timestamps: Dict[str, datetime] = {}
-        self.ttl = timedelta(seconds=ttl_seconds)
-    
-    def _generate_key(self, template_id: int) -> str:
-        """Generate cache key for template"""
-        return f"template:{template_id}"
-    
-    def _is_expired(self, key: str) -> bool:
-        """Check if cache entry is expired"""
-        if key not in self._timestamps:
-            return True
-        return datetime.now() - self._timestamps[key] > self.ttl
-    
-    def get(self, template_id: int) -> Optional[Dict[str, Any]]:
+    def __init__(self, redis_url: str = None, default_ttl: int = 3600):
         """
-        Get template from cache
-        
-        Returns:
-            Template dict or None if not cached/expired
-        """
-        key = self._generate_key(template_id)
-        
-        if key not in self._cache or self._is_expired(key):
-            return None
-        
-        return self._cache[key]
-    
-    def set(self, template_id: int, template_data: Dict[str, Any]) -> None:
-        """
-        Store template in cache
+        Initialize Redis cache
         
         Args:
-            template_id: Template ID
-            template_data: Full template data including schema
+            redis_url: Redis connection URL (defaults to settings.REDIS_URL)
+            default_ttl: Default TTL in seconds (1 hour)
         """
-        key = self._generate_key(template_id)
-        self._cache[key] = template_data
-        self._timestamps[key] = datetime.now()
+        self.redis_url = redis_url or settings.REDIS_URL
+        self.default_ttl = default_ttl
+        self._client: Optional[redis.Redis] = None
+        self._connected = False
     
-    def invalidate(self, template_id: int) -> None:
+    async def connect(self) -> None:
+        """Establish Redis connection"""
+        try:
+            self._client = await redis.from_url(
+                self.redis_url,
+                encoding="utf-8",
+                decode_responses=True,
+                socket_timeout=5,
+                socket_connect_timeout=5
+            )
+            # Test connection
+            await self._client.ping()
+            self._connected = True
+            logger.info("Redis cache connected successfully")
+        except Exception as e:
+            logger.warning(f"Redis connection failed: {e}. Operating without cache.")
+            self._connected = False
+    
+    async def disconnect(self) -> None:
+        """Close Redis connection"""
+        if self._client:
+            await self._client.close()
+            self._connected = False
+            logger.info("Redis cache disconnected")
+    
+    def is_connected(self) -> bool:
+        """Check if Redis is connected"""
+        return self._connected
+    
+    async def get(self, key: str) -> Optional[Any]:
         """
-        Invalidate cache for specific template
+        Get value from cache
         
-        Call this on template create/update/delete
+        Args:
+            key: Cache key
+            
+        Returns:
+            Cached value or None if not found/error
         """
-        key = self._generate_key(template_id)
-        self._cache.pop(key, None)
-        self._timestamps.pop(key, None)
+        if not self._connected or not self._client:
+            return None
+        
+        try:
+            data = await self._client.get(key)
+            return json.loads(data) if data else None
+        except Exception as e:
+            logger.warning(f"Cache get error for key {key}: {e}")
+            return None
     
-    def invalidate_all(self) -> None:
-        """Clear entire cache"""
-        self._cache.clear()
-        self._timestamps.clear()
+    async def set(self, key: str, value: Any, ttl: int = None) -> bool:
+        """
+        Set value in cache
+        
+        Args:
+            key: Cache key
+            value: Value to cache (will be JSON serialized)
+            ttl: Time to live in seconds (defaults to default_ttl)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self._connected or not self._client:
+            return False
+        
+        try:
+            ttl = ttl or self.default_ttl
+            serialized = json.dumps(value, default=str)
+            await self._client.setex(key, ttl, serialized)
+            return True
+        except Exception as e:
+            logger.warning(f"Cache set error for key {key}: {e}")
+            return False
     
-    def get_stats(self) -> Dict[str, Any]:
+    async def delete(self, key: str) -> bool:
+        """
+        Delete key from cache
+        
+        Args:
+            key: Cache key
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self._connected or not self._client:
+            return False
+        
+        try:
+            await self._client.delete(key)
+            return True
+        except Exception as e:
+            logger.warning(f"Cache delete error for key {key}: {e}")
+            return False
+    
+    async def delete_pattern(self, pattern: str) -> int:
+        """
+        Delete all keys matching pattern
+        
+        Args:
+            pattern: Redis key pattern (e.g., 'template:*')
+            
+        Returns:
+            Number of keys deleted
+        """
+        if not self._connected or not self._client:
+            return 0
+        
+        try:
+            keys = []
+            async for key in self._client.scan_iter(match=pattern):
+                keys.append(key)
+            
+            if keys:
+                await self._client.delete(*keys)
+                return len(keys)
+            return 0
+        except Exception as e:
+            logger.warning(f"Cache delete pattern error for {pattern}: {e}")
+            return 0
+    
+    async def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""
-        return {
-            "entries": len(self._cache),
-            "ttl_seconds": self.ttl.total_seconds(),
-            "oldest_entry": min(self._timestamps.values()) if self._timestamps else None,
-            "newest_entry": max(self._timestamps.values()) if self._timestamps else None
-        }
+        if not self._connected or not self._client:
+            return {"connected": False}
+        
+        try:
+            info = await self._client.info("stats")
+            memory = await self._client.info("memory")
+            return {
+                "connected": True,
+                "total_connections": info.get("total_connections_received", 0),
+                "total_commands": info.get("total_commands_processed", 0),
+                "used_memory_human": memory.get("used_memory_human", "unknown"),
+                "hits": info.get("keyspace_hits", 0),
+                "misses": info.get("keyspace_misses", 0)
+            }
+        except Exception as e:
+            logger.warning(f"Cache stats error: {e}")
+            return {"connected": True, "error": str(e)}
+
+
+class CacheKeys:
+    """Cache key patterns for consistent naming"""
+    
+    @staticmethod
+    def template(template_id: int) -> str:
+        return f"template:{template_id}"
+    
+    @staticmethod
+    def template_list(bank_id: int = None) -> str:
+        if bank_id:
+            return f"templates:bank:{bank_id}"
+        return "templates:all"
+    
+    @staticmethod
+    def validator(template_id: int, version: int = None) -> str:
+        if version:
+            return f"validator:{template_id}:v{version}"
+        return f"validator:{template_id}"
+    
+    @staticmethod
+    def enum_data(enum_type: str) -> str:
+        return f"enum:{enum_type}"
+    
+    @staticmethod
+    def bank(bank_id: int) -> str:
+        return f"bank:{bank_id}"
+    
+    @staticmethod
+    def banks_list() -> str:
+        return "banks:all"
+    
+    @staticmethod
+    def field_types() -> str:
+        return "field_types:all"
+    
+    @staticmethod
+    def user_permissions(user_id: int) -> str:
+        return f"permissions:user:{user_id}"
 
 
 # Global cache instance
-template_cache = TemplateCache(ttl_seconds=3600)  # 1 hour TTL
+cache = RedisCache(default_ttl=3600)  # 1 hour default TTL
 
-
-# Redis implementation (for production)
-"""
-import redis
-from typing import Optional, Dict, Any
-import json
-
-class RedisTemplateCache:
-    def __init__(self, redis_url: str = "redis://localhost:6379/0", ttl_seconds: int = 3600):
-        self.redis_client = redis.from_url(redis_url, decode_responses=True)
-        self.ttl = ttl_seconds
-    
-    def _generate_key(self, template_id: int) -> str:
-        return f"template:{template_id}"
-    
-    def get(self, template_id: int) -> Optional[Dict[str, Any]]:
-        key = self._generate_key(template_id)
-        data = self.redis_client.get(key)
-        return json.loads(data) if data else None
-    
-    def set(self, template_id: int, template_data: Dict[str, Any]) -> None:
-        key = self._generate_key(template_id)
-        self.redis_client.setex(key, self.ttl, json.dumps(template_data))
-    
-    def invalidate(self, template_id: int) -> None:
-        key = self._generate_key(template_id)
-        self.redis_client.delete(key)
-    
-    def invalidate_all(self) -> None:
-        keys = self.redis_client.keys("template:*")
-        if keys:
-            self.redis_client.delete(*keys)
-"""
+# Backward compatibility alias
+template_cache = cache

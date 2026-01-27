@@ -1,11 +1,34 @@
 """
 JSON Schema Validator with Nested Conditional Logic Support
 Compliant with JSON Schema Draft-07 specification
+Includes validator caching for performance optimization
 """
 from typing import Dict, Any, List, Tuple, Optional
 import jsonschema
 from jsonschema import validate, ValidationError, Draft7Validator
 from jsonschema.exceptions import SchemaError
+from functools import lru_cache
+import hashlib
+import json
+
+
+# Global validator cache using LRU cache (thread-safe)
+@lru_cache(maxsize=256)
+def _get_cached_validator(schema_hash: str, schema_json: str) -> Draft7Validator:
+    """
+    Get or create cached Draft7Validator
+    
+    Uses schema hash for cache key to avoid recompiling same schemas
+    
+    Args:
+        schema_hash: SHA256 hash of schema (for cache key)
+        schema_json: JSON string of schema (for validation)
+        
+    Returns:
+        Compiled Draft7Validator instance
+    """
+    schema = json.loads(schema_json)
+    return Draft7Validator(schema)
 
 
 class JSONSchemaValidator:
@@ -177,7 +200,7 @@ class JSONSchemaValidator:
         This method:
         1. Validates required fields (rejects empty values)
         2. Validates type strictness (text fields reject numbers, etc.)
-        3. Runs standard JSONSchema validation
+        3. Runs standard JSONSchema validation with cached validator
         
         Args:
             data: Data to validate
@@ -221,8 +244,14 @@ class JSONSchemaValidator:
                                 if nested_error:
                                     errors.append(nested_error)
         
-        # 3. Standard JSONSchema Validation
-        validator = Draft7Validator(schema)
+        # 3. Standard JSONSchema Validation with cached validator
+        # Create schema hash for caching
+        schema_json = json.dumps(schema, sort_keys=True)
+        schema_hash = hashlib.sha256(schema_json.encode()).hexdigest()
+        
+        # Get cached validator (or create new one)
+        validator = _get_cached_validator(schema_hash, schema_json)
+        
         for error in validator.iter_errors(data_with_defaults):
             field_path = ".".join(str(p) for p in error.absolute_path) if error.absolute_path else "root"
             
