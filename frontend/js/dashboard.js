@@ -93,33 +93,33 @@ async function loadApplications() {
 function createApplicationCard(template, bank) {
     const card = document.createElement('div');
     card.className = 'application-card';
-    card.className = 'application-card';
-    // Removed card.onclick to prevent conflict with button click
 
-
+    // Apply consistent border color based on bank
     if (bank.primary_color) {
-        card.style = `border-left: 5px solid ${bank.primary_color};`;
+        card.style.borderLeft = `5px solid ${bank.primary_color}`;
     } else {
         const bankColors = {
-            'BDO': 'border-left: 5px solid #ec1c24;',
-            'MAYA': 'border-left: 5px solid #00ff00;',
-            'SECB': 'border-left: 5px solid #004a99;'
+            'BDO': '#ec1c24',
+            'MAYA': '#00ff00',
+            'SECB': '#004a99'
         };
-        card.style = bankColors[bank.code] || '';
+        const color = bankColors[bank.code] || '#6c757d';
+        card.style.borderLeft = `5px solid ${color}`;
     }
 
-    // Simplified Card for Dashboard (Text Only, No Logos)
-    const bankBadge = `<span class="bank-tag bank-${bank.code.toLowerCase()}">${bank.name}</span>`;
+    // Consistent card structure for all templates
+    const bankBadge = `<span class="bank-tag bank-${bank.code.toLowerCase()}">${escapeHtml(bank.name)}</span>`;
+    const description = template.description || 'Fill out your application details online.';
 
     card.innerHTML = `
         <div class="app-card-header">
             ${bankBadge}
             <span class="version-badge">v${template.version}</span>
         </div>
-        <h3 class="app-title">${template.name}</h3>
-        <p class="app-description">${template.description || 'Fill out your application details online.'}</p>
+        <h3 class="app-title">${escapeHtml(template.name)}</h3>
+        <p class="app-description">${escapeHtml(description)}</p>
         <div class="app-card-footer">
-            <button class="btn-apply" onclick="handleTemplateClick(event, ${template.id}, '${template.bank_id}')">
+            <button class="btn-apply" onclick="handleTemplateClick(event, ${template.id}, ${template.bank_id})">
                 Apply Now <i class="fas fa-arrow-right"></i>
             </button>
         </div>

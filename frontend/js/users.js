@@ -50,9 +50,9 @@ function createUserRow(user) {
     const roleHtml = user.user_role ? `<span class="badge ${roleCls}">${escapeHtml(user.user_role)}</span>` : '<span class="badge badge-secondary">—</span>';
     const statusHtml = user.active !== false ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-secondary">Inactive</span>';
     
-    // Format audit fields
+    // Format audit fields from database
+    const createdAt = user.created_at ? formatDateTime(user.created_at) : '-';
     const updatedAt = user.updated_at ? formatDateTime(user.updated_at) : '-';
-    const updatedBy = user.updated_by ? escapeHtml(user.updated_by) : '-';
     
     tr.innerHTML = `
         <td class="sticky-col"><strong>${escapeHtml(user.username)}</strong></td>
@@ -62,8 +62,8 @@ function createUserRow(user) {
         <td>${escapeHtml(user.location || '—')}</td>
         <td>${roleHtml}</td>
         <td>${statusHtml}</td>
+        <td>${createdAt}</td>
         <td>${updatedAt}</td>
-        <td>${updatedBy}</td>
         <td class="table-actions">
             <button class="btn btn-sm btn-primary" onclick="editUser(${user.id})" data-permission="users" data-action="update">Edit</button>
             <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.username).replace(/'/g, "\\'")}')" data-permission="users" data-action="delete">Delete</button>

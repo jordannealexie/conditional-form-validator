@@ -58,13 +58,13 @@ function toggleAddRoleForm() {
 async function loadRoles() {
     const tbody = document.getElementById('rolesTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Loading…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading…</td></tr>';
     try {
         const data = await apiGetRoles();
         const list = Array.isArray(data) ? data : (data && data.data ? data.data : []);
         tbody.innerHTML = '';
         if (!list.length) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">No roles found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No roles found</td></tr>';
             return;
         }
         for (const role of list) {
@@ -73,7 +73,7 @@ async function loadRoles() {
         }
     } catch (e) {
         console.error('loadRoles', e);
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--danger);">Error loading roles</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--danger);">Error loading roles</td></tr>';
         if (typeof showToast === 'function') showToast('Failed to load roles', 'error');
     }
 }
@@ -95,11 +95,10 @@ function createRoleRow(role, userCount = 0) {
     const permText = Array.isArray(perms) ? perms.join(', ') : (typeof perms === 'string' ? perms : '—');
     const permShort = permText.length > 60 ? permText.slice(0, 57) + '…' : permText;
     
-    // Format audit fields with timezone
+    // Format audit fields from database (note: updated_by is now user ID, not username)
     const createdAt = role.created_at ? formatDateTime(role.created_at) : '-';
-    const createdBy = role.created_by ? escapeHtml(role.created_by) : '-';
     const updatedAt = role.updated_at ? formatDateTime(role.updated_at) : '-';
-    const updatedBy = role.updated_by ? escapeHtml(role.updated_by) : '-';
+    const updatedBy = role.updated_by ? `User #${role.updated_by}` : '-';
     
     tr.innerHTML = `
         <td class="sticky-col"><strong>${escapeHtml(role.name || '')}</strong></td>
@@ -107,7 +106,6 @@ function createRoleRow(role, userCount = 0) {
         <td title="${escapeHtml(permText)}">${escapeHtml(permShort) || '—'}</td>
         <td>${userCount}</td>
         <td>${createdAt}</td>
-        <td>${createdBy}</td>
         <td>${updatedAt}</td>
         <td>${updatedBy}</td>
         <td class="table-actions">
