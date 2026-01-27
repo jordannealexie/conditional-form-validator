@@ -7,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.core.config import settings
 from app.core.casbin_enforcer import casbin_enforcer
+from app.core.cache import cache
+from app.core.logging_config import setup_logging
+from app.middlewares.monitoring import RequestMonitoringMiddleware, CacheHeaderMiddleware
 from app.api.v1.api import api_router
 from app.db.session import engine
 from app.db.base_class import Base
@@ -21,19 +24,35 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting application...")
     
+    # Setup structured logging
+    setup_logging()
+    
     # Create database tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # Initialize Redis cache
+    if settings.CACHE_ENABLED:
+        try:
+            await cache.connect()
+            print("✅ Redis cache connected")
+        except Exception as e:
+            print(f"⚠️ Redis cache connection failed: {e}. Operating without cache.")
     
     # Initialize Casbin enforcers
     await casbin_enforcer.initialize()
     
     print("✅ Application started successfully!")
     print(f"📚 API Documentation: http://localhost:{port}{settings.API_V1_STR}/docs")
+    print(f"📊 Metrics endpoint: http://localhost:{port}{settings.API_V1_STR}/health/metrics")
     
     yield
     
     # Shutdown
+    if settings.CACHE_ENABLED:
+        await cache.disconnect()
+        print("✅ Redis cache disconnected")
+    
     await engine.dispose()
     print("👋 Application shutdown complete")
 
@@ -91,6 +110,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add monitoring and performance middlewares
+if settings.METRICS_ENABLED:
+    app.add_middleware(RequestMonitoringMiddleware)
+    app.add_middleware(CacheHeaderMiddleware)
 
 # Register exception handlers
 add_exception_handlers(app)
