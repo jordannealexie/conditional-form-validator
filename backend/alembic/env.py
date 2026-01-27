@@ -15,12 +15,13 @@ config = context.config
 
 # Override config with environment variables
 postgres_server = os.getenv("POSTGRES_SERVER", "localhost")
+postgres_port = os.getenv("POSTGRES_PORT", "5434")
 postgres_user = os.getenv("POSTGRES_USER", "postgres")
-postgres_password = os.getenv("POSTGRES_PASSWORD", "123456")
-postgres_db = os.getenv("POSTGRES_DB", "python_demo")
+postgres_password = os.getenv("POSTGRES_PASSWORD", "postgres")
+postgres_db = os.getenv("POSTGRES_DB", "fastapi_db")
 
 # Build the connection string - use psycopg2 for Alembic operations
-db_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_server}/{postgres_db}"
+db_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_server}:{postgres_port}/{postgres_db}"
 
 # Override sqlalchemy.url in alembic.ini
 config.set_main_option("sqlalchemy.url", db_url)

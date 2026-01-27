@@ -67,7 +67,6 @@ class Role(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
     updated_by = Column(String(100), nullable=True, comment="Username of last updater")
     permissions = Column(JSON, nullable=True)  # JSONB permissions as per spec
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
     users = relationship("User", secondary=user_roles, back_populates="roles")
