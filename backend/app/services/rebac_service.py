@@ -86,6 +86,8 @@ class REBACService:
         **kwargs
     ) -> Optional[ResourceRelationship]:
         """Update a relationship"""
+        from datetime import datetime
+        
         result = await self.db.execute(
             select(ResourceRelationship).where(ResourceRelationship.id == relationship_id)
         )
@@ -97,6 +99,9 @@ class REBACService:
         for key, value in kwargs.items():
             if hasattr(relationship, key):
                 setattr(relationship, key, value)
+        
+        # Explicitly set updated_at
+        relationship.updated_at = datetime.now()
                 
         await self.db.commit()
         await self.db.refresh(relationship)

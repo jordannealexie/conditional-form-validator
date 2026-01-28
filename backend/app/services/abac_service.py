@@ -55,6 +55,42 @@ class ABACService:
         )
         return result.scalar_one_or_none()
     
+    async def update_policy(
+        self,
+        policy_id: int,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        rules: Optional[Dict[str, Any]] = None,
+        is_active: Optional[bool] = None
+    ) -> Optional[ABACPolicy]:
+        """Update an existing ABAC policy"""
+        from datetime import datetime
+        
+        policy = await self.get_policy(policy_id)
+        if not policy:
+            return None
+        
+        if name is not None:
+            policy.name = name
+        if description is not None:
+            policy.description = description
+        if rules is not None:
+            policy.rules = rules
+        if is_active is not None:
+            policy.is_active = is_active
+        
+        # Explicitly set updated_at
+        policy.updated_at = datetime.now()
+        
+        await self.db.commit()
+        await self.db.refresh(policy)
+        
+        # Sync to Casbin if active
+        if policy.is_active:
+            await self.sync_policy_to_casbin(policy)
+        
+        return policy
+    
     async def delete_policy(self, policy_id: int) -> bool:
         """Delete an ABAC policy"""
         policy = await self.get_policy(policy_id)

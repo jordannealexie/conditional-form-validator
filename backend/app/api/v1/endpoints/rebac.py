@@ -4,6 +4,7 @@ ReBAC API endpoints
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, distinct
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
 from app.dependencies.permissions import require_superuser
@@ -146,3 +147,64 @@ async def update_relationship(
         raise HTTPException(status_code=404, detail="Relationship not found")
         
     return create_response(data=ResourceRelationshipResponse.model_validate(updated))
+
+
+@router.get("/metadata/options")
+async def get_rebac_options(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_superuser)
+):
+    """Get available options for ReBAC relationship creation"""
+    from app.models.user import ResourceRelationship
+    from app.models.forms import FormTemplate, FormSubmission, Bank
+    from app.models.user import User as UserModel, Role
+    
+    # Get distinct values from existing relationships
+    subject_types_result = await db.execute(
+        select(distinct(ResourceRelationship.subject_type))
+    )
+    subject_types_from_db = [row[0] for row in subject_types_result.fetchall() if row[0]]
+    
+    resource_types_result = await db.execute(
+        select(distinct(ResourceRelationship.resource_type))
+    )
+    resource_types_from_db = [row[0] for row in resource_types_result.fetchall() if row[0]]
+    
+    relationship_types_result = await db.execute(
+        select(distinct(ResourceRelationship.relationship_type))
+    )
+    relationship_types_from_db = [row[0] for row in relationship_types_result.fetchall() if row[0]]
+    
+    # Combine with standard entity types
+    subject_types = list(set(["user", "role", "group"] + subject_types_from_db))
+    resource_types = list(set(["template", "submission", "bank", "document", "project"] + resource_types_from_db))
+    relationship_types = list(set(["owner", "viewer", "editor", "manager", "member", "admin", "creator", "assignee", "reviewer"] + relationship_types_from_db))
+    
+    # Get actual entities for dropdowns
+    users_result = await db.execute(select(UserModel.id, UserModel.username).limit(100))
+    users = [{"id": str(row[0]), "label": row[1]} for row in users_result.fetchall()]
+    
+    roles_result = await db.execute(select(Role.id, Role.name).limit(50))
+    roles = [{"id": str(row[0]), "label": row[1]} for row in roles_result.fetchall()]
+    
+    templates_result = await db.execute(select(FormTemplate.id, FormTemplate.name).limit(100))
+    templates = [{"id": str(row[0]), "label": row[1]} for row in templates_result.fetchall()]
+    
+    submissions_result = await db.execute(select(FormSubmission.id, FormSubmission.submitted_by).limit(100))
+    submissions = [{"id": str(row[0]), "label": f"Submission #{row[0]}"} for row in submissions_result.fetchall()]
+    
+    banks_result = await db.execute(select(Bank.id, Bank.name).limit(50))
+    banks = [{"id": str(row[0]), "label": row[1]} for row in banks_result.fetchall()]
+    
+    return create_response(data={
+        "subject_types": sorted(subject_types),
+        "resource_types": sorted(resource_types),
+        "relationship_types": sorted(relationship_types),
+        "entities": {
+            "users": users,
+            "roles": roles,
+            "templates": templates,
+            "submissions": submissions,
+            "banks": banks
+        }
+    })

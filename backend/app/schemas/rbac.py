@@ -57,6 +57,8 @@ class ResourceRelationshipResponse(BaseModel):
     parent_resource_type: str
     parent_resource_id: str
     relationship_type: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True

@@ -102,3 +102,4 @@ class ResourceRelationship(Base):
     parent_resource_id = Column(String, nullable=False)    # parent resource id (kept for backward compatibility)
     relationship_type = Column(String, nullable=False)     # e.g., "owner_of", "member_of", "parent_of", "manages"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

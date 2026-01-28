@@ -52,6 +52,18 @@ async def ensure_permissions():
         "roles:read",
         "roles:update",
         "roles:delete",
+        
+        # ABAC Policies
+        "policies:create",
+        "policies:read",
+        "policies:update",
+        "policies:delete",
+        
+        # ReBAC Relationships
+        "relationships:create",
+        "relationships:read",
+        "relationships:update",
+        "relationships:delete",
     ]
     
     supervisor_permissions = [

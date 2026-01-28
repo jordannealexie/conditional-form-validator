@@ -66,6 +66,27 @@ async def get_abac_policy(
     return create_response(data=ABACPolicyResponse.model_validate(policy))
 
 
+@router.put("/policies/{policy_id}", response_model=ABACPolicyResponse)
+async def update_abac_policy(
+    policy_id: int,
+    policy_data: ABACPolicyCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_superuser)
+):
+    """Update an ABAC policy (admin only)"""
+    service = ABACService(db)
+    policy = await service.update_policy(
+        policy_id=policy_id,
+        name=policy_data.name,
+        description=policy_data.description,
+        rules=policy_data.rules,
+        is_active=policy_data.is_active
+    )
+    if not policy:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    return create_response(data=ABACPolicyResponse.model_validate(policy))
+
+
 @router.delete("/policies/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_abac_policy(
     policy_id: int,
@@ -266,3 +287,81 @@ async def get_abac_stats(
         "total_policies": total_count,
         "applied_policies": applied_count
     }
+
+
+@router.get("/metadata/attributes")
+async def get_available_attributes(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_superuser)
+):
+    """Get available attribute fields for ABAC policy creation"""
+    from sqlalchemy import distinct
+    from app.models.abac import UserAttribute, ResourceAttribute
+    from app.models.forms import SubmissionStatus
+    
+    # Get distinct user attribute keys from database
+    user_attr_result = await db.execute(
+        select(distinct(UserAttribute.attribute_key))
+    )
+    user_attrs = [row[0] for row in user_attr_result.fetchall()]
+    
+    # Get distinct resource attribute keys from database
+    resource_attr_result = await db.execute(
+        select(distinct(ResourceAttribute.attribute_key))
+    )
+    resource_attrs = [row[0] for row in resource_attr_result.fetchall()]
+    
+    # Build comprehensive attribute list from User model fields
+    user_model_fields = [
+        {"key": "user.id", "label": "User ID", "type": "number"},
+        {"key": "user.username", "label": "Username", "type": "string"},
+        {"key": "user.email", "label": "Email", "type": "string"},
+        {"key": "user.user_role", "label": "User Role", "type": "string"},
+        {"key": "user.bank_id", "label": "Bank ID", "type": "number"},
+        {"key": "user.department", "label": "Department", "type": "string"},
+        {"key": "user.level", "label": "Level", "type": "number"},
+        {"key": "user.location", "label": "Location", "type": "string"},
+    ]
+    
+    # Add dynamic user attributes from database
+    for attr in user_attrs:
+        if not any(f["key"].endswith(attr) for f in user_model_fields):
+            user_model_fields.append({
+                "key": f"user.{attr}",
+                "label": attr.replace("_", " ").title(),
+                "type": "string"
+            })
+    
+    # Resource fields
+    resource_fields = [
+        {"key": "resource.id", "label": "Resource ID", "type": "string"},
+        {"key": "resource.type", "label": "Resource Type", "type": "string"},
+        {"key": "resource.user_id", "label": "Resource Owner ID", "type": "number"},
+        {"key": "resource.bank_id", "label": "Resource Bank ID", "type": "number"},
+        {"key": "resource.status", "label": "Resource Status", "type": "string"},
+        {"key": "resource.template_id", "label": "Template ID", "type": "number"},
+    ]
+    
+    # Add dynamic resource attributes from database
+    for attr in resource_attrs:
+        if not any(f["key"].endswith(attr) for f in resource_fields):
+            resource_fields.append({
+                "key": f"resource.{attr}",
+                "label": attr.replace("_", " ").title(),
+                "type": "string"
+            })
+    
+    return create_response(data={
+        "user_attributes": user_model_fields,
+        "resource_attributes": resource_fields,
+        "operators": [
+            {"value": "==", "label": "Equals"},
+            {"value": "!=", "label": "Not Equals"},
+            {"value": ">", "label": "Greater Than"},
+            {"value": "<", "label": "Less Than"},
+            {"value": ">=", "label": "Greater or Equal"},
+            {"value": "<=", "label": "Less or Equal"},
+            {"value": "contains", "label": "Contains"},
+            {"value": "in", "label": "In List"}
+        ]
+    })

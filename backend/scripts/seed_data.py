@@ -18,7 +18,8 @@ from sqlalchemy import text, select
 from app.db.session import AsyncSessionLocal, engine
 from app.db.base_class import Base
 from app.models.forms import Bank, FormTemplate, FormSubmission, SubmissionStatus
-from app.models.user import User
+from app.models.user import User, ResourceRelationship, Role
+from app.models.abac import ABACPolicy, UserAttribute, ResourceAttribute
 
 
 # ============================================================================
@@ -718,6 +719,410 @@ async def seed_data():
         print("   BDO: Credit Card Application (15 fields, conditional logic, file uploads)")
         print("   Maya: Personal Loan (14 fields, all/any operators, file uploads)")
         print("   SECB: KYC Form (16 fields, PEP logic, comprehensive validation)")
+        
+        # Seed ABAC and ReBAC policies
+        print("\n🔐 Seeding ABAC & ReBAC Policies...")
+        try:
+            await seed_abac_policies(session)
+            await seed_user_attributes(session)
+            await seed_resource_attributes(session)
+            await seed_rebac_relationships(session)
+            print("✅ ABAC & ReBAC policies seeded successfully!")
+        except Exception as e:
+            print(f"⚠️  Warning: ABAC/ReBAC seeding failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+        
+        # Ensure permissions are synced to Casbin and DB
+        print("\n🔐 Syncing permissions to Casbin...")
+        from scripts.ensure_permissions import ensure_permissions
+        try:
+            await ensure_permissions()
+            print("✅ Permissions synced successfully!")
+        except Exception as e:
+            print(f"⚠️  Warning: Permission sync failed: {str(e)}")
+
+
+# ============================================================================
+# ABAC & ReBAC Seed Functions
+# ============================================================================
+
+async def seed_abac_policies(db):
+    """Seed realistic ABAC policies"""
+    print("   🔐 Seeding ABAC Policies...")
+    
+    # Delete existing
+    await db.execute(text("DELETE FROM abac_policies"))
+    await db.commit()
+    
+    policies = [
+        {
+            "name": "Admin Full Access",
+            "description": "Admins have full access to all resources",
+            "rules": {
+                "condition": "all",
+                "rules": [
+                    {"field": "user.user_role", "operator": "==", "value": "admin"}
+                ]
+            },
+            "is_active": True
+        },
+        {
+            "name": "Supervisor Read Access",
+            "description": "Supervisors can read submissions and templates",
+            "rules": {
+                "condition": "all",
+                "rules": [
+                    {"field": "user.user_role", "operator": "==", "value": "supervisor"}
+                ]
+            },
+            "is_active": True
+        },
+        {
+            "name": "Own Submissions Only",
+            "description": "Users can only access their own submissions",
+            "rules": {
+                "condition": "all",
+                "rules": [
+                    {"field": "user.id", "operator": "==", "value": "resource.user_id"}
+                ]
+            },
+            "is_active": True
+        },
+        {
+            "name": "Same Bank Access",
+            "description": "Users can only access templates from their bank",
+            "rules": {
+                "condition": "all",
+                "rules": [
+                    {"field": "user.bank_id", "operator": "==", "value": "resource.bank_id"}
+                ]
+            },
+            "is_active": True
+        },
+        {
+            "name": "Department-Based Access",
+            "description": "Users can access resources from their department",
+            "rules": {
+                "condition": "all",
+                "rules": [
+                    {"field": "user.department", "operator": "==", "value": "resource.department"}
+                ]
+            },
+            "is_active": True
+        }
+    ]
+    
+    for policy_data in policies:
+        db.add(ABACPolicy(**policy_data))
+    
+    await db.commit()
+    print(f"      ✅ Created {len(policies)} ABAC policies")
+
+
+async def seed_user_attributes(db):
+    """Seed user attributes from real users"""
+    print("   👤 Seeding User Attributes...")
+    
+    # Delete existing
+    await db.execute(text("DELETE FROM user_attributes"))
+    await db.commit()
+    
+    # Get real users
+    result = await db.execute(select(User).limit(50))
+    users = result.scalars().all()
+    
+    if not users:
+        print("      ⚠️  No users found. Skipping...")
+        return
+    
+    attributes_data = []
+    
+    for user in users:
+        # Department attribute
+        if user.department:
+            attributes_data.append({
+                "user_id": user.id,
+                "attribute_key": "department",
+                "attribute_value": user.department
+            })
+        
+        # Level attribute
+        if user.level:
+            attributes_data.append({
+                "user_id": user.id,
+                "attribute_key": "level",
+                "attribute_value": str(user.level)
+            })
+        
+        # Location attribute
+        if user.location:
+            attributes_data.append({
+                "user_id": user.id,
+                "attribute_key": "location",
+                "attribute_value": user.location
+            })
+        
+        # Role-based attributes
+        if user.user_role:
+            clearance_map = {
+                "admin": "full",
+                "supervisor": "high",
+                "moderator": "medium",
+                "user": "standard"
+            }
+            attributes_data.append({
+                "user_id": user.id,
+                "attribute_key": "clearance",
+                "attribute_value": clearance_map.get(user.user_role, "standard")
+            })
+    
+    for attr_data in attributes_data:
+        db.add(UserAttribute(**attr_data))
+    
+    await db.commit()
+    print(f"      ✅ Created {len(attributes_data)} user attributes")
+
+
+async def seed_resource_attributes(db):
+    """Seed resource attributes for templates and submissions"""
+    print("   📦 Seeding Resource Attributes...")
+    
+    # Delete existing
+    await db.execute(text("DELETE FROM resource_attributes"))
+    await db.commit()
+    
+    # Get templates
+    templates_result = await db.execute(select(FormTemplate).limit(10))
+    templates = templates_result.scalars().all()
+    
+    # Get submissions
+    submissions_result = await db.execute(select(FormSubmission).limit(10))
+    submissions = submissions_result.scalars().all()
+    
+    attributes_data = []
+    
+    # Add attributes to templates
+    for i, template in enumerate(templates):
+        classification = "public" if i % 2 == 0 else "confidential"
+        attributes_data.extend([
+            {"resource_type": "template", "resource_id": str(template.id), 
+             "attribute_key": "classification", "attribute_value": classification},
+            {"resource_type": "template", "resource_id": str(template.id), 
+             "attribute_key": "bank_id", "attribute_value": str(template.bank_id)},
+            {"resource_type": "template", "resource_id": str(template.id), 
+             "attribute_key": "form_type", "attribute_value": template.form_type or "general"}
+        ])
+    
+    # Add attributes to submissions
+    for submission in submissions:
+        attributes_data.extend([
+            {"resource_type": "submission", "resource_id": str(submission.id),
+             "attribute_key": "user_id", "attribute_value": str(submission.user_id)},
+            {"resource_type": "submission", "resource_id": str(submission.id),
+             "attribute_key": "status", "attribute_value": submission.status},
+            {"resource_type": "submission", "resource_id": str(submission.id),
+             "attribute_key": "template_id", "attribute_value": str(submission.template_id)}
+        ])
+    
+    for attr_data in attributes_data:
+        db.add(ResourceAttribute(**attr_data))
+    
+    await db.commit()
+    print(f"      ✅ Created {len(attributes_data)} resource attributes")
+
+
+async def seed_rebac_relationships(db):
+    """Seed ReBAC relationships with graph-traversable connections"""
+    print("   🔗 Seeding ReBAC Relationships...")
+    
+    # Delete existing
+    await db.execute(text("DELETE FROM resource_relationships"))
+    await db.commit()
+    
+    # Get real data
+    users_result = await db.execute(select(User).limit(10))
+    users = users_result.scalars().all()
+    
+    templates_result = await db.execute(select(FormTemplate).limit(5))
+    templates = templates_result.scalars().all()
+    
+    submissions_result = await db.execute(select(FormSubmission).limit(5))
+    submissions = submissions_result.scalars().all()
+    
+    roles_result = await db.execute(select(Role).limit(5))
+    roles = roles_result.scalars().all()
+    
+    if not users:
+        print("      ⚠️  No users found. Skipping...")
+        return
+    
+    relationships_data = []
+    
+    # === User -> Template Relationships (Ownership & Viewing) ===
+    for i, template in enumerate(templates[:3]):
+        if i < len(users):
+            # Owner relationship
+            relationships_data.append({
+                "subject_type": "user",
+                "subject_id": str(users[i].id),
+                "relationship_type": "owner",
+                "resource_type": "template",
+                "resource_id": str(template.id),
+                "parent_resource_type": "bank",
+                "parent_resource_id": str(template.bank_id)
+            })
+            
+            # Editor relationship for next user
+            if i + 1 < len(users):
+                relationships_data.append({
+                    "subject_type": "user",
+                    "subject_id": str(users[i + 1].id),
+                    "relationship_type": "editor",
+                    "resource_type": "template",
+                    "resource_id": str(template.id),
+                    "parent_resource_type": "bank",
+                    "parent_resource_id": str(template.bank_id)
+                })
+    
+    # Viewer relationships for all users on all templates
+    for template in templates:
+        for j in range(min(3, len(users))):
+            relationships_data.append({
+                "subject_type": "user",
+                "subject_id": str(users[j].id),
+                "relationship_type": "viewer",
+                "resource_type": "template",
+                "resource_id": str(template.id),
+                "parent_resource_type": "bank",
+                "parent_resource_id": str(template.bank_id)
+            })
+    
+    # === User -> Submission Relationships (Ownership & Management) ===
+    for submission in submissions:
+        # Owner relationship (the user who submitted)
+        relationships_data.append({
+            "subject_type": "user",
+            "subject_id": str(submission.user_id),
+            "relationship_type": "owner",
+            "resource_type": "submission",
+            "resource_id": str(submission.id),
+            "parent_resource_type": "template",
+            "parent_resource_id": str(submission.template_id)
+        })
+        
+        # Reviewer relationship (different user)
+        reviewer_user = next((u for u in users if u.id != submission.user_id), None)
+        if reviewer_user:
+            relationships_data.append({
+                "subject_type": "user",
+                "subject_id": str(reviewer_user.id),
+                "relationship_type": "reviewer",
+                "resource_type": "submission",
+                "resource_id": str(submission.id),
+                "parent_resource_type": "template",
+                "parent_resource_id": str(submission.template_id)
+            })
+    
+    # === Role -> Template Relationships (Administrative Access) ===
+    admin_users = [u for u in users if u.user_role == 'admin']
+    manager_users = [u for u in users if u.user_role == 'manager']
+    
+    if admin_users and templates:
+        # Admin role can manage all templates
+        for template in templates[:2]:
+            relationships_data.append({
+                "subject_type": "role",
+                "subject_id": "admin",
+                "relationship_type": "manager",
+                "resource_type": "template",
+                "resource_id": str(template.id),
+                "parent_resource_type": "bank",
+                "parent_resource_id": str(template.bank_id)
+            })
+    
+    if manager_users and templates:
+        # Manager role can manage specific templates
+        relationships_data.append({
+            "subject_type": "role",
+            "subject_id": "manager",
+            "relationship_type": "manager",
+            "resource_type": "template",
+            "resource_id": str(templates[0].id),
+            "parent_resource_type": "bank",
+            "parent_resource_id": str(templates[0].bank_id)
+        })
+    
+    # === User -> Role Relationships (Role Membership) ===
+    if roles and users:
+        for i, role in enumerate(roles[:3]):
+            if i < len(users):
+                relationships_data.append({
+                    "subject_type": "user",
+                    "subject_id": str(users[i].id),
+                    "relationship_type": "member",
+                    "resource_type": "role",
+                    "resource_id": str(role.id),
+                    "parent_resource_type": "",  # Empty string instead of None
+                    "parent_resource_id": ""  # Empty string instead of None
+                })
+    
+    # === Template -> Template Relationships (Template Hierarchy) ===
+    if len(templates) >= 2:
+        # Parent template relationship
+        relationships_data.append({
+            "subject_type": "template",
+            "subject_id": str(templates[0].id),
+            "relationship_type": "parent",
+            "resource_type": "template",
+            "resource_id": str(templates[1].id),
+            "parent_resource_type": "bank",
+            "parent_resource_id": str(templates[0].bank_id)
+        })
+    
+    # === Submission -> Submission Relationships (Linked Submissions) ===
+    if len(submissions) >= 2:
+        # Related submissions (for approval workflow)
+        relationships_data.append({
+            "subject_type": "submission",
+            "subject_id": str(submissions[0].id),
+            "relationship_type": "depends_on",
+            "resource_type": "submission",
+            "resource_id": str(submissions[1].id),
+            "parent_resource_type": "template",
+            "parent_resource_id": str(submissions[0].template_id)
+        })
+    
+    # === User -> User Relationships (Delegation & Reporting) ===
+    if len(users) >= 3:
+        # Manager delegates to user
+        relationships_data.append({
+            "subject_type": "user",
+            "subject_id": str(users[0].id),
+            "relationship_type": "delegate",
+            "resource_type": "user",
+            "resource_id": str(users[1].id),
+            "parent_resource_type": "",  # Empty string instead of None
+            "parent_resource_id": ""  # Empty string instead of None
+        })
+        
+        # User reports to manager
+        relationships_data.append({
+            "subject_type": "user",
+            "subject_id": str(users[2].id),
+            "relationship_type": "reports_to",
+            "resource_type": "user",
+            "resource_id": str(users[0].id),
+            "parent_resource_type": "",  # Empty string instead of None
+            "parent_resource_id": ""  # Empty string instead of None
+        })
+    
+    for rel_data in relationships_data:
+        db.add(ResourceRelationship(**rel_data))
+    
+    await db.commit()
+    print(f"      ✅ Created {len(relationships_data)} ReBAC relationships (graph-traversable)")
+
 
 
 if __name__ == "__main__":
