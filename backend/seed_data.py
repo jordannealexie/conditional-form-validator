@@ -21,7 +21,7 @@ from app.core.casbin_enforcer import casbin_enforcer, CasbinRule
 
 BDO_TEMPLATE = {
     "name": "BDO Loan Application Form",
-    "version": "1.0.0",
+    "version": "1.0",
     "fields": [
         {"id": "applicant_name", "label": "Full Name", "type": "text", "required": True},
         {"id": "email", "label": "Email Address", "type": "email", "required": True},
@@ -62,7 +62,7 @@ BDO_TEMPLATE = {
 
 MAYA_TEMPLATE = {
     "name": "Maya Digital Credit Line",
-    "version": "1.2.0",
+    "version": "1.2",
     "fields": [
         {"id": "legal_name", "label": "Legal Name (as per ID)", "type": "text", "required": True},
         {"id": "maya_id", "label": "Maya ID / Number", "type": "text", "required": True},
@@ -97,7 +97,7 @@ MAYA_TEMPLATE = {
 
 SECB_TEMPLATE = {
     "name": "Security Bank Gold Mastery Card",
-    "version": "2.0.1",
+    "version": "2.0",
     "fields": [
         {"id": "customer_name", "label": "Customer Full Name", "type": "text", "required": True},
         {"id": "tin_number", "label": "TIN Number", "type": "text", "required": True},
