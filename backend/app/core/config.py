@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
     
+    # Client ID validation
+    CLIENT_IDS: str = "web-client-v1,test-client,mobile-app-v1"
+    
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"  # "json" or "text"

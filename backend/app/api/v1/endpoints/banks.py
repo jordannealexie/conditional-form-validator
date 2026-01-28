@@ -4,10 +4,13 @@ Bank API endpoints for form system
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_
 
 from app.db.session import get_db
 from app.models.user import User
+from app.models.forms import Bank
 from app.dependencies.auth import get_current_user, get_current_superuser
+from app.dtos.custom_response_dto import CustomResponse
 from app.schemas.forms import (
     BankCreate,
     BankUpdate,
@@ -21,7 +24,7 @@ from app.utils.response import create_response
 router = APIRouter()
 
 
-@router.get("/", response_model=BankListResponse, summary="List all banks")
+@router.get("/", response_model=CustomResponse[List[BankResponse]], summary="List all banks")
 async def list_banks(
     include_deleted: bool = False,
     db: AsyncSession = Depends(get_db),
@@ -32,11 +35,11 @@ async def list_banks(
     Requires authentication.
     """
     banks = await BankRepository.get_all(db, include_deleted=include_deleted)
-    data = [BankResponse.model_validate(bank) for bank in banks]
-    return create_response(data=data)
+    # banks is now a list of dictionaries, use directly
+    return create_response(data=banks)
 
 
-@router.post("/", response_model=BankResponse, status_code=status.HTTP_201_CREATED, summary="Create a new bank")
+@router.post("/", response_model=CustomResponse[BankResponse], status_code=status.HTTP_201_CREATED, summary="Create a new bank")
 async def create_bank(
     bank_data: BankCreate,
     db: AsyncSession = Depends(get_db),
@@ -55,10 +58,12 @@ async def create_bank(
         )
     
     bank = await BankRepository.create(db, **bank_data.model_dump())
-    return create_response(data=BankResponse.model_validate(bank))
+    
+    # bank is now a dictionary, use it directly
+    return create_response(data=bank)
 
 
-@router.get("/{bank_id}", response_model=BankResponse, summary="Get bank by ID")
+@router.get("/{bank_id}", response_model=CustomResponse[BankResponse], summary="Get bank by ID")
 async def get_bank(
     bank_id: int,
     db: AsyncSession = Depends(get_db),
@@ -74,10 +79,12 @@ async def get_bank(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Bank with ID {bank_id} not found"
         )
-    return BankResponse.model_validate(bank)
+    
+    # bank is now a dictionary, use it directly
+    return create_response(data=bank)
 
 
-@router.put("/{bank_id}", response_model=BankResponse, summary="Update bank")
+@router.put("/{bank_id}", response_model=CustomResponse[BankResponse], summary="Update bank")
 async def update_bank(
     bank_id: int,
     bank_data: BankUpdate,
@@ -88,7 +95,12 @@ async def update_bank(
     Update a bank.
     Requires superuser authentication.
     """
-    bank = await BankRepository.get_by_id(db, bank_id)
+    # Get bank object for update (need actual object)
+    bank_result = await db.execute(
+        select(Bank).where(and_(Bank.id == bank_id, Bank.deleted_at.is_(None)))
+    )
+    bank = bank_result.scalar_one_or_none()
+    
     if not bank:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -97,7 +109,10 @@ async def update_bank(
     
     # If updating code, check if new code already exists
     if bank_data.code and bank_data.code != bank.code:
-        existing_bank = await BankRepository.get_by_code(db, bank_data.code)
+        existing_result = await db.execute(
+            select(Bank).where(and_(Bank.code == bank_data.code, Bank.deleted_at.is_(None)))
+        )
+        existing_bank = existing_result.scalar_one_or_none()
         if existing_bank:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,7 +124,9 @@ async def update_bank(
         bank, 
         **bank_data.model_dump(exclude_unset=True)
     )
-    return create_response(data=BankResponse.model_validate(updated_bank))
+    
+    # updated_bank is now a dictionary, use it directly
+    return create_response(data=updated_bank)
 
 
 @router.delete("/{bank_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete bank")

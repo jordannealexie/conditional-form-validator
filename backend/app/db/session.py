@@ -18,9 +18,9 @@ engine = create_async_engine(
 AsyncSessionLocal = sessionmaker(
     engine,
     class_=AsyncSession,
-    expire_on_commit=False,
+    expire_on_commit=True,  # Changed to True to expire objects after commit
     autocommit=False,
-    autoflush=False,
+    autoflush=True,  # Changed to True to ensure changes are flushed
 )
 
 async def get_db() -> AsyncSession:

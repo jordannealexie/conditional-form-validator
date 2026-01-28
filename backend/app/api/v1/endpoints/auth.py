@@ -60,12 +60,17 @@ async def register(
     await db.commit()
     await db.refresh(user)
     
-    await audit.log("register", user_id=user.id, username=user.username, details={"msg": f"New user registered: {user.username}"})
+    # Store user attributes to avoid greenlet issues
+    user_id = user.id
+    username = user.username
+    
+    await audit.log("register", user_id=user_id, username=username, details={"msg": f"New user registered: {username}"})
     
     return user
 
 
 @router.post("/login", response_model=Token)
+@router.post("/token", response_model=Token)  # OAuth2PasswordRequestForm expects /token endpoint
 async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -95,7 +100,9 @@ async def login(
     if not user or not verify_password(form_data.password, user.password_hash):
         print(f"DEBUG: Login failed for user {form_data.username}, entered password: {form_data.password}")
         print(f"DEBUG: User found: {user is not None}, hash: {user.password_hash if user else None}")
-        await audit.log("login_attempt", user_id=user.id if user else None, status="failure", details="Incorrect credentials")
+        # Store user_id to avoid greenlet issues
+        user_id = user.id if user else None
+        await audit.log("login_attempt", user_id=user_id, status="failure", details="Incorrect credentials")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -103,11 +110,19 @@ async def login(
         )
     
     if not user.active:
-        await audit.log("login_attempt", user_id=user.id, status="failure", details="Inactive account")
+        # Store user_id to avoid greenlet issues
+        user_id = user.id
+        await audit.log("login_attempt", user_id=user_id, status="failure", details="Inactive account")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
         )
+    
+    # Store username early to avoid greenlet issues later
+    username = user.username
+    user_id = user.id
+    user_role = user.user_role
+    bank_id = user.bank_id
     
     # Sync user roles to Casbin on login to ensure fresh permissions
     from app.core.casbin_enforcer import casbin_enforcer
@@ -118,28 +133,27 @@ async def login(
         result = await db.execute(
             select(User).options(selectinload(User.roles)).where(User.id == user.id)
         )
-        user = result.scalar_one_or_none()
+        user_with_roles = result.scalar_one_or_none()
+        if user_with_roles:
+            user = user_with_roles
         
         # Sync user roles to Casbin
-        if user and user.user_role:
-            role_names = [user.user_role]
-            print(f"DEBUG: Syncing roles for user {user.username}: {role_names}")
-            casbin_enforcer.sync_user_roles(user.username, role_names)
+        if user and user_role:
+            role_names = [user_role]
+            print(f"DEBUG: Syncing roles for user {username}: {role_names}")
+            casbin_enforcer.sync_user_roles(username, role_names)
     except Exception as e:
         print(f"Warning: Could not sync roles to Casbin: {e}")
     
     # Get user permissions from Casbin (through roles)
     permissions = []
     try:
-        # Get direct permissions for user
-        policy = casbin_enforcer.get_permissions_for_user(user.username)
-        permissions = [f"{p[1]}:{p[2]}" for p in policy if len(p) >= 3]
-        
-        # Also get implicit permissions through roles
-        roles = casbin_enforcer.get_roles_for_user(user.username)
-        print(f"DEBUG: User {user.username} has roles in Casbin: {roles}")
+        # Get implicit permissions through roles
+        roles = casbin_enforcer.get_roles_for_user(username)
+        print(f"DEBUG: User {username} has roles in Casbin: {roles}")
         for role in roles:
-            role_perms = casbin_enforcer.get_permissions_for_role(role)
+            # Get permissions for each role
+            role_perms = casbin_enforcer.get_permissions_for_user_in_domain(role, "")
             print(f"DEBUG: Role {role} has permissions: {role_perms}")
             for p in role_perms:
                 if len(p) >= 3:
@@ -151,27 +165,30 @@ async def login(
     
     # Token payload: user_id, username, user_role, bank_id, permissions
     token_data = {
-        "user_id": user.id,
-        "sub": user.username,
-        "user_role": user.user_role,
-        "bank_id": user.bank_id,
+        "user_id": user_id,
+        "sub": username,
+        "user_role": user_role,
+        "bank_id": bank_id,
         "permissions": permissions
     }
     
     access_token = create_access_token(data=token_data)
-    refresh_token_jwt = create_refresh_token(data={"sub": user.username})
+    refresh_token_jwt = create_refresh_token(data={"sub": username})
     
     # Store refresh token in DB
     from app.core.config import settings
     db_refresh_token = RefreshToken(
-        user_id=user.id,
+        user_id=user_id,
         token=refresh_token_jwt,
         expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     db.add(db_refresh_token)
     await db.commit()
     
-    await audit.log("login", user_id=user.id, username=user.username, details="Login success")
+    # Refresh user data to avoid greenlet issues
+    await db.refresh(user)
+    
+    await audit.log("login", user_id=user_id, username=username, details="Login success")
     
     return {
         "access_token": access_token,

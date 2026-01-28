@@ -14,6 +14,7 @@ from app.api.v1.api import api_router
 from app.db.session import engine
 from app.db.base_class import Base
 from app.exceptions.handlers import add_exception_handlers
+from app.utils.docs import setup_swagger_documentation
 
 port = int(os.getenv("PORT", "8000"))
 
@@ -102,13 +103,14 @@ def custom_openapi():
 # Set custom OpenAPI schema (Optional - FastAPI handles this via dependencies)
 # app.openapi = custom_openapi
 
-# Configure CORS
+# Configure CORS with explicit settings for Swagger UI
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=["*"],  # Allow all origins for development
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Add monitoring and performance middlewares
@@ -120,8 +122,10 @@ if settings.METRICS_ENABLED:
 add_exception_handlers(app)
 
 # Include API router (includes all endpoint routers)
-# Include API router (includes all endpoint routers)
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Setup custom Swagger documentation with X-Client-ID header
+setup_swagger_documentation(app, settings.API_V1_STR)
 
 # Construct path to frontend relative to this file
 # backend/app/main.py -> backend/app -> backend -> root -> frontend

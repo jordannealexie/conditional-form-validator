@@ -17,21 +17,61 @@ class BankRepository:
     """Repository for Bank model CRUD operations"""
     
     @staticmethod
-    async def create(db: AsyncSession, **kwargs) -> Bank:
+    async def create(db: AsyncSession, **kwargs) -> dict:
         """Create a new bank"""
         bank = Bank(**kwargs)
         db.add(bank)
         await db.commit()
         await db.refresh(bank)
-        return bank
+        
+        # Extract data while in session context
+        bank_data = {
+            "id": bank.id,
+            "name": bank.name,
+            "code": bank.code,
+            "logo_url": bank.logo_url,
+            "primary_color": bank.primary_color,
+            "description": bank.description,
+            "active": bank.active,
+            "created_at": bank.created_at,
+            "updated_at": bank.updated_at,
+            "deleted_at": bank.deleted_at
+        }
+        
+        # Clear template cache since templates might reference this new bank
+        await template_cache.delete_pattern("template:*")
+        
+        return bank_data
     
     @staticmethod
-    async def get_by_id(db: AsyncSession, bank_id: int) -> Optional[Bank]:
-        """Get bank by ID"""
+    async def get_by_id(db: AsyncSession, bank_id: int) -> Optional[dict]:
+        """Get bank by ID with fresh data"""
+        # Expire all to ensure fresh data
+        db.expire_all()
+        
         result = await db.execute(
             select(Bank).where(and_(Bank.id == bank_id, Bank.deleted_at.is_(None)))
         )
-        return result.scalar_one_or_none()
+        bank = result.scalar_one_or_none()
+        
+        if bank:
+            await db.refresh(bank)
+            # Extract data while in session context
+            bank_data = {
+                "id": bank.id,
+                "name": bank.name,
+                "code": bank.code,
+                "logo_url": bank.logo_url,
+                "primary_color": bank.primary_color,
+                "description": bank.description,
+                "active": bank.active,
+                "created_at": bank.created_at,
+                "updated_at": bank.updated_at,
+                "deleted_at": bank.deleted_at
+            }
+            return bank_data
+            
+        return None
     
     @staticmethod
     async def get_by_code(db: AsyncSession, code: str) -> Optional[Bank]:
@@ -42,27 +82,97 @@ class BankRepository:
         return result.scalar_one_or_none()
     
     @staticmethod
-    async def get_all(db: AsyncSession, include_deleted: bool = False) -> List[Bank]:
-        """Get all banks"""
+    async def get_all(db: AsyncSession, include_deleted: bool = False) -> List[dict]:
+        """Get all banks with fresh data"""
+        # Expire all cached objects to ensure absolutely fresh data
+        db.expire_all()
+        
+        # Create a completely fresh query
         query = select(Bank)
         if not include_deleted:
             query = query.where(Bank.deleted_at.is_(None))
-        result = await db.execute(query.order_by(Bank.name))
-        return list(result.scalars().all())
+        
+        # Order by updated_at desc, then by name to show recently updated banks first
+        result = await db.execute(
+            query.order_by(Bank.updated_at.desc().nullslast(), Bank.name)
+        )
+        banks = list(result.scalars().all())
+        
+        # Extract data while in session context to avoid greenlet errors
+        bank_data_list = []
+        for bank in banks:
+            await db.refresh(bank)
+            bank_data = {
+                "id": bank.id,
+                "name": bank.name,
+                "code": bank.code,
+                "logo_url": bank.logo_url,
+                "primary_color": bank.primary_color,
+                "description": bank.description,
+                "active": bank.active,
+                "created_at": bank.created_at,
+                "updated_at": bank.updated_at,
+                "deleted_at": bank.deleted_at
+            }
+            bank_data_list.append(bank_data)
+        
+        return bank_data_list
     
     @staticmethod
-    async def update(db: AsyncSession, bank: Bank, **kwargs) -> Bank:
-        """Update bank"""
+    async def update(db: AsyncSession, bank: Bank, **kwargs) -> dict:
+        """Update bank and return data as dictionary to avoid greenlet issues"""
+        from datetime import datetime
+        
+        # Ensure we have the latest state first
+        await db.refresh(bank)
+        
+        # Update fields
         for key, value in kwargs.items():
             if value is not None and hasattr(bank, key):
                 setattr(bank, key, value)
+        
+        # Explicitly set updated_at to ensure it's updated
+        bank.updated_at = datetime.utcnow()
+        
+        # Mark the object as dirty and add to session
+        db.add(bank)
+        
+        # Flush changes to database
+        await db.flush()
+        
+        # Commit the transaction
         await db.commit()
+        
+        # Refresh the updated object to get latest data from database
         await db.refresh(bank)
-        return bank
+        
+        # Extract all data while still in session context
+        bank_data = {
+            "id": bank.id,
+            "name": bank.name,
+            "code": bank.code,
+            "logo_url": bank.logo_url,
+            "primary_color": bank.primary_color,
+            "description": bank.description,
+            "active": bank.active,
+            "created_at": bank.created_at,
+            "updated_at": bank.updated_at,
+            "deleted_at": bank.deleted_at
+        }
+        
+        # Clear session cache to ensure fresh data on next query
+        db.expire_all()
+        
+        # CRITICAL: Invalidate all template cache since templates cache bank data
+        await template_cache.delete_pattern("template:*")
+        
+        return bank_data
     
     @staticmethod
     async def soft_delete(db: AsyncSession, bank: Bank) -> Bank:
         """Soft delete bank"""
+        from datetime import datetime
+        
         bank.deleted_at = datetime.utcnow()
         bank.active = False
         await db.commit()

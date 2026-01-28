@@ -156,7 +156,7 @@ class CacheHeaderMiddleware(BaseHTTPMiddleware):
     # Endpoints that can be cached with their TTL in seconds
     CACHEABLE_ENDPOINTS = {
         "/api/v1/enums": 86400,  # 24 hours for enum data
-        "/api/v1/banks": 3600,    # 1 hour for banks
+        # "/api/v1/banks": 3600,    # REMOVED: Banks should not be cached due to frequent updates
         "/api/v1/field-types": 3600,  # 1 hour for field types
     }
     
@@ -167,8 +167,17 @@ class CacheHeaderMiddleware(BaseHTTPMiddleware):
         if request.method != "GET":
             return response
         
-        # Check if endpoint is cacheable
         path = request.url.path
+        
+        # Force no-cache for bank endpoints
+        if path.startswith("/api/v1/banks"):
+            response.headers["Cache-Control"] = "private, no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+            response.headers["Last-Modified"] = "0"
+            return response
+        
+        # Check if endpoint is cacheable
         for endpoint, ttl in self.CACHEABLE_ENDPOINTS.items():
             if path.startswith(endpoint):
                 # Add cache headers
