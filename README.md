@@ -139,6 +139,7 @@ The application follows a modular architecture with clear separation of concerns
    
    # Seed database with test data
    python seed_data.py
+   python test_templates.py
    ```
 
 6. **Run Application**
@@ -272,9 +273,9 @@ python -m pytest --cov=app tests/ --cov-report=html
 - Check logs at `/api/v1/health/metrics` for performance monitoring
 - API documentation available at `/api/v1/docs` for testing endpoints
 
-## Documentation
-- [Implementation Plan](.gemini/antigravity/brain/07899d65-236f-49d5-b6b7-08fca3e9483a/implementation_plan.md)
-- [Final Walkthrough](.gemini/antigravity/brain/07899d65-236f-49d5-b6b7-08fca3e9483a/walkthrough.md)
-
 ## License
 MIT
+
+## Killing used port
+sudo lsof -i :8000
+sudo kill -9 PID
