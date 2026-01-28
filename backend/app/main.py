@@ -147,12 +147,12 @@ else:
 #     }
 
 
-@app.get("/health")
-async def health_check(request: Request):
-    """Health check endpoint"""
-    origin = request.headers.get('origin', 'No origin')
-    print(f"Root health check from origin: {origin}")
-    return {"status": "healthy"}
+# @app.get("/health")
+# async def health_check(request: Request):
+#     """Health check endpoint"""
+#     origin = request.headers.get('origin', 'No origin')
+#     print(f"Root health check from origin: {origin}")
+#     return {"status": "healthy"}
 
 
 if __name__ == "__main__":
