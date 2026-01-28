@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ABAC Policies - Form Submission</title>
     <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/abac.css">
 </head>
 
 <body>
@@ -38,14 +39,19 @@
                         <span>Submissions</span>
                     </a>
                 </li>
-                <li class="nav-item">
+                <li class="nav-item" data-permission="roles" data-action="read">
                     <a href="roles.html">
                         <span>Roles & Permissions</span>
                     </a>
                 </li>
-                <li class="nav-item active">
+                <li class="nav-item active" data-permission="policies" data-action="read">
                     <a href="abac.html">
                         <span>ABAC Policies</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-permission="relationships" data-action="read">
+                    <a href="rebac.html">
+                        <span>ReBAC</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -81,67 +87,79 @@
             <!-- Add Policy Form -->
             <div class="content-section">
                 <div class="section-header">
-                    <h2>Add New Policy</h2>
-                    <button class="btn btn-primary" onclick="toggleAddPolicyForm()">
+                    <h2 id="formTitle">Add New Policy</h2>
+                    <button class="btn btn-primary" onclick="toggleAddPolicyForm()" id="addPolicyBtn">
                         <span>+</span> Add Policy
                     </button>
                 </div>
 
                 <form id="addPolicyForm" class="form-container" style="display: none;">
-                    <div class="form-group">
-                        <label for="policyName">Policy Name</label>
-                        <input type="text" id="policyName" required>
+                    <div class="policy-form-header">
+                        <h3>Policy Details</h3>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <label for="policyName">Policy Name *</label>
+                            <input type="text" id="policyName" required placeholder="e.g., Department Access Policy">
+                        </div>
+
+                        <div class="form-group" style="flex: 1;">
+                            <label style="display: flex; align-items: center; margin-top: 28px;">
+                                <input type="checkbox" id="isActive" checked style="margin-right: 8px;">
+                                <span style="font-weight: 500;">Active</span>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="form-group">
                         <label for="policyDescription">Description</label>
-                        <textarea id="policyDescription" rows="3"></textarea>
+                        <textarea id="policyDescription" rows="2" placeholder="Brief description of what this policy controls"></textarea>
                     </div>
 
-                    <div class="form-group">
-                        <label for="resource">Resource</label>
-                        <input type="text" id="resource" placeholder="e.g., document, user, etc." required>
-                    </div>
+                    <div class="policy-form-divider"></div>
 
                     <div class="form-group">
-                        <label for="action">Action</label>
-                        <select id="action" required>
-                            <option value="">Select Action</option>
-                            <option value="read">Read</option>
-                            <option value="write">Write</option>
-                            <option value="delete">Delete</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Conditions</label>
-                        <div class="conditions-builder" id="conditionsBuilder">
-                            <!-- Conditions will be built here -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div>
+                                <label style="margin: 0; font-size: 1.1em; font-weight: 600;">Policy Rules</label>
+                                <p style="margin: 4px 0 0 0; font-size: 0.9em; color: #666;">Define conditions that must be met for this policy to grant access</p>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="addCondition()" style="min-width: 150px;">
+                                <span>+</span> Add Condition
+                            </button>
                         </div>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="addCondition()">Add
-                            Condition</button>
+                        <div class="conditions-builder" id="conditionsBuilder">
+                            <div class="empty-state" id="emptyRulesState">
+                                <p>No conditions added yet. Click "Add Condition" to create your first rule.</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Create Policy</button>
-                        <button type="button" class="btn btn-secondary" onclick="toggleAddPolicyForm()">Cancel</button>
+                    <div class="form-actions" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
+                        <button type="submit" class="btn btn-primary" style="min-width: 120px;">Save Policy</button>
+                        <button type="button" class="btn btn-secondary" onclick="cancelPolicyForm()">Cancel</button>
                     </div>
                 </form>
             </div>
 
             <!-- Policies List -->
             <div class="content-section">
-                <h2>Existing Policies</h2>
+                <div class="section-header">
+                    <h2>Active Policies</h2>
+                    <div style="font-size: 0.9em; color: #666;">Manage attribute-based access control rules</div>
+                </div>
                 <div class="table-container">
                     <table class="data-table" id="policiesTable">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Resource</th>
-                                <th>Action</th>
-                                <th>Conditions</th>
-                                <th>Actions</th>
+                                <th style="width: 16%;">Policy Name</th>
+                                <th style="width: 20%;">Description</th>
+                                <th style="width: 28%;">Conditions</th>
+                                <th style="width: 8%;">Status</th>
+                                <th style="width: 10%;">Created At</th>
+                                <th style="width: 10%;">Updated At</th>
+                                <th style="width: 8%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="policiesTableBody">

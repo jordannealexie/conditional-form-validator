@@ -12,9 +12,12 @@ A comprehensive form management and validation platform built with FastAPI and V
 
 ### 🔐 Unified Authorization
 - **RBAC**: Role-Based Access Control for distinct user roles (Admin, Supervisor, Fieldman).
-- **ABAC**: Attribute-Based Access Control for fine-grained resource permissions.
-- **ReBAC**: Relationship-Based Access Control for hierarchical data ownership.
+- **ABAC**: Attribute-Based Access Control for fine-grained resource permissions with sample policies.
+- **ReBAC**: Relationship-Based Access Control for hierarchical data ownership with sample relationships.
 - **Multi-tenant Visibility**: Banks can only see their own data and forms.
+- **Sample Policies**: Pre-configured ABAC policies and ReBAC relationships for testing.
+
+📖 **See [ABAC_REBAC_README.md](backend/ABAC_REBAC_README.md) for detailed documentation on ABAC and ReBAC features.**
 
 ### 🚀 Performance & Scalability
 - **Redis Cache**: High-performance caching for templates and user sessions.
@@ -137,9 +140,12 @@ The application follows a modular architecture with clear separation of concerns
    # Create admin user (optional, seed_data.py includes this)
    python create_admin.py
    
-   # Seed database with test data
+   # Seed database with test data (includes ABAC/ReBAC policies)
    python seed_data.py
    python test_templates.py
+   
+   # Or seed only ABAC/ReBAC policies
+   python scripts/seed_abac_rebac.py
    ```
 
 6. **Run Application**
@@ -197,18 +203,21 @@ Key frontend features:
 - Dynamic form rendering with conditional logic
 - Admin panel for template management
 - Role-based UI components
+- **ABAC Policy Management** (`/abac.html`): View, create, edit, and test attribute-based access policies
+- **ReBAC Relationship Management** (`/rebac.html`): Manage relationships between users and resources
 
 ## Project Status
 
 ✅ **Completed Features:**
-- Full RBAC/ABAC/ReBAC authorization system
+- Full RBAC/ABAC/ReBAC authorization system with sample policies
 - Multi-tenant bank support (BDO, Maya Bank, Security Bank)
 - Dynamic form templates with conditional logic
 - User management and authentication
-- Database seeding with test data
+- Database seeding with test data (including ABAC/ReBAC)
 - API documentation and health monitoring
 - Redis caching and session management
 - Comprehensive logging and error handling
+- Frontend interfaces for ABAC and ReBAC management
 
 ✅ **Current Functionality:**
 - Login system with role-based access

@@ -432,6 +432,32 @@ async function apiCreatePolicy(policyData) {
 }
 
 /**
+ * Update ABAC policy
+ * Backend endpoint: PUT /abac/policies/{policy_id}
+ * @param {number} policyId 
+ * @param {object} policyData 
+ * @returns {Promise<object>}
+ */
+async function apiUpdatePolicy(policyId, policyData) {
+    return await apiRequest(`/abac/policies/${policyId}`, {
+        method: 'PUT',
+        body: policyData
+    });
+}
+
+/**
+ * Delete ABAC policy
+ * Backend endpoint: DELETE /abac/policies/{policy_id}
+ * @param {number} policyId 
+ * @returns {Promise<void>}
+ */
+async function apiDeletePolicy(policyId) {
+    return await apiRequest(`/abac/policies/${policyId}`, {
+        method: 'DELETE'
+    });
+}
+
+/**
  * Test ABAC policy
  * Backend endpoint: POST /abac/test
  * @param {object} userAttributes 
@@ -507,6 +533,24 @@ async function apiUpdateRelationship(relationshipId, relationshipData) {
  */
 async function apiGetAbacStats() {
     return await apiRequest('/abac/stats');
+}
+
+/**
+ * Get available ABAC attributes
+ * Backend endpoint: GET /abac/metadata/attributes
+ * @returns {Promise<object>}
+ */
+async function apiGetAbacAttributes() {
+    return await apiRequest('/abac/metadata/attributes');
+}
+
+/**
+ * Get ReBAC options for dropdowns
+ * Backend endpoint: GET /rebac/metadata/options
+ * @returns {Promise<object>}
+ */
+async function apiGetRebacOptions() {
+    return await apiRequest('/rebac/metadata/options');
 }
 
 /**

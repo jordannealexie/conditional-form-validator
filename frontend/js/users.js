@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadUserInfo();
     loadUsers();
     setupMobileMenu();
+    
+    // Enforce UI permissions after a short delay
+    if (typeof enforceUIPermissions === 'function') {
+        setTimeout(enforceUIPermissions, 100);
+    }
 });
 
 async function loadUserInfo() {

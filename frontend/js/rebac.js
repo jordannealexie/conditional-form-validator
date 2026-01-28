@@ -3,16 +3,75 @@
 
 let relationshipsData = [];
 let editingRelationshipId = null;
+let rebacOptions = null;
 
 /**
  * Initialize ReBAC page
  */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     if (typeof requireAuth === 'function') requireAuth();
     loadUserInfo();
+    
+    // Load ReBAC options first
+    try {
+        rebacOptions = await apiGetRebacOptions();
+        // Populate dropdowns with options
+        populateDropdowns();
+    } catch (error) {
+        console.error('Error loading ReBAC options:', error);
+    }
+    
     loadRelationships();
     setupMobileMenu();
+    
+    // Enforce UI permissions after a short delay to ensure everything is loaded
+    if (typeof enforceUIPermissions === 'function') {
+        setTimeout(enforceUIPermissions, 100);
+    }
 });
+
+/**
+ * Populate dropdowns with data from API
+ */
+function populateDropdowns() {
+    if (!rebacOptions) return;
+    
+    // Populate subject type
+    const subjectTypeSelect = document.getElementById('subjectType');
+    if (subjectTypeSelect && rebacOptions.subject_types) {
+        subjectTypeSelect.innerHTML = '<option value="">Select Type</option>' +
+            rebacOptions.subject_types.map(type => 
+                `<option value="${escapeHtml(type)}">${escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}</option>`
+            ).join('');
+    }
+    
+    // Populate relationship type
+    const relationSelect = document.getElementById('relation');
+    if (relationSelect && rebacOptions.relationship_types) {
+        relationSelect.innerHTML = '<option value="">Select Relationship</option>' +
+            rebacOptions.relationship_types.map(type => 
+                `<option value="${escapeHtml(type)}">${escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}</option>`
+            ).join('');
+    }
+    
+    // Populate resource type
+    const objectTypeSelect = document.getElementById('objectType');
+    if (objectTypeSelect && rebacOptions.resource_types) {
+        objectTypeSelect.innerHTML = '<option value="">Select Type</option>' +
+            rebacOptions.resource_types.map(type => 
+                `<option value="${escapeHtml(type)}">${escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}</option>`
+            ).join('');
+    }
+    
+    // Populate parent resource type (same as resource types)
+    const parentTypeSelect = document.getElementById('parentResourceType');
+    if (parentTypeSelect && rebacOptions.resource_types) {
+        parentTypeSelect.innerHTML = '<option value="">Select Type</option>' +
+            rebacOptions.resource_types.map(type => 
+                `<option value="${escapeHtml(type)}">${escapeHtml(type.charAt(0).toUpperCase() + type.slice(1))}</option>`
+            ).join('');
+    }
+}
 
 /**
  * Load current user info for sidebar
@@ -64,8 +123,8 @@ function resetForm() {
     const btn = document.querySelector('#addRelationshipForm button[type="submit"]');
     if (btn) btn.textContent = 'Create Relationship';
 
-    const header = document.querySelector('.section-header h2');
-    if (header) header.innerText = 'Add New Relationship'; // Reset header if changed
+    const formTitle = document.getElementById('formTitle');
+    if (formTitle) formTitle.textContent = 'Add New Relationship';
 }
 
 /**
@@ -88,6 +147,11 @@ async function loadRelationships() {
             const row = createRelationshipRow(relationship);
             tableBody.appendChild(row);
         });
+        
+        // Enforce permissions after loading
+        if (typeof enforceUIPermissions === 'function') {
+            enforceUIPermissions();
+        }
     } catch (error) {
         console.error('Error loading relationships:', error);
         showToast('Error loading relationships', 'error');
@@ -105,16 +169,23 @@ function createRelationshipRow(relationship) {
     // Use backend field names: subject_type, relationship_type, resource_type
     const subject = `${relationship.subject_type}: ${relationship.subject_id}`;
     const object = `${relationship.resource_type}: ${relationship.resource_id}`;
+    
+    // Add badge styling to relationship type
+    const relationshipClass = relationship.relationship_type.toLowerCase();
+
+    const createdAt = relationship.created_at ? new Date(relationship.created_at).toLocaleString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
+    const updatedAt = relationship.updated_at ? new Date(relationship.updated_at).toLocaleString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
 
     row.innerHTML = `
         <td>${relationship.id}</td>
         <td>${escapeHtml(subject)}</td>
-        <td><span class="badge badge-secondary">${escapeHtml(relationship.relationship_type)}</span></td>
+        <td><span class="relationship-badge ${relationshipClass}">${escapeHtml(relationship.relationship_type)}</span></td>
         <td>${escapeHtml(object)}</td>
-        <td>${new Date(relationship.created_at).toLocaleDateString()}</td>
+        <td style="font-size: 0.85em;">${createdAt}</td>
+        <td style="font-size: 0.85em;">${updatedAt}</td>
         <td>
-            <button class="btn btn-sm btn-primary" onclick="editRelationship(${relationship.id})">Edit</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteRelationship(${relationship.id})">Delete</button>
+            <button class="btn btn-sm btn-primary" onclick="editRelationship(${relationship.id})" data-permission="relationships" data-action="update">Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRelationship(${relationship.id})" data-permission="relationships" data-action="delete">Delete</button>
         </td>
     `;
 
@@ -136,13 +207,15 @@ function editRelationship(id) {
     document.getElementById('relation').value = rel.relationship_type;
     document.getElementById('objectType').value = rel.resource_type;
     document.getElementById('objectId').value = rel.resource_id;
+    document.getElementById('parentResourceType').value = rel.parent_resource_type;
+    document.getElementById('parentResourceId').value = rel.parent_resource_id;
 
     // Update UI
     const btn = document.querySelector('#addRelationshipForm button[type="submit"]');
     if (btn) btn.textContent = 'Update Relationship';
-
-    // We might want to change the header text too 
-    // document.querySelector('.section-header h2').innerText = 'Edit Relationship';
+    
+    const formTitle = document.getElementById('formTitle');
+    if (formTitle) formTitle.textContent = 'Edit Relationship';
 
     toggleAddRelationshipForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -161,10 +234,8 @@ if (addRelationshipForm) {
         const relation = document.getElementById('relation').value;
         const objectType = document.getElementById('objectType').value;
         const objectId = document.getElementById('objectId').value;
-
-        // Backend expects: subject_type, subject_id, relationship_type, resource_type, resource_id
-        // And parent_resource_type/id (we will default these or let backend handle)
-        // I'll send them equal to resource for flat structure if backend requires them.
+        const parentResourceType = document.getElementById('parentResourceType').value;
+        const parentResourceId = document.getElementById('parentResourceId').value;
 
         const payload = {
             subject_type: subjectType,
@@ -172,9 +243,8 @@ if (addRelationshipForm) {
             relationship_type: relation,
             resource_type: objectType,
             resource_id: objectId,
-            // Provide defaults for strict backend requirements if needed
-            parent_resource_type: objectType,
-            parent_resource_id: objectId
+            parent_resource_type: parentResourceType,
+            parent_resource_id: parentResourceId
         };
 
         try {
@@ -187,6 +257,7 @@ if (addRelationshipForm) {
             }
 
             e.target.reset();
+            resetForm();
             toggleAddRelationshipForm(false);
             loadRelationships();
         } catch (error) {

@@ -7,7 +7,9 @@ const AVAILABLE_PERMISSIONS = [
     'forms:create', 'forms:read', 'forms:update', 'forms:delete',
     'templates:create', 'templates:read', 'templates:update', 'templates:delete',
     'submissions:create', 'submissions:read', 'submissions:update', 'submissions:delete', 'submissions:review',
-    'banks:create', 'banks:read', 'banks:update', 'banks:delete'
+    'banks:create', 'banks:read', 'banks:update', 'banks:delete',
+    'policies:create', 'policies:read', 'policies:update', 'policies:delete',
+    'relationships:create', 'relationships:read', 'relationships:update', 'relationships:delete'
 ];
 
 document.addEventListener('DOMContentLoaded', () => {

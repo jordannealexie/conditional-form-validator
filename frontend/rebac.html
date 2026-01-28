@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ReBAC - Form Submission</title>
     <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/rebac.css">
 </head>
 
 <body>
@@ -38,12 +39,17 @@
                         <span>Submissions</span>
                     </a>
                 </li>
-                <li class="nav-item">
+                <li class="nav-item" data-permission="roles" data-action="read">
                     <a href="roles.html">
                         <span>Roles & Permissions</span>
                     </a>
                 </li>
-                <li class="nav-item active">
+                <li class="nav-item" data-permission="policies" data-action="read">
+                    <a href="abac.html">
+                        <span>ABAC Policies</span>
+                    </a>
+                </li>
+                <li class="nav-item active" data-permission="relationships" data-action="read">
                     <a href="rebac.html">
                         <span>ReBAC</span>
                     </a>
@@ -81,59 +87,107 @@
             <!-- Add Relationship Form -->
             <div class="content-section">
                 <div class="section-header">
-                    <h2>Add New Relationship</h2>
-                    <button class="btn btn-primary" onclick="toggleAddRelationshipForm()">
+                    <h2 id="formTitle">Add New Relationship</h2>
+                    <button class="btn btn-primary" onclick="toggleAddRelationshipForm()" id="addRelationshipBtn">
                         <span>+</span> Add Relationship
                     </button>
                 </div>
 
                 <form id="addRelationshipForm" class="form-container" style="display: none;">
-                    <div class="form-group">
-                        <label for="subjectType">Subject Type</label>
-                        <select id="subjectType" required>
-                            <option value="">Select Type</option>
-                            <option value="user">User</option>
-                            <option value="role">Role</option>
-                            <option value="group">Group</option>
-                        </select>
+                    <div class="relationship-form-header">
+                        <h3>Relationship Details</h3>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4>Subject (Who)</h4>
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="subjectType">Subject Type *</label>
+                                <select id="subjectType" required>
+                                    <option value="">Select Type</option>
+                                    <option value="user">User</option>
+                                    <option value="role">Role</option>
+                                    <option value="group">Group</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="flex: 2;">
+                                <label for="subjectId">Subject ID *</label>
+                                <input type="text" id="subjectId" required placeholder="e.g., 1 or username">
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="subjectId">Subject ID</label>
-                        <input type="text" id="subjectId" required>
+                    <div class="relationship-form-divider"></div>
+
+                    <div class="form-section">
+                        <h4>Relationship Type</h4>
+                        <div class="form-group">
+                            <label for="relation">Relationship *</label>
+                            <select id="relation" required>
+                                <option value="">Select Relationship</option>
+                                <option value="owner">Owner</option>
+                                <option value="member">Member</option>
+                                <option value="manager">Manager</option>
+                                <option value="viewer">Viewer</option>
+                                <option value="editor">Editor</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <small>Defines what the subject can do with the resource</small>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="relation">Relation</label>
-                        <select id="relation" required>
-                            <option value="">Select Relation</option>
-                            <option value="owner">Owner</option>
-                            <option value="member">Member</option>
-                            <option value="parent">Parent</option>
-                            <option value="child">Child</option>
-                            <option value="manager">Manager</option>
-                        </select>
+                    <div class="relationship-form-divider"></div>
+
+                    <div class="form-section">
+                        <h4>Resource (What)</h4>
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="objectType">Resource Type *</label>
+                                <select id="objectType" required>
+                                    <option value="">Select Type</option>
+                                    <option value="template">Template</option>
+                                    <option value="submission">Submission</option>
+                                    <option value="bank">Bank</option>
+                                    <option value="organization">Organization</option>
+                                    <option value="project">Project</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="flex: 2;">
+                                <label for="objectId">Resource ID *</label>
+                                <input type="text" id="objectId" required placeholder="e.g., 1">
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="objectType">Object Type</label>
-                        <select id="objectType" required>
-                            <option value="">Select Type</option>
-                            <option value="resource">Resource</option>
-                            <option value="document">Document</option>
-                            <option value="project">Project</option>
-                        </select>
+                    <div class="relationship-form-divider"></div>
+
+                    <div class="form-section">
+                        <h4>Parent Resource (Context)</h4>
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="parentResourceType">Parent Type *</label>
+                                <select id="parentResourceType" required>
+                                    <option value="">Select Type</option>
+                                    <option value="bank">Bank</option>
+                                    <option value="template">Template</option>
+                                    <option value="organization">Organization</option>
+                                    <option value="project">Project</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="flex: 2;">
+                                <label for="parentResourceId">Parent ID *</label>
+                                <input type="text" id="parentResourceId" required placeholder="e.g., 1">
+                                <small>For top-level resources, use same as Resource Type/ID</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="objectId">Object ID</label>
-                        <input type="text" id="objectId" required>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Create Relationship</button>
-                        <button type="button" class="btn btn-secondary"
-                            onclick="toggleAddRelationshipForm()">Cancel</button>
+                    <div class="form-actions" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e0e0e0;">
+                        <button type="submit" class="btn btn-primary" style="min-width: 150px;">Create Relationship</button>
+                        <button type="button" class="btn btn-secondary" onclick="toggleAddRelationshipForm(false)">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -145,12 +199,13 @@
                     <table class="data-table" id="relationshipsTable">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Subject</th>
-                                <th>Relation</th>
-                                <th>Object</th>
-                                <th>Created</th>
-                                <th>Actions</th>
+                                <th style="width: 5%;">ID</th>
+                                <th style="width: 20%;">Subject</th>
+                                <th style="width: 12%;">Relation</th>
+                                <th style="width: 20%;">Object</th>
+                                <th style="width: 12%;">Created At</th>
+                                <th style="width: 12%;">Updated At</th>
+                                <th style="width: 12%;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="relationshipsTableBody">
