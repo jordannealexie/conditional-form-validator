@@ -4,6 +4,17 @@ from pydantic import BaseModel, EmailStr, Field, validator, ConfigDict
 
 from app.models.user import UserRole
 
+# Valid locations - EXACTLY 17 cities as specified
+VALID_LOCATIONS = [
+    "Makati", "Quezon City", "Paranaque", "Pampanga", "Bulacan",
+    "Cavite", "Laguna", "Batangas", "Cebu", "Iloilo", "Bacolod",
+    "Davao", "Cagayan De Oro", "Pagadian", "Tagum", "Zamboanga", "General Santos"
+]
+
+# Valid levels - only 1, 2, 3
+VALID_LEVELS = [1, 2, 3]
+
+
 class UserBase(BaseModel):
     """Base User Schema with common attributes"""
     email: EmailStr
@@ -14,8 +25,22 @@ class UserBase(BaseModel):
     is_active: Optional[bool] = True
     is_superuser: Optional[bool] = False
     department: Optional[str] = None
-    level: Optional[int] = 1
+    level: Optional[int] = Field(1, ge=1, le=3, description="User level (1-3 only)")
     location: Optional[str] = None
+
+    @validator('level')
+    def validate_level(cls, v):
+        """Validate level is 1, 2, or 3"""
+        if v is not None and v not in VALID_LEVELS:
+            raise ValueError(f'Level must be one of {VALID_LEVELS}')
+        return v
+
+    @validator('location')
+    def validate_location(cls, v):
+        """Validate location is from the allowed list"""
+        if v is not None and v not in VALID_LOCATIONS:
+            raise ValueError(f'Location must be one of: {", ".join(VALID_LOCATIONS)}')
+        return v
 
 class UserCreate(UserBase):
     """Schema for creating a new user"""
@@ -42,6 +67,21 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     department: Optional[str] = None
     location: Optional[str] = None
+    level: Optional[int] = Field(None, ge=1, le=3, description="User level (1-3 only)")
+
+    @validator('level')
+    def validate_level(cls, v):
+        """Validate level is 1, 2, or 3"""
+        if v is not None and v not in VALID_LEVELS:
+            raise ValueError(f'Level must be one of {VALID_LEVELS}')
+        return v
+
+    @validator('location')
+    def validate_location(cls, v):
+        """Validate location is from the allowed list"""
+        if v is not None and v not in VALID_LOCATIONS:
+            raise ValueError(f'Location must be one of: {", ".join(VALID_LOCATIONS)}')
+        return v
 
 class UserLogin(BaseModel):
     """Schema for user login"""

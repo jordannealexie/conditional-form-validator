@@ -14,6 +14,8 @@ from app.api.v1.endpoints import roles
 from app.api.v1.endpoints import files
 from app.api.v1.endpoints import enums
 from app.api.v1.endpoints import field_types
+from app.api.v1.endpoints import lookups
+from app.api.v1.endpoints import metadata
 
 api_router = APIRouter()
 
@@ -31,5 +33,7 @@ api_router.include_router(enums.router, prefix="/enums", tags=["Form System - En
 api_router.include_router(field_types.router, prefix="/field-types", tags=["Form System - Field Types"])
 api_router.include_router(roles.router, prefix="/roles", tags=["Roles"])
 api_router.include_router(files.router, prefix="/files", tags=["Files"])
+api_router.include_router(lookups.router, prefix="/lookups", tags=["Lookup Tables"])
+api_router.include_router(metadata.router, prefix="/metadata", tags=["Form Metadata"])
 
 # This is the main API router that includes all endpoint routers

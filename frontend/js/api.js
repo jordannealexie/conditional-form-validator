@@ -536,12 +536,120 @@ async function apiGetAbacStats() {
 }
 
 /**
- * Get available ABAC attributes
+ * Get available ABAC attributes metadata
  * Backend endpoint: GET /abac/metadata/attributes
+ * Returns comprehensive metadata including:
+ * - attribute_groups: Grouped attributes with operators and value sources
+ * - global_operators: All available operators
  * @returns {Promise<object>}
  */
 async function apiGetAbacAttributes() {
     return await apiRequest('/abac/metadata/attributes');
+}
+
+// ============ Lookup Table Endpoints ============
+
+/**
+ * Get all departments
+ * Backend endpoint: GET /lookups/departments
+ * @param {boolean} activeOnly - Filter for active departments only (default: true)
+ * @returns {Promise<Array>}
+ */
+async function apiGetDepartments(activeOnly = true) {
+    return await apiRequest(`/lookups/departments?active_only=${activeOnly}`);
+}
+
+/**
+ * Create a new department
+ * Backend endpoint: POST /lookups/departments
+ * @param {object} data - Department data {name, code, description, is_active, display_order}
+ * @returns {Promise<object>}
+ */
+async function apiCreateDepartment(data) {
+    return await apiRequest('/lookups/departments', {
+        method: 'POST',
+        body: data
+    });
+}
+
+/**
+ * Update a department
+ * Backend endpoint: PUT /lookups/departments/{id}
+ * @param {number} id - Department ID
+ * @param {object} data - Updated department data
+ * @returns {Promise<object>}
+ */
+async function apiUpdateDepartment(id, data) {
+    return await apiRequest(`/lookups/departments/${id}`, {
+        method: 'PUT',
+        body: data
+    });
+}
+
+/**
+ * Delete a department
+ * Backend endpoint: DELETE /lookups/departments/{id}
+ * @param {number} id - Department ID
+ * @returns {Promise<void>}
+ */
+async function apiDeleteDepartment(id) {
+    return await apiRequest(`/lookups/departments/${id}`, {
+        method: 'DELETE'
+    });
+}
+
+/**
+ * Get all locations
+ * Backend endpoint: GET /lookups/locations
+ * @param {boolean} activeOnly - Filter for active locations only (default: true)
+ * @param {string} region - Optional region filter
+ * @returns {Promise<Array>}
+ */
+async function apiGetLocations(activeOnly = true, region = null) {
+    let url = `/lookups/locations?active_only=${activeOnly}`;
+    if (region) {
+        url += `&region=${encodeURIComponent(region)}`;
+    }
+    return await apiRequest(url);
+}
+
+/**
+ * Create a new location
+ * Backend endpoint: POST /lookups/locations
+ * @param {object} data - Location data {name, code, description, region, is_active, display_order}
+ * @returns {Promise<object>}
+ */
+async function apiCreateLocation(data) {
+    return await apiRequest('/lookups/locations', {
+        method: 'POST',
+        body: data
+    });
+}
+
+/**
+ * Update a location
+ * Backend endpoint: PUT /lookups/locations/{id}
+ * @param {number} id - Location ID
+ * @param {object} data - Updated location data
+ * @returns {Promise<object>}
+ */
+async function apiUpdateLocation(id, data) {
+    return await apiRequest(`/lookups/locations/${id}`, {
+        method: 'PUT',
+        body: data
+    });
+}
+
+/**
+ * Delete a location
+ * Backend endpoint: DELETE /lookups/locations/{id}
+ * @param {number} id - Location ID
+ * @returns {Promise<void>}
+ */
+async function apiDeleteLocation(id) {
+    return await apiRequest(`/lookups/locations/${id}`, {
+        method: 'DELETE'
+    });
 }
 
 /**

@@ -108,22 +108,16 @@
                         </div>
                         <div class="form-group">
                             <label for="profile_department">Department</label>
-                            <select id="profile_department">
+                            <select id="profile_department" name="department">
                                 <option value="">Select Department</option>
-                                <option value="IT">IT</option>
-                                <option value="Marketing">Marketing</option>
-                                <option value="Finance">Finance</option>
-                                <option value="HR">HR</option>
-                                <option value="Operations">Operations</option>
+                                <!-- Options loaded dynamically from backend -->
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="profile_location">Location</label>
-                            <select id="profile_location">
+                            <select id="profile_location" name="location">
                                 <option value="">Select Location</option>
-                                <option value="Parañaque">Parañaque</option>
-                                <option value="Makati">Makati</option>
-                                <option value="Quezon City">Quezon City</option>
+                                <!-- Options loaded dynamically from backend -->
                             </select>
                         </div>
                         <div class="form-actions">
@@ -185,11 +179,11 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <script src="js/utils.js?v=5"></script>
-    <script src="js/api.js?v=5"></script>
-    <script src="js/auth.js?v=5"></script>
-    <script src="js/profile.js?v=3"></script>
-    <script src="js/users.js?v=3"></script>
+    <script src="js/utils.js?v=9"></script>
+    <script src="js/api.js?v=9"></script>
+    <script src="js/auth.js?v=9"></script>
+    <script src="js/dropdown-loader.js?v=3"></script>
+    <script src="js/profile.js?v=6"></script>
 </body>
 
 </html>

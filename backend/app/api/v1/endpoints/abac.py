@@ -294,74 +294,284 @@ async def get_available_attributes(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_any_permission("policies:read", "policies:create", "policies:update"))
 ):
-    """Get available attribute fields for ABAC policy creation - requires any policies permission"""
+    """
+    Get comprehensive attribute metadata for ABAC policy builder.
+    
+    This endpoint returns:
+    - All available attributes grouped by category
+    - User-friendly operator labels for each attribute type
+    - Value sources (API endpoints or static lists)
+    - Input types and validation rules
+    
+    This is the single source of truth for the frontend policy builder.
+    """
     from sqlalchemy import distinct
     from app.models.abac import UserAttribute, ResourceAttribute
-    from app.models.forms import SubmissionStatus
-    
-    # Get distinct user attribute keys from database
-    user_attr_result = await db.execute(
-        select(distinct(UserAttribute.attribute_key))
+    from app.models.lookup import Department, Location
+    from app.models.user import Role
+    from app.schemas.abac import (
+        ABACMetadataResponse, AttributeGroup, AttributeDefinition,
+        OperatorDefinition, ValueOption
     )
-    user_attrs = [row[0] for row in user_attr_result.fetchall()]
     
-    # Get distinct resource attribute keys from database
-    resource_attr_result = await db.execute(
-        select(distinct(ResourceAttribute.attribute_key))
+    # Define user-friendly operators
+    NUMERIC_OPERATORS = [
+        OperatorDefinition(value="==", label="is", description="Value equals exactly"),
+        OperatorDefinition(value="!=", label="is not", description="Value does not equal"),
+        OperatorDefinition(value=">", label="is greater than", description="Value is greater than"),
+        OperatorDefinition(value="<", label="is less than", description="Value is less than"),
+        OperatorDefinition(value=">=", label="is at least", description="Value is greater than or equal"),
+        OperatorDefinition(value="<=", label="is at most", description="Value is less than or equal"),
+    ]
+    
+    STRING_OPERATORS = [
+        OperatorDefinition(value="==", label="is", description="Exact match"),
+        OperatorDefinition(value="!=", label="is not", description="Does not match"),
+        OperatorDefinition(value="contains", label="contains", description="Contains the text"),
+        OperatorDefinition(value="startswith", label="starts with", description="Begins with the text"),
+        OperatorDefinition(value="endswith", label="ends with", description="Ends with the text"),
+    ]
+    
+    ENUM_OPERATORS = [
+        OperatorDefinition(value="==", label="is", description="Exact match"),
+        OperatorDefinition(value="!=", label="is not", description="Does not match"),
+        OperatorDefinition(value="in", label="is one of", description="Matches any in list"),
+        OperatorDefinition(value="not_in", label="is not one of", description="Does not match any in list"),
+    ]
+    
+    BOOLEAN_OPERATORS = [
+        OperatorDefinition(value="==", label="is", description="Equals true or false"),
+    ]
+    
+    # Fetch dynamic data from database
+    # Get roles
+    roles_result = await db.execute(select(Role).where(Role.name != None).order_by(Role.name))
+    roles = roles_result.scalars().all()
+    role_options = [ValueOption(value=r.name, label=r.name.title()) for r in roles]
+    
+    # Get departments
+    dept_result = await db.execute(
+        select(Department)
+        .where(Department.is_active == True)
+        .order_by(Department.display_order, Department.name)
     )
-    resource_attrs = [row[0] for row in resource_attr_result.fetchall()]
+    departments = dept_result.scalars().all()
+    dept_options = [ValueOption(value=d.name, label=d.name) for d in departments]
     
-    # Build comprehensive attribute list from User model fields
-    user_model_fields = [
-        {"key": "user.id", "label": "User ID", "type": "number"},
-        {"key": "user.username", "label": "Username", "type": "string"},
-        {"key": "user.email", "label": "Email", "type": "string"},
-        {"key": "user.user_role", "label": "User Role", "type": "string"},
-        {"key": "user.bank_id", "label": "Bank ID", "type": "number"},
-        {"key": "user.department", "label": "Department", "type": "string"},
-        {"key": "user.level", "label": "Level", "type": "number"},
-        {"key": "user.location", "label": "Location", "type": "string"},
+    # Get locations
+    loc_result = await db.execute(
+        select(Location)
+        .where(Location.is_active == True)
+        .order_by(Location.display_order, Location.name)
+    )
+    locations = loc_result.scalars().all()
+    loc_options = [ValueOption(value=loc.name, label=loc.name) for loc in locations]
+    
+    # Get dynamic user attributes from user_attributes table
+    user_attr_result = await db.execute(select(distinct(UserAttribute.attribute_key)))
+    dynamic_user_attrs = [row[0] for row in user_attr_result.fetchall()]
+    
+    # Get dynamic resource attributes
+    resource_attr_result = await db.execute(select(distinct(ResourceAttribute.attribute_key)))
+    dynamic_resource_attrs = [row[0] for row in resource_attr_result.fetchall()]
+    
+    # Build User Attributes group
+    user_attributes = [
+        AttributeDefinition(
+            key="user.id",
+            label="User ID",
+            description="The unique identifier of the user",
+            value_type="number",
+            operators=NUMERIC_OPERATORS,
+            value_source=None,
+            input_placeholder="Enter user ID (e.g., 1, 2, 3)"
+        ),
+        AttributeDefinition(
+            key="user.user_role",
+            label="User Role",
+            description="The primary role assigned to the user",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            value_source="/api/v1/roles",
+            static_values=role_options if role_options else None
+        ),
+        AttributeDefinition(
+            key="user.department",
+            label="Department",
+            description="The department the user belongs to",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            value_source="/api/v1/lookups/departments",
+            static_values=dept_options if dept_options else None
+        ),
+        AttributeDefinition(
+            key="user.location",
+            label="Location",
+            description="The physical location or office of the user",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            value_source="/api/v1/lookups/locations",
+            static_values=loc_options if loc_options else None
+        ),
+        AttributeDefinition(
+            key="user.level",
+            label="User Level",
+            description="The authorization level of the user (1-3)",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            value_source=None,
+            static_values=[
+                ValueOption(value="1", label="Level 1 (Basic)"),
+                ValueOption(value="2", label="Level 2 (Standard)"),
+                ValueOption(value="3", label="Level 3 (Advanced)"),
+            ]
+        ),
+        AttributeDefinition(
+            key="user.bank_id",
+            label="Bank ID",
+            description="The bank the user is associated with",
+            value_type="number",
+            operators=NUMERIC_OPERATORS,
+            value_source="/api/v1/banks",
+            input_placeholder="Enter bank ID"
+        ),
+        AttributeDefinition(
+            key="user.is_superuser",
+            label="Is Superuser",
+            description="Whether the user has superuser privileges",
+            value_type="boolean",
+            operators=BOOLEAN_OPERATORS,
+            static_values=[
+                ValueOption(value="true", label="Yes"),
+                ValueOption(value="false", label="No")
+            ]
+        ),
+        AttributeDefinition(
+            key="user.active",
+            label="Is Active",
+            description="Whether the user account is active",
+            value_type="boolean",
+            operators=BOOLEAN_OPERATORS,
+            static_values=[
+                ValueOption(value="true", label="Yes"),
+                ValueOption(value="false", label="No")
+            ]
+        ),
     ]
     
     # Add dynamic user attributes from database
-    for attr in user_attrs:
-        if not any(f["key"].endswith(attr) for f in user_model_fields):
-            user_model_fields.append({
-                "key": f"user.{attr}",
-                "label": attr.replace("_", " ").title(),
-                "type": "string"
-            })
+    for attr_key in dynamic_user_attrs:
+        if not any(a.key == f"user.{attr_key}" for a in user_attributes):
+            user_attributes.append(AttributeDefinition(
+                key=f"user.{attr_key}",
+                label=attr_key.replace("_", " ").title(),
+                description=f"Custom attribute: {attr_key}",
+                value_type="string",
+                operators=STRING_OPERATORS,
+                input_placeholder=f"Enter {attr_key}"
+            ))
     
-    # Resource fields
-    resource_fields = [
-        {"key": "resource.id", "label": "Resource ID", "type": "string"},
-        {"key": "resource.type", "label": "Resource Type", "type": "string"},
-        {"key": "resource.user_id", "label": "Resource Owner ID", "type": "number"},
-        {"key": "resource.bank_id", "label": "Resource Bank ID", "type": "number"},
-        {"key": "resource.status", "label": "Resource Status", "type": "string"},
-        {"key": "resource.template_id", "label": "Template ID", "type": "number"},
+    # Build Resource Attributes group
+    resource_attributes = [
+        AttributeDefinition(
+            key="resource.id",
+            label="Resource ID",
+            description="The unique identifier of the resource",
+            value_type="string",
+            operators=STRING_OPERATORS,
+            input_placeholder="Enter resource ID"
+        ),
+        AttributeDefinition(
+            key="resource.type",
+            label="Resource Type",
+            description="The type of resource (e.g., document, form, submission)",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            static_values=[
+                ValueOption(value="document", label="Document"),
+                ValueOption(value="form", label="Form"),
+                ValueOption(value="submission", label="Submission"),
+                ValueOption(value="template", label="Template"),
+                ValueOption(value="bank", label="Bank"),
+            ]
+        ),
+        AttributeDefinition(
+            key="resource.user_id",
+            label="Resource Owner ID",
+            description="The ID of the user who owns the resource",
+            value_type="number",
+            operators=NUMERIC_OPERATORS,
+            input_placeholder="Enter owner user ID"
+        ),
+        AttributeDefinition(
+            key="resource.bank_id",
+            label="Resource Bank ID",
+            description="The bank associated with the resource",
+            value_type="number",
+            operators=NUMERIC_OPERATORS,
+            input_placeholder="Enter bank ID"
+        ),
+        AttributeDefinition(
+            key="resource.status",
+            label="Resource Status",
+            description="The current status of the resource",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            static_values=[
+                ValueOption(value="draft", label="Draft"),
+                ValueOption(value="pending", label="Pending"),
+                ValueOption(value="approved", label="Approved"),
+                ValueOption(value="rejected", label="Rejected"),
+                ValueOption(value="published", label="Published"),
+            ]
+        ),
+        AttributeDefinition(
+            key="resource.classification",
+            label="Classification",
+            description="The security classification of the resource",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            static_values=[
+                ValueOption(value="public", label="Public"),
+                ValueOption(value="internal", label="Internal"),
+                ValueOption(value="confidential", label="Confidential"),
+                ValueOption(value="restricted", label="Restricted"),
+            ]
+        ),
     ]
     
     # Add dynamic resource attributes from database
-    for attr in resource_attrs:
-        if not any(f["key"].endswith(attr) for f in resource_fields):
-            resource_fields.append({
-                "key": f"resource.{attr}",
-                "label": attr.replace("_", " ").title(),
-                "type": "string"
-            })
+    for attr_key in dynamic_resource_attrs:
+        if not any(a.key == f"resource.{attr_key}" for a in resource_attributes):
+            resource_attributes.append(AttributeDefinition(
+                key=f"resource.{attr_key}",
+                label=attr_key.replace("_", " ").title(),
+                description=f"Custom attribute: {attr_key}",
+                value_type="string",
+                operators=STRING_OPERATORS,
+                input_placeholder=f"Enter {attr_key}"
+            ))
     
-    return create_response(data={
-        "user_attributes": user_model_fields,
-        "resource_attributes": resource_fields,
-        "operators": [
-            {"value": "==", "label": "Equals"},
-            {"value": "!=", "label": "Not Equals"},
-            {"value": ">", "label": "Greater Than"},
-            {"value": "<", "label": "Less Than"},
-            {"value": ">=", "label": "Greater or Equal"},
-            {"value": "<=", "label": "Less or Equal"},
-            {"value": "contains", "label": "Contains"},
-            {"value": "in", "label": "In List"}
+    # Build the response
+    metadata = ABACMetadataResponse(
+        attribute_groups=[
+            AttributeGroup(
+                name="User Attributes",
+                description="Attributes related to the user requesting access",
+                attributes=user_attributes
+            ),
+            AttributeGroup(
+                name="Resource Attributes",
+                description="Attributes related to the resource being accessed",
+                attributes=resource_attributes
+            )
+        ],
+        global_operators=[
+            *NUMERIC_OPERATORS,
+            *STRING_OPERATORS,
+            *ENUM_OPERATORS,
+            *BOOLEAN_OPERATORS
         ]
-    })
+    )
+    
+    return create_response(data=metadata.model_dump())

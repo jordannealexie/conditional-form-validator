@@ -1,12 +1,11 @@
 // User Management - Form Submission
 // Edit, Delete, Add with Role; uses /users API
-
-const ROLES = ['admin', 'supervisor', 'fieldman'];
+// Uses shared DropdownLoader for all dropdown values - NO HARDCODING
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof requireAuth === 'function') requireAuth();
     loadUserInfo();
-    loadUsers();
+    initUserManagement();
     setupMobileMenu();
     
     // Enforce UI permissions after a short delay
@@ -14,6 +13,61 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(enforceUIPermissions, 100);
     }
 });
+
+/**
+ * Initialize user management - load dropdowns then users
+ */
+async function initUserManagement() {
+    try {
+        console.log('[users.js] initUserManagement started, DropdownLoader:', typeof DropdownLoader);
+        // Load dropdown data first using shared DropdownLoader
+        await DropdownLoader.loadAll();
+        console.log('[users.js] DropdownLoader.loadAll() completed');
+        // Then load users
+        await loadUsers();
+    } catch (error) {
+        console.error('Error initializing user management:', error);
+    }
+}
+
+/**
+ * Build role options HTML using DropdownLoader
+ * @param {string} [selectedRole] - Currently selected role
+ * @returns {string} HTML options string
+ */
+function buildRoleOptions(selectedRole = '') {
+    console.log('[users.js] buildRoleOptions called, DropdownLoader:', typeof DropdownLoader);
+    const options = DropdownLoader.buildOptions('roles', selectedRole, { emptyLabel: 'Select Role' });
+    console.log('[users.js] Role options built:', options.substring(0, 100));
+    return options;
+}
+
+/**
+ * Build department options HTML using DropdownLoader
+ * @param {string} [selectedDept] - Currently selected department
+ * @returns {string} HTML options string
+ */
+function buildDepartmentOptions(selectedDept = '') {
+    return DropdownLoader.buildOptions('departments', selectedDept, { emptyLabel: 'Select Department' });
+}
+
+/**
+ * Build location options HTML using DropdownLoader
+ * @param {string} [selectedLoc] - Currently selected location
+ * @returns {string} HTML options string
+ */
+function buildLocationOptions(selectedLoc = '') {
+    return DropdownLoader.buildOptions('locations', selectedLoc, { emptyLabel: 'Select Location' });
+}
+
+/**
+ * Build level options HTML using DropdownLoader
+ * @param {number|string} [selectedLevel] - Currently selected level
+ * @returns {string} HTML options string
+ */
+function buildLevelOptions(selectedLevel = '') {
+    return DropdownLoader.buildOptions('levels', selectedLevel, { emptyLabel: 'Select Level' });
+}
 
 async function loadUserInfo() {
     try {
@@ -87,9 +141,10 @@ loadUsers = async function () {
 };
 
 function showAddUserModal() {
-    const roleOpts = ROLES.map(r => `<option value="${r}">${r}</option>`).join('');
-    const deptOpts = ['IT', 'Marketing', 'Finance', 'HR', 'Operations'].map(d => `<option value="${d}">${d}</option>`).join('');
-    const locOpts = ['Parañaque', 'Makati', 'Quezon City'].map(l => `<option value="${l}">${l}</option>`).join('');
+    const roleOpts = buildRoleOptions();
+    const deptOpts = buildDepartmentOptions();
+    const locOpts = buildLocationOptions();
+    const levelOpts = buildLevelOptions('1'); // Default to Level 1
     const content = `
         <form id="addUserForm" onsubmit="handleAddUser(event)">
             <div class="field-row" style="display:flex; gap:10px;">
@@ -101,9 +156,10 @@ function showAddUserModal() {
             <div class="form-group"><label>Password *</label><input type="password" name="password" required minlength="8"></div>
             <div class="form-group"><label>Role</label><select name="user_role">${roleOpts}</select></div>
             <div class="field-row" style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:1;"><label>Department</label><select name="department"><option value="">Select Department</option>${deptOpts}</select></div>
-                <div class="form-group" style="flex:1;"><label>Location</label><select name="location"><option value="">Select Location</option>${locOpts}</select></div>
+                <div class="form-group" style="flex:1;"><label>Department</label><select name="department">${deptOpts}</select></div>
+                <div class="form-group" style="flex:1;"><label>Location</label><select name="location">${locOpts}</select></div>
             </div>
+            <div class="form-group"><label>Level</label><select name="level">${levelOpts}</select></div>
         </form>
     `;
     createModal('Add New User', content, [
@@ -138,9 +194,10 @@ async function handleAddUser(ev) {
         password,
         first_name: fd.get('first_name') || null,
         last_name: fd.get('last_name') || null,
-        user_role: fd.get('user_role'),
+        user_role: fd.get('user_role') || null,
         department: fd.get('department') || null,
         location: fd.get('location') || null,
+        level: parseInt(fd.get('level')) || 1,
         bank_id: null
     };
     try {
@@ -157,9 +214,10 @@ async function editUser(userId) {
     try {
         const user = await apiGetUser(userId);
         if (!user) return;
-        const roleOpts = ROLES.map(r => `<option value="${r}" ${(user.user_role || '') === r ? 'selected' : ''}>${r}</option>`).join('');
-        const deptOpts = ['IT', 'Marketing', 'Finance', 'HR', 'Operations'].map(d => `<option value="${d}" ${(user.department || '') === d ? 'selected' : ''}>${d}</option>`).join('');
-        const locOpts = ['Parañaque', 'Makati', 'Quezon City'].map(l => `<option value="${l}" ${(user.location || '') === l ? 'selected' : ''}>${l}</option>`).join('');
+        const roleOpts = buildRoleOptions(user.user_role || '');
+        const deptOpts = buildDepartmentOptions(user.department || '');
+        const locOpts = buildLocationOptions(user.location || '');
+        const levelOpts = buildLevelOptions(user.level || 1);
         const content = `
             <form id="editUserForm" onsubmit="handleEditUser(event, ${userId})">
                 <div class="field-row" style="display:flex; gap:10px;">
@@ -170,13 +228,16 @@ async function editUser(userId) {
                 <div class="form-group"><label>Email *</label><input type="email" name="email" value="${escapeHtml(user.email || '')}" required></div>
                 <div class="form-group"><label>Role</label><select name="user_role">${roleOpts}</select></div>
                 <div class="field-row" style="display:flex; gap:10px;">
-                    <div class="form-group" style="flex:1;"><label>Department</label><select name="department"><option value="">Select Department</option>${deptOpts}</select></div>
-                    <div class="form-group" style="flex:1;"><label>Location</label><select name="location"><option value="">Select Location</option>${locOpts}</select></div>
+                    <div class="form-group" style="flex:1;"><label>Department</label><select name="department">${deptOpts}</select></div>
+                    <div class="form-group" style="flex:1;"><label>Location</label><select name="location">${locOpts}</select></div>
                 </div>
-                <div class="form-group"><label>Status</label><select name="active">
-                    <option value="true" ${user.active !== false ? 'selected' : ''}>Active</option>
-                    <option value="false" ${user.active === false ? 'selected' : ''}>Inactive</option>
-                </select></div>
+                <div class="field-row" style="display:flex; gap:10px;">
+                    <div class="form-group" style="flex:1;"><label>Level</label><select name="level">${levelOpts}</select></div>
+                    <div class="form-group" style="flex:1;"><label>Status</label><select name="active">
+                        <option value="true" ${user.active !== false ? 'selected' : ''}>Active</option>
+                        <option value="false" ${user.active === false ? 'selected' : ''}>Inactive</option>
+                    </select></div>
+                </div>
             </form>
         `;
         createModal('Edit User', content, [
@@ -204,9 +265,10 @@ async function handleEditUser(ev, userId) {
         email,
         first_name: fd.get('first_name') || null,
         last_name: fd.get('last_name') || null,
-        user_role: fd.get('user_role'),
+        user_role: fd.get('user_role') || null,
         department: fd.get('department') || null,
         location: fd.get('location') || null,
+        level: parseInt(fd.get('level')) || 1,
         active: fd.get('active') === 'true'
     };
     try {

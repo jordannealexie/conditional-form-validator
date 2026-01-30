@@ -51,13 +51,8 @@
                 <div class="form-group">
                     <label for="department">Department</label>
                     <select id="department" name="department">
-                        <option value="General">General</option>
-                        <option value="IT">IT</option>
-                        <option value="Sales">Sales</option>
-                        <option value="Marketing">Marketing</option>
-                        <option value="Finance">Finance</option>
-                        <option value="HR">HR</option>
-                        <option value="Operations">Operations</option>
+                        <option value="">Select Department</option>
+                        <!-- Options loaded dynamically via DropdownLoader -->
                     </select>
                 </div>
 
@@ -65,20 +60,16 @@
                     <div class="form-group">
                         <label for="level">Access Level</label>
                         <select id="level" name="level">
-                            <option value="1">Level 1 (Basic)</option>
-                            <option value="2">Level 2 (Standard)</option>
-                            <option value="3">Level 3 (Advanced)</option>
+                            <option value="">Select Level</option>
+                            <!-- Options loaded dynamically via DropdownLoader -->
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="location">Location</label>
                         <select id="location" name="location">
-                            <option value="Remote">Remote</option>
-                            <option value="HQ">HQ</option>
-                            <option value="NYC">New York</option>
-                            <option value="LA">Los Angeles</option>
-                            <option value="SF">San Francisco</option>
+                            <option value="">Select Location</option>
+                            <!-- Options loaded dynamically via DropdownLoader -->
                         </select>
                     </div>
                 </div>
@@ -97,16 +88,38 @@
         </div>
     </div>
 
-    <script src="js/utils.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
+    <script src="js/utils.js?v=9"></script>
+    <script src="js/api.js?v=9"></script>
+    <script src="js/auth.js?v=9"></script>
+    <script src="js/dropdown-loader.js?v=3"></script>
 
     <script>
+        /**
+         * Initialize registration form dropdowns using shared DropdownLoader
+         * All dropdown values come from backend - NO HARDCODING
+         */
+        async function initRegisterDropdowns() {
+            try {
+                await DropdownLoader.loadAll();
+                
+                // Populate dropdowns from backend
+                DropdownLoader.populateSelect('department', 'departments', '', { emptyLabel: 'Select Department' });
+                DropdownLoader.populateSelect('location', 'locations', '', { emptyLabel: 'Select Location' });
+                DropdownLoader.populateSelect('level', 'levels', '1', { includeEmpty: false }); // Default to Level 1
+                
+            } catch (error) {
+                console.error('Error loading dropdown data:', error);
+            }
+        }
+
         // Check if user is already logged in
         document.addEventListener('DOMContentLoaded', () => {
             if (isAuthenticated()) {
                 window.location.href = 'dashboard.html';
             }
+
+            // Load dropdowns using shared DropdownLoader
+            initRegisterDropdowns();
 
             // Add password strength checker
             const passwordInput = document.getElementById('password');
@@ -177,7 +190,7 @@
                     full_name,
                     password,
                     department,
-                    level,
+                    level: parseInt(level) || 1,
                     location
                 });
 

@@ -1,7 +1,34 @@
-// ABAC Management Module
-// Handles attribute-based access control functionality using the real API
+// ABAC Management Module - Enhanced with Metadata-Driven Policy Builder
+// Handles attribute-based access control functionality with dynamic dropdowns
 
-let availableAttributes = null;
+/**
+ * @typedef {Object} OperatorDefinition
+ * @property {string} value - Technical operator value
+ * @property {string} label - User-friendly label
+ * @property {string} [description] - Help text
+ */
+
+/**
+ * @typedef {Object} ValueOption
+ * @property {string} value - Actual value
+ * @property {string} label - Display label
+ */
+
+/**
+ * @typedef {Object} AttributeDefinition
+ * @property {string} key - Attribute key (e.g., 'user.department')
+ * @property {string} label - User-friendly label
+ * @property {string} [description] - Help text
+ * @property {string} value_type - Type: 'number', 'string', 'enum', 'boolean'
+ * @property {OperatorDefinition[]} operators - Allowed operators
+ * @property {string} [value_source] - API endpoint for values
+ * @property {ValueOption[]} [static_values] - Static value options
+ * @property {string} [input_placeholder] - Placeholder text
+ */
+
+// Global state for ABAC metadata
+let abacMetadata = null;
+let cachedValueOptions = {};
 
 /**
  * Initialize ABAC page
@@ -10,21 +37,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof requireAuth === 'function') requireAuth();
     loadUserInfo();
     
-    // Load available attributes first
+    // Load ABAC metadata first
     try {
-        availableAttributes = await apiGetAbacAttributes();
+        await loadAbacMetadata();
     } catch (error) {
-        console.error('Error loading ABAC attributes:', error);
+        console.error('Error loading ABAC metadata:', error);
+        showToast('Error loading policy builder configuration', 'error');
     }
     
     loadPolicies();
     setupMobileMenu();
     
-    // Enforce UI permissions after a short delay to ensure everything is loaded
+    // Enforce UI permissions after a short delay
     if (typeof enforceUIPermissions === 'function') {
         setTimeout(enforceUIPermissions, 100);
     }
 });
+
+/**
+ * Load ABAC metadata from backend
+ */
+async function loadAbacMetadata() {
+    const data = await apiGetAbacAttributes();
+    abacMetadata = data;
+    
+    // Pre-cache static values for enum attributes
+    if (abacMetadata && abacMetadata.attribute_groups) {
+        for (const group of abacMetadata.attribute_groups) {
+            for (const attr of group.attributes) {
+                if (attr.static_values && attr.static_values.length > 0) {
+                    cachedValueOptions[attr.key] = attr.static_values;
+                }
+            }
+        }
+    }
+    
+    return abacMetadata;
+}
 
 /**
  * Load current user info for sidebar
@@ -62,11 +111,9 @@ function toggleAddPolicyForm() {
     if (form) {
         const isVisible = form.style.display !== 'none';
         if (isVisible) {
-            // Hide and reset
             form.style.display = 'none';
             resetPolicyForm();
         } else {
-            // Show
             form.style.display = 'block';
         }
     }
@@ -92,7 +139,7 @@ async function loadPolicies() {
         tableBody.innerHTML = '';
 
         if (!policies || policies.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No policies found</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No policies found</td></tr>';
             return;
         }
 
@@ -101,7 +148,6 @@ async function loadPolicies() {
             tableBody.appendChild(row);
         });
         
-        // Enforce permissions after loading
         if (typeof enforceUIPermissions === 'function') {
             enforceUIPermissions();
         }
@@ -112,6 +158,51 @@ async function loadPolicies() {
 }
 
 /**
+ * Get user-friendly operator label from technical value
+ * @param {string} operatorValue - Technical operator (e.g., '==')
+ * @returns {string} User-friendly label (e.g., 'is')
+ */
+function getOperatorLabel(operatorValue) {
+    if (!abacMetadata || !abacMetadata.global_operators) {
+        // Fallback mapping for non-technical display
+        const fallbackMap = {
+            '==': 'is',
+            '!=': 'is not',
+            '>': 'is greater than',
+            '<': 'is less than',
+            '>=': 'is at least',
+            '<=': 'is at most',
+            'contains': 'contains',
+            'in': 'is one of',
+            'not_in': 'is not one of',
+            'startswith': 'starts with',
+            'endswith': 'ends with'
+        };
+        return fallbackMap[operatorValue] || operatorValue;
+    }
+    
+    const op = abacMetadata.global_operators.find(o => o.value === operatorValue);
+    return op ? op.label : operatorValue;
+}
+
+/**
+ * Get attribute label from key
+ * @param {string} attrKey - Attribute key (e.g., 'user.department')
+ * @returns {string} User-friendly label
+ */
+function getAttributeLabel(attrKey) {
+    if (!abacMetadata || !abacMetadata.attribute_groups) {
+        return attrKey;
+    }
+    
+    for (const group of abacMetadata.attribute_groups) {
+        const attr = group.attributes.find(a => a.key === attrKey);
+        if (attr) return attr.label;
+    }
+    return attrKey;
+}
+
+/**
  * Create a table row for a policy
  * @param {object} policy 
  * @returns {HTMLElement}
@@ -119,21 +210,21 @@ async function loadPolicies() {
 function createPolicyRow(policy) {
     const row = document.createElement('tr');
     
-    // Format rules as badges
+    // Format rules as user-friendly badges
     let rulesDisplay = '<div class="policy-rule-display">';
     if (policy.rules && policy.rules.rules && Array.isArray(policy.rules.rules)) {
         if (policy.rules.rules.length === 0) {
             rulesDisplay += '<span class="badge badge-info">No conditions</span>';
         } else {
             policy.rules.rules.forEach(rule => {
-                const field = escapeHtml(String(rule.field || ''));
-                const operator = escapeHtml(String(rule.operator || ''));
+                const fieldLabel = getAttributeLabel(rule.field || '');
+                const operatorLabel = getOperatorLabel(rule.operator || '');
                 const value = escapeHtml(String(rule.value || ''));
                 
                 rulesDisplay += `
                     <div class="rule-badge">
-                        <span class="rule-field">${field}</span>
-                        <span class="rule-operator">${operator}</span>
+                        <span class="rule-field">${escapeHtml(fieldLabel)}</span>
+                        <span class="rule-operator">${escapeHtml(operatorLabel)}</span>
                         <span class="rule-value">${value}</span>
                     </div>
                 `;
@@ -144,10 +235,22 @@ function createPolicyRow(policy) {
     }
     rulesDisplay += '</div>';
     
-    const statusBadge = policy.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-secondary">Inactive</span>';
+    const statusBadge = policy.is_active 
+        ? '<span class="badge badge-success">Active</span>' 
+        : '<span class="badge badge-secondary">Inactive</span>';
     
-    const createdAt = policy.created_at ? new Date(policy.created_at).toLocaleString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
-    const updatedAt = policy.updated_at ? new Date(policy.updated_at).toLocaleString('en-US', {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : 'N/A';
+    const createdAt = policy.created_at 
+        ? new Date(policy.created_at).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric', 
+            hour: '2-digit', minute: '2-digit'
+        }) 
+        : 'N/A';
+    const updatedAt = policy.updated_at 
+        ? new Date(policy.updated_at).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric', 
+            hour: '2-digit', minute: '2-digit'
+        }) 
+        : 'N/A';
 
     row.innerHTML = `
         <td>${escapeHtml(policy.name)}</td>
@@ -177,10 +280,8 @@ if (addPolicyForm) {
         const policyDescription = document.getElementById('policyDescription').value;
         const isActive = document.getElementById('isActive')?.checked ?? true;
 
-        // Build rules from conditions
         const rules = buildPolicyRules();
         
-        // Validate that at least one condition is added
         if (!rules.rules || rules.rules.length === 0) {
             showToast('Please add at least one condition', 'error');
             return;
@@ -197,11 +298,9 @@ if (addPolicyForm) {
             const editId = addPolicyForm.dataset.editId;
             
             if (editId) {
-                // Update existing policy
                 await apiUpdatePolicy(parseInt(editId), policyData);
                 showToast('Policy updated successfully', 'success');
             } else {
-                // Create new policy
                 await apiCreatePolicy(policyData);
                 showToast('Policy created successfully', 'success');
             }
@@ -226,11 +325,13 @@ function resetPolicyForm() {
     form.reset();
     delete form.dataset.editId;
     
-    // Reset conditions
     const conditionsBuilder = document.getElementById('conditionsBuilder');
-    conditionsBuilder.innerHTML = '<div class="empty-state" id="emptyRulesState"><p>No conditions added yet. Click "Add Condition" to start.</p></div>';
+    conditionsBuilder.innerHTML = `
+        <div class="empty-state" id="emptyRulesState">
+            <p>No conditions added yet. Click "Add Condition" to start building your policy.</p>
+        </div>
+    `;
     
-    // Reset button text and form title
     const submitBtn = form.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.textContent = 'Create Policy';
     
@@ -239,12 +340,236 @@ function resetPolicyForm() {
 }
 
 /**
+ * Build attribute dropdown options from metadata
+ * @returns {string} HTML options string
+ */
+function buildAttributeOptions() {
+    let options = '<option value="">Select Attribute</option>';
+    
+    if (!abacMetadata || !abacMetadata.attribute_groups) {
+        // Fallback if metadata not loaded
+        options += `
+            <optgroup label="User Attributes">
+                <option value="user.id">User ID</option>
+                <option value="user.user_role">User Role</option>
+                <option value="user.department">Department</option>
+                <option value="user.location">Location</option>
+                <option value="user.level">User Level</option>
+            </optgroup>
+            <optgroup label="Resource Attributes">
+                <option value="resource.type">Resource Type</option>
+                <option value="resource.status">Resource Status</option>
+            </optgroup>
+        `;
+        return options;
+    }
+    
+    for (const group of abacMetadata.attribute_groups) {
+        options += `<optgroup label="${escapeHtml(group.name)}">`;
+        for (const attr of group.attributes) {
+            const description = attr.description ? ` title="${escapeHtml(attr.description)}"` : '';
+            options += `<option value="${escapeHtml(attr.key)}"${description}>${escapeHtml(attr.label)}</option>`;
+        }
+        options += '</optgroup>';
+    }
+    
+    return options;
+}
+
+/**
+ * Get attribute definition by key
+ * @param {string} attrKey 
+ * @returns {AttributeDefinition|null}
+ */
+function getAttributeDefinition(attrKey) {
+    if (!abacMetadata || !abacMetadata.attribute_groups) return null;
+    
+    for (const group of abacMetadata.attribute_groups) {
+        const attr = group.attributes.find(a => a.key === attrKey);
+        if (attr) return attr;
+    }
+    return null;
+}
+
+/**
+ * Build operator dropdown options for a specific attribute
+ * @param {string} attrKey - Attribute key
+ * @returns {string} HTML options string
+ */
+function buildOperatorOptions(attrKey) {
+    const attr = getAttributeDefinition(attrKey);
+    
+    if (!attr || !attr.operators || attr.operators.length === 0) {
+        // Fallback operators with user-friendly labels
+        return `
+            <option value="==">is</option>
+            <option value="!=">is not</option>
+        `;
+    }
+    
+    let options = '';
+    for (const op of attr.operators) {
+        const description = op.description ? ` title="${escapeHtml(op.description)}"` : '';
+        options += `<option value="${escapeHtml(op.value)}"${description}>${escapeHtml(op.label)}</option>`;
+    }
+    
+    return options;
+}
+
+/**
+ * Build value input HTML based on attribute type
+ * @param {string} attrKey - Attribute key
+ * @param {string} [currentValue] - Current value for editing
+ * @returns {string} HTML string for value input
+ */
+function buildValueInput(attrKey, currentValue = '') {
+    const attr = getAttributeDefinition(attrKey);
+    const escapedValue = escapeHtml(String(currentValue));
+    
+    if (!attr) {
+        return `<input type="text" class="condition-value" placeholder="Enter value" value="${escapedValue}">`;
+    }
+    
+    switch (attr.value_type) {
+        case 'number':
+            return `
+                <input type="number" class="condition-value" 
+                    placeholder="${escapeHtml(attr.input_placeholder || 'Enter number')}" 
+                    value="${escapedValue}">
+            `;
+            
+        case 'boolean':
+            const boolVals = attr.static_values || [
+                { value: 'true', label: 'Yes' },
+                { value: 'false', label: 'No' }
+            ];
+            let boolOptions = '';
+            for (const opt of boolVals) {
+                const selected = opt.value === currentValue ? ' selected' : '';
+                boolOptions += `<option value="${escapeHtml(opt.value)}"${selected}>${escapeHtml(opt.label)}</option>`;
+            }
+            return `<select class="condition-value">${boolOptions}</select>`;
+            
+        case 'enum':
+            // Use cached or static values
+            const values = cachedValueOptions[attrKey] || attr.static_values || [];
+            
+            if (values.length === 0) {
+                // No values available - show loading indicator and fetch
+                fetchAttributeValues(attrKey);
+                return `
+                    <select class="condition-value" data-attr-key="${escapeHtml(attrKey)}">
+                        <option value="">Loading options...</option>
+                    </select>
+                `;
+            }
+            
+            let enumOptions = '<option value="">Select value</option>';
+            for (const opt of values) {
+                const selected = opt.value === currentValue ? ' selected' : '';
+                enumOptions += `<option value="${escapeHtml(opt.value)}"${selected}>${escapeHtml(opt.label)}</option>`;
+            }
+            return `<select class="condition-value">${enumOptions}</select>`;
+            
+        case 'string':
+        default:
+            return `
+                <input type="text" class="condition-value" 
+                    placeholder="${escapeHtml(attr.input_placeholder || 'Enter value')}" 
+                    value="${escapedValue}">
+            `;
+    }
+}
+
+/**
+ * Fetch attribute values from backend API
+ * @param {string} attrKey 
+ */
+async function fetchAttributeValues(attrKey) {
+    const attr = getAttributeDefinition(attrKey);
+    if (!attr || !attr.value_source) return;
+    
+    try {
+        let values = [];
+        
+        // Map common endpoints to API functions
+        if (attr.value_source.includes('/roles')) {
+            const roles = await apiGetRoles();
+            values = (Array.isArray(roles) ? roles : []).map(r => ({
+                value: r.name,
+                label: r.name.charAt(0).toUpperCase() + r.name.slice(1)
+            }));
+        } else if (attr.value_source.includes('/departments')) {
+            const departments = await apiGetDepartments();
+            values = (Array.isArray(departments) ? departments : []).map(d => ({
+                value: d.name,
+                label: d.name
+            }));
+        } else if (attr.value_source.includes('/locations')) {
+            const locations = await apiGetLocations();
+            values = (Array.isArray(locations) ? locations : []).map(l => ({
+                value: l.name,
+                label: l.name
+            }));
+        } else if (attr.value_source.includes('/banks')) {
+            const banks = await apiGetBanks();
+            values = (Array.isArray(banks) ? banks : []).map(b => ({
+                value: String(b.id),
+                label: b.name || `Bank ${b.id}`
+            }));
+        }
+        
+        // Cache the values
+        cachedValueOptions[attrKey] = values;
+        
+        // Update all dropdowns for this attribute
+        const selects = document.querySelectorAll(`select.condition-value[data-attr-key="${attrKey}"]`);
+        selects.forEach(select => {
+            const currentVal = select.value;
+            let optionsHtml = '<option value="">Select value</option>';
+            for (const opt of values) {
+                const selected = opt.value === currentVal ? ' selected' : '';
+                optionsHtml += `<option value="${escapeHtml(opt.value)}"${selected}>${escapeHtml(opt.label)}</option>`;
+            }
+            select.innerHTML = optionsHtml;
+            select.removeAttribute('data-attr-key');
+        });
+        
+    } catch (error) {
+        console.error(`Error fetching values for ${attrKey}:`, error);
+    }
+}
+
+/**
+ * Handle attribute selection change - update operators and value input
+ * @param {HTMLSelectElement} selectElement 
+ */
+function onAttributeChange(selectElement) {
+    const conditionItem = selectElement.closest('.condition-item');
+    if (!conditionItem) return;
+    
+    const attrKey = selectElement.value;
+    const operatorSelect = conditionItem.querySelector('.condition-operator');
+    const valueContainer = conditionItem.querySelector('.value-container');
+    
+    // Update operators with user-friendly labels
+    if (operatorSelect) {
+        operatorSelect.innerHTML = buildOperatorOptions(attrKey);
+    }
+    
+    // Update value input based on attribute type
+    if (valueContainer) {
+        valueContainer.innerHTML = buildValueInput(attrKey);
+    }
+}
+
+/**
  * Add a condition to the policy builder
  */
 function addCondition() {
     const conditionsBuilder = document.getElementById('conditionsBuilder');
     
-    // Hide empty state if it exists
+    // Hide empty state
     const emptyState = document.getElementById('emptyRulesState');
     if (emptyState) {
         emptyState.style.display = 'none';
@@ -252,70 +577,28 @@ function addCondition() {
 
     const conditionDiv = document.createElement('div');
     conditionDiv.className = 'condition-item';
-
-    // Build attribute options from available attributes
-    let attributeOptions = '<option value="">Select Attribute</option>';
     
-    if (availableAttributes) {
-        // Add user attributes
-        if (availableAttributes.user_attributes) {
-            attributeOptions += '<optgroup label="User Attributes">';
-            availableAttributes.user_attributes.forEach(attr => {
-                attributeOptions += `<option value="${escapeHtml(attr.key)}">${escapeHtml(attr.label)}</option>`;
-            });
-            attributeOptions += '</optgroup>';
-        }
-        
-        // Add resource attributes
-        if (availableAttributes.resource_attributes) {
-            attributeOptions += '<optgroup label="Resource Attributes">';
-            availableAttributes.resource_attributes.forEach(attr => {
-                attributeOptions += `<option value="${escapeHtml(attr.key)}">${escapeHtml(attr.label)}</option>`;
-            });
-            attributeOptions += '</optgroup>';
-        }
-    } else {
-        // Fallback to static options if API data not loaded
-        attributeOptions += `
-            <optgroup label="User Attributes">
-                <option value="user.user_role">User Role</option>
-                <option value="user.department">Department</option>
-                <option value="user.level">Level</option>
-                <option value="user.location">Location</option>
-                <option value="user.bank_id">Bank ID</option>
-            </optgroup>
-            <optgroup label="Resource Attributes">
-                <option value="resource.user_id">Resource Owner ID</option>
-                <option value="resource.bank_id">Resource Bank ID</option>
-                <option value="resource.status">Status</option>
-                <option value="resource.classification">Classification</option>
-            </optgroup>
-        `;
-    }
+    const attributeOptions = buildAttributeOptions();
 
     conditionDiv.innerHTML = `
         <div class="form-group">
             <label>Attribute</label>
-            <select class="condition-attribute">
+            <select class="condition-attribute" onchange="onAttributeChange(this)">
                 ${attributeOptions}
             </select>
         </div>
         <div class="form-group">
             <label>Operator</label>
             <select class="condition-operator">
-                <option value="==">Equals (==)</option>
-                <option value="!=">Not Equals (!=)</option>
-                <option value=">">Greater Than (>)</option>
-                <option value="<">Less Than (<)</option>
-                <option value=">=">Greater or Equal (>=)</option>
-                <option value="<=">Less or Equal (<=)</option>
-                <option value="contains">Contains</option>
-                <option value="in">In List</option>
+                <option value="==">is</option>
+                <option value="!=">is not</option>
             </select>
         </div>
         <div class="form-group">
             <label>Value</label>
-            <input type="text" class="condition-value" placeholder="Enter value">
+            <div class="value-container">
+                <input type="text" class="condition-value" placeholder="Select an attribute first">
+            </div>
         </div>
         <button type="button" class="btn-remove" onclick="removeCondition(this)" title="Remove condition">×</button>
     `;
@@ -329,7 +612,6 @@ function addCondition() {
 function removeCondition(button) {
     button.parentElement.remove();
     
-    // Show empty state if no conditions remain
     const conditionsBuilder = document.getElementById('conditionsBuilder');
     const conditions = conditionsBuilder.querySelectorAll('.condition-item');
     const emptyState = document.getElementById('emptyRulesState');
@@ -349,17 +631,34 @@ function buildPolicyRules() {
     conditions.forEach(condition => {
         const field = condition.querySelector('.condition-attribute').value;
         const operator = condition.querySelector('.condition-operator').value;
-        const value = condition.querySelector('.condition-value').value;
+        const valueInput = condition.querySelector('.condition-value');
+        const value = valueInput ? valueInput.value : '';
 
-        if (field && operator && value) {
-            // Parse value to correct type
+        if (field && operator && value !== '') {
+            // Parse value to correct type based on attribute definition
             let parsedValue = value;
-            if (!isNaN(value) && value !== '') {
-                parsedValue = Number(value);
-            } else if (value.toLowerCase() === 'true') {
-                parsedValue = true;
-            } else if (value.toLowerCase() === 'false') {
-                parsedValue = false;
+            const attr = getAttributeDefinition(field);
+            
+            if (attr) {
+                switch (attr.value_type) {
+                    case 'number':
+                        parsedValue = Number(value);
+                        break;
+                    case 'boolean':
+                        parsedValue = value === 'true';
+                        break;
+                    default:
+                        parsedValue = value;
+                }
+            } else {
+                // Fallback parsing
+                if (!isNaN(value) && value !== '') {
+                    parsedValue = Number(value);
+                } else if (value.toLowerCase() === 'true') {
+                    parsedValue = true;
+                } else if (value.toLowerCase() === 'false') {
+                    parsedValue = false;
+                }
             }
 
             rules.push({
@@ -396,16 +695,39 @@ async function editPolicy(policyId) {
 
         // Clear and populate conditions
         const conditionsBuilder = document.getElementById('conditionsBuilder');
-        conditionsBuilder.innerHTML = '<div class="empty-state" id="emptyRulesState"><p>No conditions added yet. Click "Add Condition" to start.</p></div>';
+        conditionsBuilder.innerHTML = `
+            <div class="empty-state" id="emptyRulesState" style="display: none;">
+                <p>No conditions added yet. Click "Add Condition" to start building your policy.</p>
+            </div>
+        `;
 
         if (policy.rules && policy.rules.rules && Array.isArray(policy.rules.rules) && policy.rules.rules.length > 0) {
-            policy.rules.rules.forEach(rule => {
+            for (const rule of policy.rules.rules) {
+                // Add condition element
                 addCondition();
-                const lastCondition = conditionsBuilder.lastElementChild;
-                lastCondition.querySelector('.condition-attribute').value = rule.field || '';
-                lastCondition.querySelector('.condition-operator').value = rule.operator || '==';
-                lastCondition.querySelector('.condition-value').value = rule.value || '';
-            });
+                const lastCondition = conditionsBuilder.querySelector('.condition-item:last-child');
+                
+                // Set attribute
+                const attrSelect = lastCondition.querySelector('.condition-attribute');
+                attrSelect.value = rule.field || '';
+                
+                // Trigger attribute change to update operators and value input
+                onAttributeChange(attrSelect);
+                
+                // Set operator
+                const opSelect = lastCondition.querySelector('.condition-operator');
+                opSelect.value = rule.operator || '==';
+                
+                // Set value (need slight delay for dynamic inputs to render)
+                setTimeout(() => {
+                    const valueInput = lastCondition.querySelector('.condition-value');
+                    if (valueInput) {
+                        valueInput.value = rule.value !== undefined ? String(rule.value) : '';
+                    }
+                }, 100);
+            }
+        } else {
+            document.getElementById('emptyRulesState').style.display = 'block';
         }
 
         // Show form if hidden
@@ -417,7 +739,6 @@ async function editPolicy(policyId) {
         // Change form to edit mode
         form.dataset.editId = policyId;
         
-        // Change button text and header
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.textContent = 'Update Policy';
         
@@ -444,4 +765,14 @@ async function deletePolicy(policyId) {
         console.error('Error deleting policy:', error);
         showToast(error.message || 'Error deleting policy', 'error');
     }
+}
+
+/**
+ * Refresh metadata and cached values
+ * Call this when roles/departments/locations are updated
+ */
+async function refreshAbacMetadata() {
+    cachedValueOptions = {};
+    await loadAbacMetadata();
+    showToast('Policy builder refreshed', 'success');
 }

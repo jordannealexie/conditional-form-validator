@@ -107,3 +107,98 @@ class ABACCheckResponse(BaseModel):
     has_permission: bool
     matched_policies: List[str] = Field(default_factory=list, description="Names of policies that granted access")
     reason: Optional[str] = Field(None, description="Explanation of the decision")
+
+
+# ============ ABAC Metadata Schemas for Policy Builder UI ============
+
+class OperatorDefinition(BaseModel):
+    """Definition of an operator with user-friendly label"""
+    value: str = Field(..., description="Technical operator value (e.g., '==', '!=')")
+    label: str = Field(..., description="User-friendly label (e.g., 'is', 'is not')")
+    description: Optional[str] = Field(None, description="Help text for the operator")
+
+
+class ValueOption(BaseModel):
+    """A single option for dropdown values"""
+    value: str = Field(..., description="The actual value to store")
+    label: str = Field(..., description="User-friendly display label")
+
+
+class AttributeDefinition(BaseModel):
+    """Complete definition of an attribute for the policy builder"""
+    key: str = Field(..., description="Attribute key (e.g., 'user.department')")
+    label: str = Field(..., description="User-friendly label (e.g., 'Department')")
+    description: Optional[str] = Field(None, description="Help text for the attribute")
+    value_type: str = Field(..., description="Type: 'number', 'string', 'enum', 'boolean'")
+    operators: List[OperatorDefinition] = Field(..., description="Allowed operators for this attribute")
+    value_source: Optional[str] = Field(None, description="API endpoint to fetch values, null for manual input")
+    static_values: Optional[List[ValueOption]] = Field(None, description="Static list of values if not from API")
+    input_placeholder: Optional[str] = Field(None, description="Placeholder text for input field")
+    validation_pattern: Optional[str] = Field(None, description="Regex pattern for validation")
+
+
+class AttributeGroup(BaseModel):
+    """Group of related attributes"""
+    name: str = Field(..., description="Group name (e.g., 'User Attributes')")
+    description: Optional[str] = Field(None, description="Group description")
+    attributes: List[AttributeDefinition] = Field(..., description="Attributes in this group")
+
+
+class ABACMetadataResponse(BaseModel):
+    """Complete ABAC metadata for the policy builder UI"""
+    attribute_groups: List[AttributeGroup] = Field(..., description="Grouped attributes for the UI")
+    global_operators: Optional[List[OperatorDefinition]] = Field(None, description="All available operators")
+    
+    class Config:
+        from_attributes = True
+
+
+# Lookup table schemas
+class DepartmentBase(BaseModel):
+    """Base schema for Department"""
+    name: str = Field(..., min_length=1, max_length=100, description="Department name")
+    code: Optional[str] = Field(None, max_length=20, description="Short code")
+    description: Optional[str] = Field(None, max_length=255)
+    is_active: bool = Field(True, description="Whether this option is available")
+    display_order: int = Field(0, description="Sort order in dropdowns")
+
+
+class DepartmentCreate(DepartmentBase):
+    """Schema for creating a department"""
+    pass
+
+
+class DepartmentResponse(DepartmentBase):
+    """Schema for department response"""
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+
+class LocationBase(BaseModel):
+    """Base schema for Location"""
+    name: str = Field(..., min_length=1, max_length=100, description="Location name")
+    code: Optional[str] = Field(None, max_length=20, description="Short code")
+    description: Optional[str] = Field(None, max_length=255)
+    region: Optional[str] = Field(None, max_length=100, description="Region for grouping")
+    is_active: bool = Field(True, description="Whether this option is available")
+    display_order: int = Field(0, description="Sort order in dropdowns")
+
+
+class LocationCreate(LocationBase):
+    """Schema for creating a location"""
+    pass
+
+
+class LocationResponse(LocationBase):
+    """Schema for location response"""
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+

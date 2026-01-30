@@ -1,15 +1,40 @@
 /**
  * Profile Module
  * Handles profile updates, password changes, and activity logs
+ * Uses shared DropdownLoader for all dropdown values - NO HARDCODING
  */
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof requireAuth === 'function') requireAuth();
     loadUserInfo();
-    loadProfileData();
+    initProfilePage();
     loadActivityLogs();
     setupMobileMenu();
 });
+
+/**
+ * Initialize profile page - load dropdowns then user data
+ */
+async function initProfilePage() {
+    try {
+        console.log('[profile.js] initProfilePage started, DropdownLoader:', typeof DropdownLoader);
+        // Load dropdown data using shared DropdownLoader
+        await DropdownLoader.loadAll();
+        console.log('[profile.js] DropdownLoader.loadAll() completed');
+        
+        // Populate dropdowns
+        console.log('[profile.js] Populating department dropdown...');
+        DropdownLoader.populateSelect('profile_department', 'departments', '', { emptyLabel: 'Select Department' });
+        console.log('[profile.js] Populating location dropdown...');
+        DropdownLoader.populateSelect('profile_location', 'locations', '', { emptyLabel: 'Select Location' });
+        
+        // Then load user profile data
+        await loadProfileData();
+        console.log('[profile.js] Profile data loaded');
+    } catch (error) {
+        console.error('Error initializing profile page:', error);
+    }
+}
 
 /**
  * Load User Info for sidebar
@@ -38,13 +63,13 @@ async function loadProfileData() {
             document.getElementById('profile_first_name').value = user.first_name || '';
             document.getElementById('profile_last_name').value = user.last_name || '';
 
-            // Set department dropdown
+            // Set department dropdown value
             const deptSelect = document.getElementById('profile_department');
             if (user.department && deptSelect) {
                 deptSelect.value = user.department;
             }
 
-            // Set location dropdown
+            // Set location dropdown value
             const locSelect = document.getElementById('profile_location');
             if (user.location && locSelect) {
                 locSelect.value = user.location;
