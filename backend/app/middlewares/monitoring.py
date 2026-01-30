@@ -156,7 +156,7 @@ class CacheHeaderMiddleware(BaseHTTPMiddleware):
     # Endpoints that can be cached with their TTL in seconds
     CACHEABLE_ENDPOINTS = {
         "/api/v1/enums": 86400,  # 24 hours for enum data
-        # "/api/v1/banks": 3600,    # REMOVED: Banks should not be cached due to frequent updates
+        # "/api/v1/banks": in,    # REMOVED: Banks should not be cached due to frequent updates
         "/api/v1/field-types": 3600,  # 1 hour for field types
     }
     
