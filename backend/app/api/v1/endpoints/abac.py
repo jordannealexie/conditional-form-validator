@@ -6,7 +6,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.permissions import require_superuser
+from app.dependencies.permissions import require_permission, require_any_permission
 from app.models.user import User
 from app.schemas.abac import (
     UserAttributeCreate, UserAttributeResponse,
@@ -26,9 +26,9 @@ router = APIRouter()
 async def create_abac_policy(
     policy_data: ABACPolicyCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("policies:create"))
 ):
-    """Create a new ABAC policy (admin only)"""
+    """Create a new ABAC policy - requires policies:create permission"""
     service = ABACService(db)
     policy = await service.create_policy(
         name=policy_data.name,
@@ -43,9 +43,9 @@ async def create_abac_policy(
 async def list_abac_policies(
     active_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("policies:read"))
 ):
-    """List all ABAC policies (admin only)"""
+    """List all ABAC policies - requires policies:read permission"""
     service = ABACService(db)
     policies = await service.get_policies(active_only=active_only)
     data = [ABACPolicyResponse.model_validate(p) for p in policies]
@@ -56,9 +56,9 @@ async def list_abac_policies(
 async def get_abac_policy(
     policy_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("policies:read"))
 ):
-    """Get a specific ABAC policy (admin only)"""
+    """Get a specific ABAC policy - requires policies:read permission"""
     service = ABACService(db)
     policy = await service.get_policy(policy_id)
     if not policy:
@@ -71,9 +71,9 @@ async def update_abac_policy(
     policy_id: int,
     policy_data: ABACPolicyCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("policies:update"))
 ):
-    """Update an ABAC policy (admin only)"""
+    """Update an ABAC policy - requires policies:update permission"""
     service = ABACService(db)
     policy = await service.update_policy(
         policy_id=policy_id,
@@ -91,9 +91,9 @@ async def update_abac_policy(
 async def delete_abac_policy(
     policy_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("policies:delete"))
 ):
-    """Delete an ABAC policy (admin only)"""
+    """Delete an ABAC policy - requires policies:delete permission"""
     service = ABACService(db)
     success = await service.delete_policy(policy_id)
     if not success:
@@ -106,9 +106,9 @@ async def delete_abac_policy(
 async def set_user_attribute(
     attribute_data: UserAttributeCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("policies:update"))
 ):
-    """Set a user attribute (admin only)"""
+    """Set a user attribute - requires policies:update permission"""
     service = ABACService(db)
     attribute = await service.set_user_attribute(
         user_id=attribute_data.user_id,
@@ -140,9 +140,9 @@ async def get_user_attributes(
 async def set_resource_attribute(
     attribute_data: ResourceAttributeCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("policies:update"))
 ):
-    """Set a resource attribute (admin only)"""
+    """Set a resource attribute - requires policies:update permission"""
     service = ABACService(db)
     attribute = await service.set_resource_attribute(
         resource_type=attribute_data.resource_type,
@@ -292,9 +292,9 @@ async def get_abac_stats(
 @router.get("/metadata/attributes")
 async def get_available_attributes(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_any_permission("policies:read", "policies:create", "policies:update"))
 ):
-    """Get available attribute fields for ABAC policy creation"""
+    """Get available attribute fields for ABAC policy creation - requires any policies permission"""
     from sqlalchemy import distinct
     from app.models.abac import UserAttribute, ResourceAttribute
     from app.models.forms import SubmissionStatus

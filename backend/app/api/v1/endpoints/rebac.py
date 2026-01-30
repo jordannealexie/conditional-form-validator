@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, distinct
 from app.db.session import get_db
 from app.dependencies.auth import get_current_user
-from app.dependencies.permissions import require_superuser
+from app.dependencies.permissions import require_permission, require_any_permission
 from app.models.user import User
 from app.schemas.rbac import (
     ResourceRelationshipCreate,
@@ -25,9 +25,9 @@ router = APIRouter()
 async def create_relationship(
     relationship_data: ResourceRelationshipCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("relationships:create"))
 ):
-    """Create a new resource relationship (admin only)"""
+    """Create a new resource relationship - requires relationships:create permission"""
     service = REBACService(db)
     relationship = await service.create_relationship(
         subject_type=relationship_data.subject_type,
@@ -48,9 +48,9 @@ async def list_relationships(
     resource_type: Optional[str] = None,
     resource_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("relationships:read"))
 ):
-    """List all relationships with optional filters (admin only)"""
+    """List all relationships with optional filters - requires relationships:read permission"""
     service = REBACService(db)
     relationships = await service.get_relationships(
         subject_type=subject_type,
@@ -66,9 +66,9 @@ async def list_relationships(
 async def delete_relationship(
     relationship_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("relationships:delete"))
 ):
-    """Delete a relationship (admin only)"""
+    """Delete a relationship - requires relationships:delete permission"""
     service = REBACService(db)
     success = await service.delete_relationship(relationship_id)
     if not success:
@@ -123,9 +123,9 @@ async def update_relationship(
     relationship_id: int,
     relationship_data: ResourceRelationshipCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_permission("relationships:update"))
 ):
-    """Update a relationship (admin only)"""
+    """Update a relationship - requires relationships:update permission"""
     service = REBACService(db)
     
     # Check existence
@@ -152,9 +152,9 @@ async def update_relationship(
 @router.get("/metadata/options")
 async def get_rebac_options(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_superuser)
+    current_user: User = Depends(require_any_permission("relationships:read", "relationships:create", "relationships:update"))
 ):
-    """Get available options for ReBAC relationship creation"""
+    """Get available options for ReBAC relationship creation - requires any relationships permission"""
     from app.models.user import ResourceRelationship
     from app.models.forms import FormTemplate, FormSubmission, Bank
     from app.models.user import User as UserModel, Role

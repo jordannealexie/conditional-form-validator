@@ -153,7 +153,7 @@ async def login(
         print(f"DEBUG: User {username} has roles in Casbin: {roles}")
         for role in roles:
             # Get permissions for each role
-            role_perms = casbin_enforcer.get_permissions_for_user_in_domain(role, "")
+            role_perms = casbin_enforcer.get_permissions_for_user(role)
             print(f"DEBUG: Role {role} has permissions: {role_perms}")
             for p in role_perms:
                 if len(p) >= 3:

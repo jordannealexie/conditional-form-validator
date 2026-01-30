@@ -39,7 +39,7 @@ class CasbinEnforcer:
             # For now, use default adapter - policies will be separated by ptype
             rbac_adapter = Adapter(engine)
             self.rbac_enforcer = casbin.Enforcer(
-                'backend/app/casbin/rbac_model.conf',
+                'app/casbin/rbac_model.conf',
                 rbac_adapter
             )
             # Set auto-save
@@ -49,7 +49,7 @@ class CasbinEnforcer:
             # ABAC Enforcer
             abac_adapter = Adapter(engine)
             self.abac_enforcer = casbin.Enforcer(
-                'backend/app/casbin/abac_model.conf',
+                'app/casbin/abac_model.conf',
                 abac_adapter
             )
             self.abac_enforcer.enable_auto_save(True)
@@ -117,7 +117,8 @@ class CasbinEnforcer:
     def check_rbac_permission(self, user: str, resource: str, action: str) -> bool:
         """Check RBAC permission (sync operation)"""
         if not self.rbac_enforcer:
-            raise Exception("RBAC enforcer not initialized")
+            print(f"⚠️ RBAC enforcer not initialized - denying permission check for {user}")
+            return False
         try:
             # Get user's roles first
             roles = self.rbac_enforcer.get_roles_for_user(user)
@@ -327,6 +328,12 @@ class CasbinEnforcer:
             raise Exception("RBAC enforcer not initialized")
         return self.rbac_enforcer.get_permissions_for_user(role)
     
+    def get_permissions_for_user(self, user: str) -> list:
+        """Get all permissions for a user (or role) - alias for compatibility"""
+        if not self.rbac_enforcer:
+            raise Exception("RBAC enforcer not initialized")
+        return self.rbac_enforcer.get_permissions_for_user(user)
+    
     def sync_role_permissions(self, role: str, permissions: list):
         """
         Synchronize role permissions from a list of strings (format: "resource:action")
@@ -401,6 +408,43 @@ class CasbinEnforcer:
                 self.rebac_enforcer.save_policy()
         except Exception as e:
             print(f"Error saving policies: {e}")
+    
+    async def add_policy_async(self, user: str, resource: str, action: str) -> bool:
+        """Add a policy to RBAC enforcer (async wrapper)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._add_policy_sync, user, resource, action)
+    
+    def _add_policy_sync(self, user: str, resource: str, action: str) -> bool:
+        """Add a policy to RBAC enforcer (sync operation)"""
+        try:
+            if not self.rbac_enforcer:
+                print("❌ RBAC enforcer not initialized")
+                return False
+            result = self.rbac_enforcer.add_policy(user, resource, action)
+            if result:
+                self.rbac_enforcer.save_policy()
+                print(f"✅ Added policy: ({user}, {resource}, {action})")
+            else:
+                print(f"⚠️ Policy already exists: ({user}, {resource}, {action})")
+            return result
+        except Exception as e:
+            print(f"❌ Error adding policy: {e}")
+            return False
+    
+    async def get_policy_async(self) -> list:
+        """Get all policies from RBAC enforcer (async wrapper)"""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._get_policy_sync)
+    
+    def _get_policy_sync(self) -> list:
+        """Get all policies from RBAC enforcer (sync operation)"""
+        try:
+            if not self.rbac_enforcer:
+                return []
+            return self.rbac_enforcer.get_policy()
+        except Exception as e:
+            print(f"❌ Error getting policies: {e}")
+            return []
 
 # Global enforcer instance
 casbin_enforcer = CasbinEnforcer()
