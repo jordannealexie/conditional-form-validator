@@ -298,13 +298,22 @@ class FormRenderer {
                 const isVisible = this.evaluateCondition(field.show_if);
                 wrapper.style.display = isVisible ? 'block' : 'none';
                 if (!isVisible) {
-                    // Clear value when hidden
+                    // Clear value when hidden (without triggering change events to prevent infinite loop)
                     const input = document.getElementById(field.id);
                     if (input) {
                         if (field.type === 'checkbox' || field.type === 'boolean') {
                             input.checked = false;
                         } else if (field.type === 'file') {
-                            this.removeFile(field.id);
+                            // Clear file field without calling removeFile() to avoid infinite recursion
+                            delete this.uploadedFiles[field.id];
+                            const tokenInput = document.getElementById(`${field.id}_token`);
+                            if (tokenInput) tokenInput.value = '';
+                            const statusEl = document.getElementById(`${field.id}_status`);
+                            if (statusEl) {
+                                statusEl.innerHTML = '';
+                                statusEl.className = 'upload-status';
+                            }
+                            input.value = '';
                         } else {
                             input.value = '';
                         }
