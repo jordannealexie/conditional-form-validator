@@ -1126,5 +1126,10 @@ async def seed_rebac_relationships(db):
 
 
 if __name__ == "__main__":
-    asyncio.run(seed_data())
+    # Deprecated entrypoint: keep for backwards compatibility but
+    # delegate to the unified seed_all_templates script so there is
+    # effectively only one seed implementation.
+    from seed_all_templates import seed_all_templates
+
+    asyncio.run(seed_all_templates())
 

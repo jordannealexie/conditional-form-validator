@@ -375,4 +375,8 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Deprecated entrypoint: use the unified seed_all_templates
+    # script instead of this ABAC/ReBAC-specific seeder.
+    from seed_all_templates import seed_all_templates
+
+    asyncio.run(seed_all_templates())

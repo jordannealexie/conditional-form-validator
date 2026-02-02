@@ -185,15 +185,24 @@ class FormTemplateRepository:
     
     @staticmethod
     async def create(db: AsyncSession, **kwargs) -> FormTemplate:
-        """Create a new form template and invalidate cache"""
+        """Create a new form template without committing.
+
+        Commit is handled at the endpoint level so that the template
+        creation and its corresponding audit log can be part of the
+        same transaction.
+        """
         template = FormTemplate(**kwargs)
         db.add(template)
-        await db.commit()
-        await db.refresh(template, attribute_names=["bank"])  # Eager load bank
-        
-        # Cache the new template
+
+        # Flush so the template gets an ID and related FKs are valid
+        await db.flush()
+
+        # Eager load bank while the session/transaction is active
+        await db.refresh(template, attribute_names=["bank"])
+
+        # Cache the new template (best-effort; cache layer is async-safe)
         FormTemplateRepository._cache_template(template)
-        
+
         return template
     
     @staticmethod

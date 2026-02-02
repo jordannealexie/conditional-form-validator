@@ -157,10 +157,12 @@ async def create_template(
                 },
                 created_by=current_user.id,
             )
-            # Commit audit log entry
-            await db.commit()
         except Exception as audit_err:
+            # Audit failures must not block template creation
             print(f"Error logging template creation in audit trail: {audit_err}")
+
+        # Commit both template and (if successful) its audit log in one transaction
+        await db.commit()
 
         return create_response(data=FormTemplateResponse.model_validate(template))
     except HTTPException:

@@ -1,7 +1,8 @@
 #!/bin/bash
-# Wrapper script to run ABAC/ReBAC seeding with correct database URL
+# Deprecated wrapper: use the unified seed_all_templates.py instead.
 
 cd "$(dirname "$0")/.."
 
-DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5434/fastapi_db" \
-python scripts/seed_abac_rebac_new.py
+echo "This script is deprecated. Running unified template seeder instead..."
+
+python scripts/seed_all_templates.py

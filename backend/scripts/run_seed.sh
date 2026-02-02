@@ -26,16 +26,15 @@ if [ ! -f ".env" ]; then
     echo "   Please edit .env with your database settings!"
 fi
 
-# Run the initialization script
-echo "🚀 Initializing database..."
+# Run the unified, non-destructive seed script
+echo "🚀 Running unified template seeder..."
 echo ""
 
-python scripts/init_db.py
+python scripts/seed_all_templates.py
 
 echo ""
-echo "✅ Done!"
+echo "✅ Seeding done!"
 echo ""
 echo "💡 Next steps:"
 echo "   1. Start the API: uvicorn app.main:app --reload"
-echo "   2. Test login: curl -X POST http://localhost:8000/api/v1/auth/login -d 'username=admin&password=Admin123!'"
-echo "   3. Access docs: http://localhost:8000/api/v1/docs"
+echo "   2. Access docs: http://localhost:8000/api/v1/docs"

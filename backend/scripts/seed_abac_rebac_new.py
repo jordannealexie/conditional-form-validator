@@ -264,12 +264,8 @@ async def seed_rebac_relationships(db: AsyncSession):
 
 
 if __name__ == "__main__":
-    print("\n" + "="*60)
-    print("🌱 Seeding ABAC & ReBAC Data (Connected to Real Users)")
-    print("="*60 + "\n")
-    
-    asyncio.run(seed_all())
-    
-    print("\n" + "="*60)
-    print("✅ Seeding Complete!")
-    print("="*60 + "\n")
+    # Deprecated entrypoint: delegate to unified template seeding so
+    # there is only one seed implementation teammates need to use.
+    from seed_all_templates import seed_all_templates
+
+    asyncio.run(seed_all_templates())
