@@ -143,6 +143,8 @@ class BaseRepository(Generic[ModelType]):
         Returns:
             Updated record if found, None otherwise
         """
+        from datetime import datetime, timezone
+        
         # Check if record exists
         db_obj = await self.get(id)
         if db_obj is None:
@@ -154,6 +156,10 @@ class BaseRepository(Generic[ModelType]):
                 # handle enum values by converting to their string representation
                 processed_value = value.value if hasattr(value, 'value') else value
                 setattr(db_obj, field, processed_value)
+        
+        # Explicitly set updated_at if the model has this field
+        if hasattr(db_obj, 'updated_at'):
+            setattr(db_obj, 'updated_at', datetime.now(timezone.utc))
                 
         if commit_txn and commit_txn == True:
             await self.db.commit()

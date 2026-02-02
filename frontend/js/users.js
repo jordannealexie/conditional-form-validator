@@ -201,10 +201,27 @@ async function handleAddUser(ev) {
         bank_id: null
     };
     try {
-        await apiCreateUser(payload);
+        const newUser = await apiCreateUser(payload);
         showToast('User created successfully', 'success');
         closeModal();
-        await loadUsers(); // Reload users to show new user
+        
+        // Add new user to the table immediately
+        if (newUser) {
+            const tbody = document.getElementById('usersTableBody');
+            if (tbody) {
+                // Remove "no users" message if present
+                const noDataRow = tbody.querySelector('td[colspan]');
+                if (noDataRow) {
+                    noDataRow.parentElement.remove();
+                }
+                // Append new user row
+                tbody.appendChild(createUserRow(newUser));
+                // Re-apply permissions after adding row
+                if (typeof enforceUIPermissions === 'function') {
+                    enforceUIPermissions();
+                }
+            }
+        }
     } catch (e) {
         showToast(e.message || 'Error creating user', 'error');
     }
@@ -272,10 +289,22 @@ async function handleEditUser(ev, userId) {
         active: fd.get('active') === 'true'
     };
     try {
-        await apiUpdateUser(userId, payload);
+        const updatedUser = await apiUpdateUser(userId, payload);
         showToast('User updated successfully', 'success');
         closeModal();
-        await loadUsers(); // Reload users to show changes
+        
+        // Update the specific row immediately with response data
+        if (updatedUser) {
+            const existingRow = document.getElementById(`user-row-${userId}`);
+            if (existingRow) {
+                const newRow = createUserRow(updatedUser);
+                existingRow.replaceWith(newRow);
+                // Re-apply permissions after row update
+                if (typeof enforceUIPermissions === 'function') {
+                    enforceUIPermissions();
+                }
+            }
+        }
     } catch (e) {
         showToast(e.message || 'Error updating user', 'error');
     }

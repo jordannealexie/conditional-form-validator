@@ -36,7 +36,8 @@ class UserService:
                 "level": inp.level or 1,
                 "location": inp.location,
             }
-            user = await self.user_repo.create(obj_in=data)
+            # Don't commit yet - we need to add roles first
+            user = await self.user_repo.create(obj_in=data, commit_txn=False)
             
             # Sync roles
             if user.user_role:
@@ -44,13 +45,17 @@ class UserService:
                 result = await self.db.execute(stmt)
                 role_obj = result.scalar_one_or_none()
                 if role_obj:
-                    await self.db.execute(
-                        user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
-                    )
-                    await self.db.commit()
+                    # Use insert statement properly
+                    insert_stmt = user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
+                    await self.db.execute(insert_stmt)
                     
                     # Sync to Casbin
                     casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
+            
+            # Commit everything together
+            await self.db.commit()
+            # Refresh to get updated data
+            await self.db.refresh(user)
 
             return user
         except IntegrityError as e:
@@ -112,7 +117,8 @@ class UserService:
         if "role" in db_obj:
             db_obj["user_role"] = db_obj.pop("role", None)
             
-        user = await self.user_repo.create(obj_in=db_obj)
+        # Don't commit yet - we need to add roles first
+        user = await self.user_repo.create(obj_in=db_obj, commit_txn=False)
         
         # Sync roles
         if user.user_role:
@@ -120,13 +126,17 @@ class UserService:
              result = await self.db.execute(stmt)
              role_obj = result.scalar_one_or_none()
              if role_obj:
-                 await self.db.execute(
-                     user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
-                 )
-                 await self.db.commit()
+                 # Use insert statement properly
+                 insert_stmt = user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
+                 await self.db.execute(insert_stmt)
                  
                  # Sync to Casbin
                  casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
+        
+        # Commit everything together
+        await self.db.commit()
+        # Refresh to get updated data
+        await self.db.refresh(user)
                  
         return user
 
@@ -155,10 +165,14 @@ class UserService:
                 filtered_update_data["password_hash"] = get_password_hash(filtered_update_data["password"])
                 del filtered_update_data["password"]  # remove plaintext password
             
-            updated_user = await self.user_repo.update(id=user_id, obj_in=filtered_update_data)
+            # Check if we need to sync roles
+            role_changed = "user_role" in filtered_update_data
+            
+            # Don't commit yet if role is being changed
+            updated_user = await self.user_repo.update(id=user_id, obj_in=filtered_update_data, commit_txn=not role_changed)
             
             # Sync roles if user_role was changed
-            if "user_role" in filtered_update_data:
+            if role_changed:
                 role_name = filtered_update_data["user_role"]
                 stmt = select(Role).where(Role.name == role_name)
                 result = await self.db.execute(stmt)
@@ -166,17 +180,17 @@ class UserService:
                 
                 if role_obj:
                     # Clear existing roles and add new one in association table
-                    await self.db.execute(
-                        user_roles.delete().where(user_roles.c.user_id == user_id)
-                    )
-                    await self.db.execute(
-                        user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
-                    )
-                    await self.db.commit()
-                    await self.db.refresh(updated_user)
+                    delete_stmt = user_roles.delete().where(user_roles.c.user_id == user_id)
+                    await self.db.execute(delete_stmt)
+                    insert_stmt = user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
+                    await self.db.execute(insert_stmt)
                     
                     # Sync to Casbin
                     casbin_enforcer.sync_user_roles(updated_user.username, [role_obj.name])
+                
+                # Commit everything together
+                await self.db.commit()
+                await self.db.refresh(updated_user)
 
             return updated_user
         except IntegrityError as e:

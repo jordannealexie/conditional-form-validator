@@ -42,7 +42,7 @@ class User(Base):
     
     # Audit fields
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), server_onupdate=func.now())
     updated_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, comment="User ID who last updated this record")
     
     # Relationships
