@@ -101,14 +101,25 @@ def authorize(resource: Optional[str] = None, action: Optional[str] = None, allo
         # 2. Casbin Unified Enforcement (if resource and action are provided)
         if resource and action:
             from app.core.casbin_enforcer import casbin_enforcer
-            has_access = await casbin_enforcer.enforce_unified_async(current_user, resource, action)
+            # Build a lightweight user object to avoid lazy-loading attributes inside threadpool
+            class SimpleUser:
+                pass
+
+            su = SimpleUser()
+            su.username = getattr(current_user, 'username', None)
+            su.is_superuser = bool(getattr(current_user, 'is_superuser', False))
+            su.department = getattr(current_user, 'department', None)
+            su.level = int(getattr(current_user, 'level', 1) or 1)
+            su.location = getattr(current_user, 'location', None)
+
+            has_access = await casbin_enforcer.enforce_unified_async(su, resource, action)
             if has_access:
                 return current_user
-            
+
             # Check alternate actions if primary action failed
             if alternate_actions:
                 for alt_action in alternate_actions:
-                    has_access = await casbin_enforcer.enforce_unified_async(current_user, resource, alt_action)
+                    has_access = await casbin_enforcer.enforce_unified_async(su, resource, alt_action)
                     if has_access:
                         return current_user
 

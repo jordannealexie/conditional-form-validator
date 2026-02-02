@@ -1,5 +1,6 @@
 from typing import List, Optional, Union
 
+import asyncio
 from app.core.security import get_password_hash
 from app.core.casbin_enforcer import casbin_enforcer
 from app.models.user import User
@@ -36,7 +37,7 @@ class UserService:
                 "level": inp.level or 1,
                 "location": inp.location,
             }
-            # Don't commit yet - we need to add roles first
+            # Don't commit - let endpoint handle commit after audit logging
             user = await self.user_repo.create(obj_in=data, commit_txn=False)
             
             # Sync roles
@@ -49,12 +50,12 @@ class UserService:
                     insert_stmt = user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
                     await self.db.execute(insert_stmt)
                     
-                    # Sync to Casbin
-                    casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
+                    # Sync to Casbin (run in threadpool since Casbin is synchronous)
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, casbin_enforcer.sync_user_roles, user.username, [role_obj.name])
             
-            # Commit everything together
-            await self.db.commit()
-            # Refresh to get updated data
+            # Flush to get ID and updated data but don't commit yet
+            await self.db.flush()
             await self.db.refresh(user)
 
             return user
@@ -74,11 +75,13 @@ class UserService:
     async def get(self, user_id: int) -> Optional[User]:
         """Get a user by ID"""
         result = await self.user_repo.get(user_id)
-        # attach casbin role if available
+        # attach casbin role if available (run sync casbin calls in executor)
         try:
-            roles = casbin_enforcer.get_roles_for_user(result.username) if result else []
-            if roles:
-                result._casbin_role = roles[0]
+            if result:
+                loop = asyncio.get_event_loop()
+                roles = await loop.run_in_executor(None, casbin_enforcer.get_roles_for_user, result.username)
+                if roles:
+                    result._casbin_role = roles[0]
         except Exception:
             # enforcer may not be initialized yet; leave DB role/property as-is
             pass
@@ -88,9 +91,11 @@ class UserService:
         """Get a user by email"""
         result = await self.user_repo.get_by_email(email)
         try:
-            roles = casbin_enforcer.get_roles_for_user(result.username) if result else []
-            if roles:
-                result._casbin_role = roles[0]
+            if result:
+                loop = asyncio.get_event_loop()
+                roles = await loop.run_in_executor(None, casbin_enforcer.get_roles_for_user, result.username)
+                if roles:
+                    result._casbin_role = roles[0]
         except Exception:
             pass
         return result
@@ -98,10 +103,11 @@ class UserService:
     async def get_all_users(self) -> List[User]:
         """Get all users"""
         users, _ = await self.user_repo.get_multi()
-        # attach casbin roles where present
+        # attach casbin roles where present (run sync casbin calls in executor)
         try:
+            loop = asyncio.get_event_loop()
             for u in users:
-                roles = casbin_enforcer.get_roles_for_user(u.username)
+                roles = await loop.run_in_executor(None, casbin_enforcer.get_roles_for_user, u.username)
                 if roles:
                     u._casbin_role = roles[0]
         except Exception:
@@ -117,7 +123,7 @@ class UserService:
         if "role" in db_obj:
             db_obj["user_role"] = db_obj.pop("role", None)
             
-        # Don't commit yet - we need to add roles first
+        # Don't commit - let endpoint handle commit after audit logging
         user = await self.user_repo.create(obj_in=db_obj, commit_txn=False)
         
         # Sync roles
@@ -130,12 +136,12 @@ class UserService:
                  insert_stmt = user_roles.insert().values(user_id=user.id, role_id=role_obj.id)
                  await self.db.execute(insert_stmt)
                  
-                 # Sync to Casbin
-                 casbin_enforcer.sync_user_roles(user.username, [role_obj.name])
+                 # Sync to Casbin (run in threadpool since Casbin is synchronous)
+                 loop = asyncio.get_event_loop()
+                 await loop.run_in_executor(None, casbin_enforcer.sync_user_roles, user.username, [role_obj.name])
         
-        # Commit everything together
-        await self.db.commit()
-        # Refresh to get updated data
+        # Flush to get ID and updated data but don't commit yet
+        await self.db.flush()
         await self.db.refresh(user)
                  
         return user
@@ -168,8 +174,8 @@ class UserService:
             # Check if we need to sync roles
             role_changed = "user_role" in filtered_update_data
             
-            # Don't commit yet if role is being changed
-            updated_user = await self.user_repo.update(id=user_id, obj_in=filtered_update_data, commit_txn=not role_changed)
+            # Don't commit - let the endpoint handle commit after audit logging
+            updated_user = await self.user_repo.update(id=user_id, obj_in=filtered_update_data, commit_txn=False)
             
             # Sync roles if user_role was changed
             if role_changed:
@@ -185,11 +191,12 @@ class UserService:
                     insert_stmt = user_roles.insert().values(user_id=user_id, role_id=role_obj.id)
                     await self.db.execute(insert_stmt)
                     
-                    # Sync to Casbin
-                    casbin_enforcer.sync_user_roles(updated_user.username, [role_obj.name])
+                    # Sync to Casbin (run in threadpool since Casbin is synchronous)
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, casbin_enforcer.sync_user_roles, updated_user.username, [role_obj.name])
                 
-                # Commit everything together
-                await self.db.commit()
+                # Flush to get updated values but don't commit yet
+                await self.db.flush()
                 await self.db.refresh(updated_user)
 
             return updated_user
@@ -218,14 +225,26 @@ class UserService:
         try:
             username = user.username
             
-            # 1. Remove policies from Casbin
+            # 1. Remove policies from Casbin (run in executor since Casbin is synchronous)
             if username:
-                casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy(0, username)
-                casbin_enforcer.rbac_enforcer.save_policy()
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy, 0, username)
+                await loop.run_in_executor(None, casbin_enforcer.rbac_enforcer.save_policy)
 
-            # 2. Nullify User ID in Audit Logs (Audit trails must remain, but user link broken)
+            # 2. Nullify user references in audit logs so we can safely
+            #    delete the user record while keeping the audit trail.
+            #    We clear any FK columns that may point at this user.
             await self.db.execute(
                 update(AuditLog).where(AuditLog.user_id == user_id).values(user_id=None)
+            )
+            await self.db.execute(
+                update(AuditLog).where(AuditLog.created_by == user_id).values(created_by=None)
+            )
+            await self.db.execute(
+                update(AuditLog).where(AuditLog.updated_by == user_id).values(updated_by=None)
+            )
+            await self.db.execute(
+                update(AuditLog).where(AuditLog.deleted_by == user_id).values(deleted_by=None)
             )
 
             # 3. Remove User Roles (Association table cleanup)
@@ -236,8 +255,8 @@ class UserService:
             # 4. Attempt to delete generic relations if any (e.g., refresh tokens are cascade delete)
             # The repository delete call will cascade usually, but explicit cleanups help avoid 500s 
             
-            # 5. Delete User
-            await self.user_repo.delete(id=user_id)
+            # 5. Delete User - don't commit, let endpoint handle it after audit logging
+            await self.user_repo.delete(id=user_id, commit_txn=False)
             
             return {"success": True}
             
@@ -271,13 +290,14 @@ class UserService:
         
         # 2. Remove permissions/roles from Casbin
         try:
-            casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy(0, user.username)
-            casbin_enforcer.rbac_enforcer.save_policy()
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, casbin_enforcer.rbac_enforcer.remove_filtered_grouping_policy, 0, user.username)
+            await loop.run_in_executor(None, casbin_enforcer.rbac_enforcer.save_policy)
         except Exception as e:
             print(f"Error cleaning up Casbin for user {user.username}: {e}")
             
-        # 3. Commit changes
-        await self.db.commit()
+        # 3. Flush changes but don't commit - let endpoint handle commit after audit logging
+        await self.db.flush()
         await self.db.refresh(user)
         
         return user

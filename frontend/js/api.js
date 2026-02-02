@@ -301,6 +301,33 @@ async function apiDeleteUser(userId) {
 }
 
 /**
+ * Get audit trail for a user
+ * Backend endpoint: GET /audit-trail/users/{user_id}
+ * @param {number} userId 
+ * @param {number} skip - Number of records to skip (default: 0)
+ * @param {number} limit - Maximum number of records to return (default: 100)
+ * @returns {Promise<{total: number, logs: Array}>}
+ */
+async function apiGetUserAuditTrail(userId, skip = 0, limit = 100) {
+    return await apiRequest(`/audit-trail/users/${userId}?skip=${skip}&limit=${limit}`, {
+        method: 'GET'
+    });
+}
+
+/**
+ * Get all audit logs
+ * Backend endpoint: GET /audit-trail/
+ * @param {number} skip - Number of records to skip (default: 0)
+ * @param {number} limit - Maximum number of records to return (default: 100)
+ * @returns {Promise<Array>}
+ */
+async function apiGetAllAuditLogs(skip = 0, limit = 100) {
+    return await apiRequest(`/audit-trail/?skip=${skip}&limit=${limit}`, {
+        method: 'GET'
+    });
+}
+
+/**
  * Get all roles with permissions
  * Backend endpoint: GET /roles
  * @returns {Promise<Array>}

@@ -17,5 +17,11 @@ class AuditLog(Base):
     user_agent = Column(String, nullable=True)
     payload = Column(JSON, nullable=True)
     details = Column(JSON, nullable=True) # Spec says JSONB
+    
+    # Change tracking fields
+    changes = Column(JSON, nullable=True, comment="Before and after values in JSON format")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="User ID who created this record")
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="User ID who updated this record")
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="User ID who deleted this record")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -3,8 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from app.dependencies.services import get_user_service
 from app.dependencies.auth import get_current_active_user, authorize, get_current_superuser
+from app.dependencies.services import get_user_service
+from app.repositories.user import UserRepository
+from app.repositories.audit import AuditRepository
 from app.core.casbin_enforcer import casbin_enforcer
 from app.models.user import User
 from app.dtos.custom_response_dto import CustomResponse
@@ -135,12 +137,16 @@ async def get_user_activity(
 )
 async def create_user(
     user_in: UserCreate,
-    user_service: UserService = Depends(get_user_service),
     current_user: User = Depends(authorize(resource="users", action="create")),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    request: Request = None
 ):
     """Create a new user. Admin only."""
     try:
+        # Use the same DB session for service and audit repository
+        user_service = UserService(db, UserRepository(db))
+        audit = AuditService(AuditRepository(db))
+
         # Validate input
         if not user_in.username or not user_in.username.strip():
             raise HTTPException(
@@ -172,11 +178,42 @@ async def create_user(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already taken"
             )
-        
+
         # Create user
         user = await user_service.create_admin_user(user_in)
+
+        # Capture user data immediately after creation
+        user_data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "user_role": user.user_role,
+            "department": user.department,
+            "location": user.location,
+            "level": user.level,
+            "active": user.active,
+            "role": user.user_role,
+            "is_active": user.active,
+            "roles": [user.user_role] if user.user_role else []
+        }
+
+        # Log user creation in audit trail (best-effort; don't block on failures)
+        try:
+            await audit.log_user_created(
+                user_id=user_data["id"],
+                username=user_data["username"],
+                created_by_id=current_user.id,
+                user_data=user_data,
+                request=request
+            )
+        except Exception as audit_err:
+            print(f"Audit logging failed for user create {user_data['id']}: {audit_err}")
+
+        # Commit the transaction after both creation and audit logging
+        await db.commit()
+
         return create_response(
-            data=UserResponse.model_validate(user),
+            data=UserResponse.model_validate(user_data),
             status_code=status.HTTP_201_CREATED
         )
     except HTTPException:
@@ -216,12 +253,19 @@ async def get_user_by_id(
 async def update_user(
     id: int,
     user_in: UserAdminUpdate,
-    user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(resource="users", action="update"))
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(authorize(resource="users", action="update")),
+    request: Request = None
 ) -> CustomResponse[UserResponse]:
     """Edit user: email, role, bank, active. Admin only."""
     try:
+        stage = "init"
+        # Use the same DB session for service and audit repository
+        user_service = UserService(db, UserRepository(db))
+        audit = AuditService(AuditRepository(db))
+
         # Get existing user
+        stage = "get_user"
         user = await user_service.get(id)
         if not user:
             raise HTTPException(
@@ -229,7 +273,32 @@ async def update_user(
                 detail="User not found"
             )
         
+        # Immediately convert to dict to avoid lazy loading issues
+        stage = "build_before_data"
+        # Access all column attributes at once before any other async operations
+        before_data = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "user_role": user.user_role,
+            "department": user.department,
+            "location": user.location,
+            "level": user.level,
+            "active": user.active,
+            "bank_id": user.bank_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "full_name": user.full_name,
+            "is_superuser": user.is_superuser,
+            "created_at": user.created_at,
+            "updated_at": user.updated_at
+        }
+        
+        # Store username for audit log
+        username_for_audit = before_data["username"]
+        
         # Get update data
+        stage = "prepare_update_data"
         upd = user_in.model_dump(exclude_unset=True)
         
         # Validate if there's anything to update
@@ -242,7 +311,12 @@ async def update_user(
         # Set audit field
         upd['updated_by'] = current_user.id
         
+        # Capture after state - create from before_data + updates
+        after_data = before_data.copy()
+        after_data.update({k: v for k, v in upd.items() if k in before_data})
+        
         # Update user
+        stage = "update_user_service"
         updated = await user_service.update(id, upd)
         if not updated:
             raise HTTPException(
@@ -250,16 +324,61 @@ async def update_user(
                 detail="Failed to update user"
             )
         
-        return create_response(data=UserResponse.model_validate(updated))
+        # Log update in audit trail (after update succeeds) - best-effort
+        stage = "log_audit"
+        try:
+            await audit.log_user_updated(
+                user_id=id,
+                username=username_for_audit,
+                updated_by_id=current_user.id,
+                before_data=before_data,
+                after_data=after_data,
+                request=request
+            )
+        except Exception as audit_err:
+            print(f"Audit logging failed for user update {id}: {audit_err}")
+        
+        # Commit the transaction after both update and audit logging
+        stage = "commit"
+        await db.commit()
+        
+        # Build response data from after_data to avoid accessing the model after commit
+        stage = "build_response"
+        response_data = {
+            "id": id,
+            "username": username_for_audit,
+            "email": after_data.get('email'),
+            "role": after_data.get('user_role'),
+            "user_role": after_data.get('user_role'),
+            "department": after_data.get('department'),
+            "location": after_data.get('location'),
+            "level": after_data.get('level'),
+            "active": after_data.get('active'),
+            "is_active": after_data.get('active'),
+            "bank_id": after_data.get('bank_id'),
+            "first_name": after_data.get('first_name'),
+            "last_name": after_data.get('last_name'),
+            "full_name": after_data.get('full_name'),
+            "is_superuser": after_data.get('is_superuser', False),
+            "created_at": after_data.get('created_at'),
+            "updated_at": after_data.get('updated_at'),
+            "roles": [after_data.get('user_role')] if after_data.get('user_role') else [],
+            "updated_by": current_user.id
+        }
+        
+        stage = "done"
+        return create_response(data=UserResponse.model_validate(response_data))
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        # Log and return proper error
-        print(f"Error updating user {id}: {str(e)}")
+        # Log and return proper error, including stage info to locate source
+        import traceback
+        print(f"Error updating user {id} at stage '{stage}': {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update user: {str(e)}"
+            detail=f"[stage={stage}] Failed to update user: {str(e)}"
         )
 
 
@@ -311,8 +430,9 @@ async def update_user_bank(
 async def delete_user(
     id: int,
     soft_delete: bool = Query(False, description="Perform soft delete (deactivate) instead of hard delete"),
-    user_service: UserService = Depends(get_user_service),
-    current_user: User = Depends(authorize(resource="users", action="delete"))
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(authorize(resource="users", action="delete")),
+    request: Request = None
 ):
     """
     Delete a user account.
@@ -326,12 +446,40 @@ async def delete_user(
             detail="You cannot delete your own account."
         )
 
+    # Use the same DB session for service and audit repository
+    user_service = UserService(db, UserRepository(db))
+    audit = AuditService(AuditRepository(db))
+
     target_user = await user_service.get(id)
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
+    # Immediately convert to dict to avoid lazy loading issues
+    # Access all attributes at once before any other operations
+    user_data = {
+        "id": target_user.id,
+        "username": target_user.username,
+        "email": target_user.email,
+        "user_role": target_user.user_role,
+        "department": target_user.department,
+        "location": target_user.location,
+        "level": target_user.level,
+        "active": target_user.active,
+        "bank_id": target_user.bank_id,
+        "first_name": target_user.first_name,
+        "last_name": target_user.last_name,
+        "full_name": target_user.full_name,
+        "is_superuser": target_user.is_superuser,
+        "created_at": target_user.created_at,
+        "updated_at": target_user.updated_at,
+        "roles": [target_user.user_role] if target_user.user_role else []
+    }
+    
+    # Store username for audit
+    username_for_audit = user_data["username"]
+    
     # 2. Prevent deleting superuser or special users (optional logic, can be ABAC'd but good safety net)
-    if target_user.is_superuser:
+    if user_data["is_superuser"]:
          raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Cannot delete a superuser."
@@ -341,7 +489,28 @@ async def delete_user(
         deleted_user = await user_service.deactivate_user(id)
         if not deleted_user:
              raise HTTPException(status_code=500, detail="Failed to deactivate user")
-        return create_response(data=UserResponse.model_validate(deleted_user), message="User deactivated successfully")
+        
+        # Log soft delete in audit trail (best-effort)
+        try:
+            await audit.log_user_deleted(
+                user_id=id,
+                username=username_for_audit,
+                deleted_by_id=current_user.id,
+                user_data=user_data,
+                request=request
+            )
+        except Exception as audit_err:
+            print(f"Audit logging failed for user soft delete {id}: {audit_err}")
+        
+        # Commit the transaction after both deactivation and audit logging
+        await db.commit()
+        
+        # Build response from user_data (updated with active=False)
+        response_data = user_data.copy()
+        response_data["active"] = False
+        response_data["is_active"] = False
+        response_data["role"] = response_data.get("user_role")
+        return create_response(data=UserResponse.model_validate(response_data), message="User deactivated successfully")
     else:
         # Hard delete uses the service logic with error checking
         result = await user_service.delete(id)
@@ -352,5 +521,20 @@ async def delete_user(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=result["error"]
             )
+        
+        # Log hard delete in audit trail (best-effort)
+        try:
+            await audit.log_user_deleted(
+                user_id=id,
+                username=username_for_audit,
+                deleted_by_id=current_user.id,
+                user_data=user_data,
+                request=request
+            )
+        except Exception as audit_err:
+            print(f"Audit logging failed for user hard delete {id}: {audit_err}")
+        
+        # Commit the transaction after both deletion and audit logging
+        await db.commit()
             
-        return create_response(data=None, message=f"User {target_user.username} permanently deleted")
+        return create_response(data=None, message=f"User {username_for_audit} permanently deleted")

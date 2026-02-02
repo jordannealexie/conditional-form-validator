@@ -16,6 +16,7 @@ from app.api.v1.endpoints import enums
 from app.api.v1.endpoints import field_types
 from app.api.v1.endpoints import lookups
 from app.api.v1.endpoints import metadata
+from app.api.v1.endpoints import audit_trail
 
 api_router = APIRouter()
 
@@ -35,5 +36,6 @@ api_router.include_router(roles.router, prefix="/roles", tags=["Roles"])
 api_router.include_router(files.router, prefix="/files", tags=["Files"])
 api_router.include_router(lookups.router, prefix="/lookups", tags=["Lookup Tables"])
 api_router.include_router(metadata.router, prefix="/metadata", tags=["Form Metadata"])
+api_router.include_router(audit_trail.router, prefix="/audit-trail", tags=["Audit Trail"])
 
 # This is the main API router that includes all endpoint routers

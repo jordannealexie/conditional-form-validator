@@ -329,3 +329,162 @@ async function confirmDeleteUser(userId) {
     }
 }
 
+/**
+ * Show audit trail modal for all users
+ */
+async function showAuditTrail() {
+    const content = `
+        <div class="audit-trail-container">
+            <p class="audit-trail-subtitle">User Management Audit Trail - All Activities</p>
+            <div id="auditTrailLoading" style="text-align: center; padding: 20px;">
+                <p>Loading audit logs...</p>
+            </div>
+            <div id="auditTrailContent" style="display: none;">
+                <div class="table-wrapper" style="max-height: 500px; overflow-y: auto;">
+                    <table class="audit-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Date/Time</th>
+                                <th>Performed By</th>
+                                <th>Changes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTrailTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="auditTrailError" style="display: none; text-align: center; padding: 20px; color: var(--danger);">
+                <p>Failed to load audit trail</p>
+            </div>
+        </div>
+    `;
+    
+    createModal('User Management Audit Trail', content, [
+        { label: 'Close', type: 'secondary', onclick: 'closeModal()' }
+    ], 'large');
+    
+    // Load audit trail data
+    await loadAuditTrail();
+}
+
+/**
+ * Load and display audit trail for all users
+ */
+async function loadAuditTrail() {
+    const loading = document.getElementById('auditTrailLoading');
+    const content = document.getElementById('auditTrailContent');
+    const error = document.getElementById('auditTrailError');
+    const tbody = document.getElementById('auditTrailTableBody');
+    
+    try {
+        const response = await apiGetAllAuditLogs(0, 100);
+        
+        if (loading) loading.style.display = 'none';
+        
+        // Handle null or empty response
+        const logs = Array.isArray(response) ? response : [];
+        
+        if (logs.length === 0) {
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No audit logs found</td></tr>';
+            }
+            if (content) content.style.display = 'block';
+            return;
+        }
+        
+        // Populate audit trail table
+        tbody.innerHTML = '';
+        logs.forEach(log => {
+            const tr = document.createElement('tr');
+            
+            // Format user
+            const targetUser = log.username ? escapeHtml(log.username) : (log.resource_id ? `User ID: ${log.resource_id}` : '-');
+            
+            // Format action
+            let actionLabel = log.action || 'Unknown';
+            let actionBadge = 'badge-secondary';
+            if (actionLabel.includes('created')) {
+                actionLabel = 'Created';
+                actionBadge = 'badge-success';
+            } else if (actionLabel.includes('updated')) {
+                actionLabel = 'Updated';
+                actionBadge = 'badge-primary';
+            } else if (actionLabel.includes('deleted')) {
+                actionLabel = 'Deleted';
+                actionBadge = 'badge-danger';
+            }
+            
+            // Format date/time
+            const dateTime = log.created_at ? formatDateTime(log.created_at) : '-';
+            
+            // Format performed by
+            let performedBy = '-';
+            if (log.created_by) {
+                performedBy = `User ID: ${log.created_by}`;
+            } else if (log.updated_by) {
+                performedBy = `User ID: ${log.updated_by}`;
+            } else if (log.deleted_by) {
+                performedBy = `User ID: ${log.deleted_by}`;
+            } else if (log.user_id) {
+                performedBy = `User ID: ${log.user_id}`;
+            }
+            
+            // Format changes (JSON)
+            let changesHtml = '-';
+            if (log.changes && typeof log.changes === 'object') {
+                changesHtml = `<button class="btn btn-sm btn-info" onclick="showChangesDetail(${escapeHtml(JSON.stringify(log.changes).replace(/"/g, '&quot;'))})">View Changes</button>`;
+            }
+            
+            tr.innerHTML = `
+                <td>${targetUser}</td>
+                <td><span class="badge ${actionBadge}">${actionLabel}</span></td>
+                <td>${dateTime}</td>
+                <td>${performedBy}</td>
+                <td>${changesHtml}</td>
+            `;
+            
+            tbody.appendChild(tr);
+        });
+        
+        if (content) content.style.display = 'block';
+        
+    } catch (e) {
+        console.error('Error loading audit trail:', e);
+        if (loading) loading.style.display = 'none';
+        if (error) error.style.display = 'block';
+        if (typeof showToast === 'function') {
+            showToast('Failed to load audit trail', 'error');
+        }
+    }
+}
+
+/**
+ * Show detailed changes in a modal
+ * @param {object} changes - Changes object
+ */
+function showChangesDetail(changes) {
+    let content = '<div class="changes-detail">';
+    
+    if (changes.action) {
+        content += `<p><strong>Action:</strong> ${escapeHtml(changes.action)}</p>`;
+    }
+    
+    if (changes.before) {
+        content += '<div style="margin-top: 15px;"><strong>Before:</strong><pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;">' + escapeHtml(JSON.stringify(changes.before, null, 2)) + '</pre></div>';
+    }
+    
+    if (changes.after) {
+        content += '<div style="margin-top: 15px;"><strong>After:</strong><pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;">' + escapeHtml(JSON.stringify(changes.after, null, 2)) + '</pre></div>';
+    }
+    
+    content += '</div>';
+    
+    createModal('Change Details', content, [
+        { label: 'Close', type: 'secondary', onclick: 'closeModal()' }
+    ], 'large');
+}
+
+

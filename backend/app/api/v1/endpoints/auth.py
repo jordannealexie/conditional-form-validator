@@ -7,6 +7,7 @@ from app.schemas.auth import Token, UserCreate, UserResponse, TokenData, Refresh
 from app.core.security import create_access_token, create_refresh_token, verify_password, get_password_hash
 from sqlalchemy import select
 from app.utils.rate_limit import rate_limiter
+import asyncio
 from app.dependencies.audit import get_audit_service
 from app.services.audit import AuditService
 from app.db.session import get_db
@@ -136,24 +137,26 @@ async def login(
         user_with_roles = result.scalar_one_or_none()
         if user_with_roles:
             user = user_with_roles
-        
-        # Sync user roles to Casbin
+
+        # Sync user roles to Casbin (run in threadpool)
         if user and user_role:
             role_names = [user_role]
             print(f"DEBUG: Syncing roles for user {username}: {role_names}")
-            casbin_enforcer.sync_user_roles(username, role_names)
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, casbin_enforcer.sync_user_roles, username, role_names)
     except Exception as e:
         print(f"Warning: Could not sync roles to Casbin: {e}")
     
     # Get user permissions from Casbin (through roles)
     permissions = []
     try:
-        # Get implicit permissions through roles
-        roles = casbin_enforcer.get_roles_for_user(username)
+        # Get implicit permissions through roles using executor for sync Casbin calls
+        loop = asyncio.get_event_loop()
+        roles = await loop.run_in_executor(None, casbin_enforcer.get_roles_for_user, username)
         print(f"DEBUG: User {username} has roles in Casbin: {roles}")
         for role in roles:
-            # Get permissions for each role
-            role_perms = casbin_enforcer.get_permissions_for_user(role)
+            # Get permissions for each role (sync call in executor)
+            role_perms = await loop.run_in_executor(None, casbin_enforcer.get_permissions_for_user, role)
             print(f"DEBUG: Role {role} has permissions: {role_perms}")
             for p in role_perms:
                 if len(p) >= 3:

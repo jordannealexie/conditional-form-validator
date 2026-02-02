@@ -276,7 +276,7 @@ function validatePassword(password) {
  * @param {Array} buttons 
  * @returns {HTMLElement}
  */
-function createModal(title, content, buttons = []) {
+function createModal(title, content, buttons = [], size = 'normal') {
     // Remove existing modals
     document.querySelectorAll('.modal').forEach(m => m.remove());
 
@@ -289,8 +289,11 @@ function createModal(title, content, buttons = []) {
         </button>
     `).join('');
 
+    // Add size class to modal-content
+    const sizeClass = size === 'large' ? 'modal-content-large' : '';
+
     modal.innerHTML = `
-        <div class="modal-content">
+        <div class="modal-content ${sizeClass}">
             <div class="modal-header">
                 <h3 class="modal-title">${title}</h3>
                 <button class="modal-close" onclick="closeModal()">&times;</button>

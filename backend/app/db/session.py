@@ -18,7 +18,7 @@ engine = create_async_engine(
 AsyncSessionLocal = sessionmaker(
     engine,
     class_=AsyncSession,
-    expire_on_commit=True,  # Changed to True to expire objects after commit
+    expire_on_commit=False,  # Set to False to prevent lazy loading errors after commit
     autocommit=False,
     autoflush=True,  # Changed to True to ensure changes are flushed
 )
