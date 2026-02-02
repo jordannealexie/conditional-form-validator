@@ -29,8 +29,8 @@ class ClientIdMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Skip client ID check for specific paths if needed
-        excluded_paths: list[str] = ["/", "/favicon.ico", "/api/v1/docs", "/api/v1/redoc", "/api/v1/openapi.json", "/api/v1/health", "/api/v1/health/", "/api/v1/auth/token", "/api/v1/auth/token/"]
-        if request.url.path in excluded_paths:
+        excluded_paths: list[str] = ["/", "/favicon.ico", "/api/v1/docs", "/api/v1/redoc", "/api/v1/openapi.json", "/api/v1/health", "/api/v1/health/", "/api/v1/auth/token", "/api/v1/auth/token/", "/api/v1/enums", "/api/v1/enums/"]
+        if request.url.path in excluded_paths or request.url.path.startswith("/api/v1/enums/"):
             return await call_next(request)
         
         # if path starts with /images, /css, /js, /favicon.ico, skip client ID check

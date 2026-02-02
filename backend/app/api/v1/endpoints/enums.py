@@ -32,8 +32,7 @@ router = APIRouter()
 async def list_enums(
     active_only: bool = False,
     source_type: Optional[DataSourceType] = None,
-    db: AsyncSession = Depends(get_db),
-    _ = Depends(authorize())
+    db: AsyncSession = Depends(get_db)
 ):
     """List all enum definitions"""
     service = EnumDefinitionService(db)
@@ -52,8 +51,7 @@ async def list_enums(
 )
 async def get_enum(
     enum_id: int,
-    db: AsyncSession = Depends(get_db),
-    _ = Depends(authorize())
+    db: AsyncSession = Depends(get_db)
 ):
     """Get enum definition by ID"""
     service = EnumDefinitionService(db)
@@ -72,8 +70,7 @@ async def get_enum(
 )
 async def get_enum_by_name(
     name: str,
-    db: AsyncSession = Depends(get_db),
-    _ = Depends(authorize())
+    db: AsyncSession = Depends(get_db)
 ):
     """Get enum definition by name"""
     service = EnumDefinitionService(db)
@@ -92,8 +89,7 @@ async def get_enum_by_name(
 )
 async def get_enum_options(
     enum_id: int,
-    db: AsyncSession = Depends(get_db),
-    _ = Depends(authorize())
+    db: AsyncSession = Depends(get_db)
 ):
     """Get resolved enum options"""
     service = EnumDefinitionService(db)
