@@ -330,12 +330,27 @@ async function confirmDeleteUser(userId) {
 }
 
 /**
- * Show audit trail modal for all users
+ * Show audit trail modal.
+ * Can be filtered by resourceType (e.g., 'user', 'role', 'template') and customized per page.
  */
-async function showAuditTrail() {
+async function showAuditTrail(options) {
+    const opts = options || {};
+    const resourceType = opts.resourceType || null;
+    const subjectLabel = opts.subjectLabel || (resourceType === 'role' ? 'Role' : resourceType === 'template' ? 'Template' : 'User');
+    const title = opts.title || (resourceType === 'role'
+        ? 'Roles & Permissions Audit Trail'
+        : resourceType === 'template'
+            ? 'Form Templates Audit Trail'
+            : 'User Management Audit Trail');
+    const subtitle = opts.subtitle || (resourceType === 'role'
+        ? 'Roles & Permissions Audit Trail - All Activities'
+        : resourceType === 'template'
+            ? 'Form Templates Audit Trail - All Activities'
+            : 'User Management Audit Trail - All Activities');
+
     const content = `
         <div class="audit-trail-container">
-            <p class="audit-trail-subtitle">User Management Audit Trail - All Activities</p>
+            <p class="audit-trail-subtitle">${escapeHtml(subtitle)}</p>
             <div id="auditTrailLoading" style="text-align: center; padding: 20px;">
                 <p>Loading audit logs...</p>
             </div>
@@ -344,7 +359,7 @@ async function showAuditTrail() {
                     <table class="table table-striped table-sm audit-table mb-0" style="width: 100%;">
                         <thead>
                             <tr>
-                                <th>User</th>
+                                <th>${escapeHtml(subjectLabel)}</th>
                                 <th>Action</th>
                                 <th>Date/Time</th>
                                 <th>Performed By</th>
@@ -362,18 +377,20 @@ async function showAuditTrail() {
         </div>
     `;
     
-    createModal('User Management Audit Trail', content, [
+    createModal(title, content, [
         { label: 'Close', type: 'secondary', onclick: 'closeModal()' }
     ], 'large');
     
     // Load audit trail data
-    await loadAuditTrail();
+    await loadAuditTrail({ resourceType });
 }
 
 /**
- * Load and display audit trail for all users
+ * Load and display audit trail (optionally filtered by resource type)
  */
-async function loadAuditTrail() {
+async function loadAuditTrail(options) {
+    const opts = options || {};
+    const resourceType = opts.resourceType || null;
     const loading = document.getElementById('auditTrailLoading');
     const content = document.getElementById('auditTrailContent');
     const error = document.getElementById('auditTrailError');
@@ -386,8 +403,13 @@ async function loadAuditTrail() {
         
         // Handle null or empty response
         const logs = Array.isArray(response) ? response : [];
-        
-        if (logs.length === 0) {
+
+        // Optionally filter by resource type for page-specific audit views
+        const filteredLogs = resourceType
+            ? logs.filter(log => log && log.resource_type === resourceType)
+            : logs;
+
+        if (filteredLogs.length === 0) {
             if (tbody) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No audit logs found</td></tr>';
             }
@@ -398,13 +420,35 @@ async function loadAuditTrail() {
         // Reset in-memory changes store
         window.__auditChangesStore = [];
 
+        // Build a map of user_id -> username for "Performed By" column
+        let userMap = {};
+        try {
+            const usersResponse = await apiGetUsers();
+            const users = Array.isArray(usersResponse) ? usersResponse : (usersResponse && usersResponse.data ? usersResponse.data : []);
+            users.forEach(u => {
+                if (u && typeof u.id === 'number' && u.username) {
+                    userMap[u.id] = u.username;
+                }
+            });
+        } catch (e) {
+            console.warn('Failed to load users for audit trail performer mapping:', e);
+        }
+
         // Populate audit trail table
         tbody.innerHTML = '';
-        logs.forEach(log => {
+        filteredLogs.forEach(log => {
             const tr = document.createElement('tr');
             
-            // Format user
-            const targetUser = log.username ? escapeHtml(log.username) : (log.resource_id ? `User ID: ${log.resource_id}` : '-');
+            // Format subject (user/role/template/etc.)
+            let targetSubject = '-';
+            if (log.username) {
+                targetSubject = escapeHtml(log.username);
+            } else if (log.resource_id) {
+                let prefix = 'User ID';
+                if (log.resource_type === 'role') prefix = 'Role ID';
+                else if (log.resource_type === 'template') prefix = 'Template ID';
+                targetSubject = `${prefix}: ${log.resource_id}`;
+            }
             
             // Format action
             let actionLabel = log.action || 'Unknown';
@@ -423,16 +467,16 @@ async function loadAuditTrail() {
             // Format date/time
             const dateTime = log.created_at ? formatDateTime(log.created_at) : '-';
             
-            // Format performed by
+            // Format performed by (who made the change)
             let performedBy = '-';
-            if (log.created_by) {
-                performedBy = `User ID: ${log.created_by}`;
-            } else if (log.updated_by) {
-                performedBy = `User ID: ${log.updated_by}`;
-            } else if (log.deleted_by) {
-                performedBy = `User ID: ${log.deleted_by}`;
-            } else if (log.user_id) {
-                performedBy = `User ID: ${log.user_id}`;
+            const actorId = log.created_by || log.updated_by || log.deleted_by || log.user_id;
+            if (actorId) {
+                const actorName = userMap[actorId];
+                if (actorName) {
+                    performedBy = escapeHtml(actorName) + ` (ID: ${actorId})`;
+                } else {
+                    performedBy = `User ID: ${actorId}`;
+                }
             }
             
             // Format changes (JSON)
@@ -443,7 +487,7 @@ async function loadAuditTrail() {
             }
             
             tr.innerHTML = `
-                <td>${targetUser}</td>
+                <td>${targetSubject}</td>
                 <td><span class="badge ${actionBadge}">${actionLabel}</span></td>
                 <td>${dateTime}</td>
                 <td>${performedBy}</td>

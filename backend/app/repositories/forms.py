@@ -375,7 +375,7 @@ class FormTemplateRepository:
         await db.commit()
         
         # Invalidate cache on update
-        template_cache.invalidate(template.id)
+        await template_cache.invalidate(template.id)
         
         # Refetch with eager loading to avoid lazy-load issues
         result = await db.execute(
@@ -398,7 +398,7 @@ class FormTemplateRepository:
         await db.commit()
         
         # Invalidate cache on delete
-        template_cache.invalidate(template_id)
+        await template_cache.invalidate(template_id)
     
     @staticmethod
     async def check_version_exists(

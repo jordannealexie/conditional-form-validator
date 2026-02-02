@@ -26,6 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function showRolesAuditTrail() {
+    if (typeof showAuditTrail === 'function') {
+        // Reuse shared audit trail modal, filtered to role-related entries
+        return showAuditTrail({
+            resourceType: 'role',
+            title: 'Roles & Permissions Audit Trail',
+            subtitle: 'Roles & Permissions Audit Trail - All Activities',
+            subjectLabel: 'Role'
+        });
+    }
+}
+
 async function loadUserInfo() {
     try {
         const u = await apiGetCurrentUser();

@@ -154,6 +154,28 @@ class RedisCache:
         except Exception as e:
             logger.warning(f"Cache delete pattern error for {pattern}: {e}")
             return 0
+
+    async def invalidate(self, template_id: int) -> None:
+        """Invalidate all cache entries related to a template.
+
+        This keeps the interface compatible with the older cache layer
+        that exposed an `invalidate(template_id)` method.
+        """
+        if not self._connected or not self._client:
+            return
+
+        try:
+            # Single-template cache entry
+            await self.delete(CacheKeys.template(template_id))
+
+            # Associated validator caches
+            await self.delete(CacheKeys.validator(template_id))
+            await self.delete_pattern(f"validator:{template_id}:v*")
+
+            # Template list caches (all/bank-specific)
+            await self.delete_pattern("templates:*")
+        except Exception as e:
+            logger.warning(f"Cache invalidate error for template {template_id}: {e}")
     
     async def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""

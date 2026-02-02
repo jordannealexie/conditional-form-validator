@@ -1,5 +1,5 @@
 from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.dependencies.auth import get_current_active_user, get_current_superuser, authorize
@@ -7,6 +7,8 @@ from app.repositories.forms import FormTemplateRepository, BankRepository
 from app.schemas.forms import FormTemplateResponse, FormTemplateCreate, FormTemplateUpdate
 from app.utils.response import create_response
 from app.models.user import User
+from app.dependencies.audit import get_audit_service
+from app.services.audit import AuditService
 
 router = APIRouter()
 
@@ -102,7 +104,9 @@ async def create_template(
     *,
     db: AsyncSession = Depends(get_db),
     template_in: FormTemplateCreate,
-    current_user: User = Depends(authorize(resource="forms", action="create"))
+    current_user: User = Depends(authorize(resource="forms", action="create")),
+    request: Request = None,
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> Any:
     """
     Create a new Form Template.
@@ -128,6 +132,36 @@ async def create_template(
             )
             
         template = await FormTemplateRepository.create(db, **template_in.model_dump())
+
+        # Best-effort audit log for template creation
+        try:
+            await audit_service.log(
+                action="template_created",
+                user_id=current_user.id,
+                username=template.name,
+                resource_type="template",
+                resource_id=str(template.id),
+                status="success",
+                request=request,
+                changes={
+                    "action": "created",
+                    "after": {
+                        "id": template.id,
+                        "bank_id": template.bank_id,
+                        "name": template.name,
+                        "version": template.version,
+                        "form_type": template.form_type,
+                        "active": template.active,
+                        "description": template.description,
+                    },
+                },
+                created_by=current_user.id,
+            )
+            # Commit audit log entry
+            await db.commit()
+        except Exception as audit_err:
+            print(f"Error logging template creation in audit trail: {audit_err}")
+
         return create_response(data=FormTemplateResponse.model_validate(template))
     except HTTPException:
         raise
@@ -143,18 +177,63 @@ async def update_template(
     template_id: int,
     template_in: FormTemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(resource="forms", action="update"))
+    current_user: User = Depends(authorize(resource="forms", action="update")),
+    request: Request = None,
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> Any:
     """Update a form template. Permission: forms:update."""
     try:
         template = await FormTemplateRepository.get_by_id(db, template_id)
         if not template:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
-        
+
+        # Snapshot before update
+        before_data = {
+            "id": template.id,
+            "bank_id": template.bank_id,
+            "name": template.name,
+            "version": template.version,
+            "form_type": template.form_type,
+            "active": template.active,
+            "description": template.description,
+        }
+
         upd = template_in.model_dump(exclude_unset=True)
         if upd:
             updated = await FormTemplateRepository.update(db, template, **upd)
+
+            # Best-effort audit log for template update
+            try:
+                after_data = {
+                    "id": updated.id,
+                    "bank_id": updated.bank_id,
+                    "name": updated.name,
+                    "version": updated.version,
+                    "form_type": updated.form_type,
+                    "active": updated.active,
+                    "description": updated.description,
+                }
+                await audit_service.log(
+                    action="template_updated",
+                    user_id=current_user.id,
+                    username=updated.name,
+                    resource_type="template",
+                    resource_id=str(updated.id),
+                    status="success",
+                    request=request,
+                    changes={
+                        "action": "updated",
+                        "before": before_data,
+                        "after": after_data,
+                    },
+                    updated_by=current_user.id,
+                )
+                await db.commit()
+            except Exception as audit_err:
+                print(f"Error logging template update in audit trail: {audit_err}")
+
             return create_response(data=FormTemplateResponse.model_validate(updated))
+
         return create_response(data=FormTemplateResponse.model_validate(template))
     except HTTPException:
         raise
@@ -169,15 +248,49 @@ async def update_template(
 async def delete_template(
     template_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(resource="forms", action="delete"))
+    current_user: User = Depends(authorize(resource="forms", action="delete")),
+    request: Request = None,
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> Any:
     """Delete a form template. Permission: forms:delete."""
     try:
         template = await FormTemplateRepository.get_by_id(db, template_id)
         if not template:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
-        
+
+        # Snapshot before delete
+        before_data = {
+            "id": template.id,
+            "bank_id": template.bank_id,
+            "name": template.name,
+            "version": template.version,
+            "form_type": template.form_type,
+            "active": template.active,
+            "description": template.description,
+        }
+
         await FormTemplateRepository.delete(db, template)
+
+        # Best-effort audit log for template deletion
+        try:
+            await audit_service.log(
+                action="template_deleted",
+                user_id=current_user.id,
+                username=template.name,
+                resource_type="template",
+                resource_id=str(template_id),
+                status="success",
+                request=request,
+                changes={
+                    "action": "deleted",
+                    "before": before_data,
+                },
+                deleted_by=current_user.id,
+            )
+            await db.commit()
+        except Exception as audit_err:
+            print(f"Error logging template deletion in audit trail: {audit_err}")
+
         return create_response(message="Template deleted")
     except HTTPException:
         raise

@@ -22,6 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function showTemplatesAuditTrail() {
+    if (typeof showAuditTrail === 'function') {
+        // Reuse shared audit trail modal, filtered to template-related entries
+        return showAuditTrail({
+            resourceType: 'template',
+            title: 'Form Templates Audit Trail',
+            subtitle: 'Form Templates Audit Trail - All Activities',
+            subjectLabel: 'Template'
+        });
+    }
+}
+
 /**
  * Load user info
  */

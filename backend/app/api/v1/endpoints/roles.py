@@ -1,6 +1,6 @@
 """Roles API: GET /, POST /, DELETE /{id}, GET /{id}/permissions"""
 from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
@@ -10,6 +10,8 @@ from app.db.session import get_db
 from app.dependencies.auth import authorize
 from app.models.user import User, Role
 from app.utils.response import create_response
+from app.dependencies.audit import get_audit_service
+from app.services.audit import AuditService
 
 router = APIRouter()
 
@@ -52,7 +54,9 @@ async def list_roles(
 async def create_role(
     body: RoleCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(resource="roles", action="create"))
+    current_user: User = Depends(authorize(resource="roles", action="create")),
+    request: Request = None,
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> Any:
     """Create a new role. Enabled via rules."""
     try:
@@ -76,7 +80,38 @@ async def create_role(
         # Sync to Casbin
         from app.core.casbin_enforcer import casbin_enforcer
         casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
-        
+
+        # Best-effort audit log for role creation
+        try:
+            await audit_service.log(
+                action="role_created",
+                user_id=current_user.id,
+                username=role.name,
+                resource_type="role",
+                resource_id=str(role.id),
+                status="success",
+                request=request,
+                changes={
+                    "action": "created",
+                    "after": {
+                        "id": role.id,
+                        "name": role.name,
+                        "description": role.description,
+                        "permissions": role.permissions or [],
+                        "created_at": role.created_at,
+                        "created_by": role.created_by,
+                        "updated_at": role.updated_at,
+                        "updated_by": role.updated_by,
+                    },
+                },
+                created_by=current_user.id,
+            )
+            # Commit audit log entry
+            await db.commit()
+        except Exception as audit_err:
+            # Do not fail the main request if audit logging fails
+            print(f"Error logging role creation in audit trail: {audit_err}")
+
         return create_response(data=RoleResponse.model_validate(role), status_code=status.HTTP_201_CREATED)
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -95,7 +130,9 @@ async def create_role(
 async def delete_role(
     id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(resource="roles", action="delete"))
+    current_user: User = Depends(authorize(resource="roles", action="delete")),
+    request: Request = None,
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> Any:
     """Delete a role. Enabled via rules. Fails if role is assigned to users."""
     try:
@@ -104,6 +141,19 @@ async def delete_role(
         role = result.scalar_one_or_none()
         if not role:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        
+        # Snapshot role data before delete for audit trail
+        role_data = {
+            "id": role.id,
+            "name": role.name,
+            "description": role.description,
+            "permissions": role.permissions or [],
+            "created_at": role.created_at,
+            "created_by": role.created_by,
+            "updated_at": role.updated_at,
+            "updated_by": role.updated_by,
+        }
+        role_name = role.name
         
         # Check if any user has this role
         count = await db.execute(select(func.count()).select_from(user_roles).where(user_roles.c.role_id == id))
@@ -120,8 +170,28 @@ async def delete_role(
         
         # Remove from Casbin
         from app.core.casbin_enforcer import casbin_enforcer
-        casbin_enforcer.rbac_enforcer.remove_filtered_policy(0, role.name)
+        casbin_enforcer.rbac_enforcer.remove_filtered_policy(0, role_name)
         casbin_enforcer.rbac_enforcer.save_policy()
+
+        # Best-effort audit log for role deletion
+        try:
+            await audit_service.log(
+                action="role_deleted",
+                user_id=current_user.id,
+                username=role_name,
+                resource_type="role",
+                resource_id=str(id),
+                status="success",
+                request=request,
+                changes={
+                    "action": "deleted",
+                    "before": role_data,
+                },
+                deleted_by=current_user.id,
+            )
+            await db.commit()
+        except Exception as audit_err:
+            print(f"Error logging role deletion in audit trail: {audit_err}")
         
         return create_response(message="Role deleted")
     except HTTPException:
@@ -172,7 +242,9 @@ async def update_role(
     id: int,
     body: RoleCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(authorize(resource="roles", action="update"))
+    current_user: User = Depends(authorize(resource="roles", action="update")),
+    request: Request = None,
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> Any:
     """Update a role. Enabled via rules."""
     try:
@@ -188,6 +260,18 @@ async def update_role(
         role = result.scalar_one_or_none()
         if not role:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        
+        # Snapshot before update for audit trail
+        before_data = {
+            "id": role.id,
+            "name": role.name,
+            "description": role.description,
+            "permissions": role.permissions or [],
+            "created_at": role.created_at,
+            "created_by": role.created_by,
+            "updated_at": role.updated_at,
+            "updated_by": role.updated_by,
+        }
         
         # Check for duplicate name if changing
         if body.name != role.name:
@@ -207,6 +291,37 @@ async def update_role(
         # Sync to Casbin
         from app.core.casbin_enforcer import casbin_enforcer
         casbin_enforcer.sync_role_permissions(role.name, role.permissions or [])
+
+        # Best-effort audit log for role update
+        try:
+            after_data = {
+                "id": role.id,
+                "name": role.name,
+                "description": role.description,
+                "permissions": role.permissions or [],
+                "created_at": role.created_at,
+                "created_by": role.created_by,
+                "updated_at": role.updated_at,
+                "updated_by": role.updated_by,
+            }
+            await audit_service.log(
+                action="role_updated",
+                user_id=current_user.id,
+                username=role.name,
+                resource_type="role",
+                resource_id=str(role.id),
+                status="success",
+                request=request,
+                changes={
+                    "action": "updated",
+                    "before": before_data,
+                    "after": after_data,
+                },
+                updated_by=current_user.id,
+            )
+            await db.commit()
+        except Exception as audit_err:
+            print(f"Error logging role update in audit trail: {audit_err}")
         
         return create_response(data=RoleResponse.model_validate(role))
     except HTTPException:
