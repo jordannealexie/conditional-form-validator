@@ -395,6 +395,9 @@ async function loadAuditTrail() {
             return;
         }
         
+        // Reset in-memory changes store
+        window.__auditChangesStore = [];
+
         // Populate audit trail table
         tbody.innerHTML = '';
         logs.forEach(log => {
@@ -435,7 +438,8 @@ async function loadAuditTrail() {
             // Format changes (JSON)
             let changesHtml = '-';
             if (log.changes && typeof log.changes === 'object') {
-                changesHtml = `<button class="btn btn-sm btn-info" onclick="showChangesDetail(${escapeHtml(JSON.stringify(log.changes).replace(/"/g, '&quot;'))})">View Changes</button>`;
+                const idx = window.__auditChangesStore.push(log.changes) - 1;
+                changesHtml = `<button class="btn btn-sm btn-info" onclick="showChangesDetailFromIndex(${idx})">View Changes</button>`;
             }
             
             tr.innerHTML = `
@@ -459,6 +463,21 @@ async function loadAuditTrail() {
             showToast('Failed to load audit trail', 'error');
         }
     }
+}
+
+/**
+ * Helper to look up changes object from in-memory store
+ * @param {number} index
+ */
+function showChangesDetailFromIndex(index) {
+    if (!window.__auditChangesStore || !window.__auditChangesStore[index]) {
+        console.error('No changes data found for index', index);
+        if (typeof showToast === 'function') {
+            showToast('No change details available for this entry', 'error');
+        }
+        return;
+    }
+    showChangesDetail(window.__auditChangesStore[index]);
 }
 
 /**
