@@ -340,8 +340,8 @@ async function showAuditTrail() {
                 <p>Loading audit logs...</p>
             </div>
             <div id="auditTrailContent" style="display: none;">
-                <div class="table-wrapper" style="max-height: 500px; overflow-y: auto;">
-                    <table class="audit-table" style="width: 100%;">
+                <div class="table-wrapper table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-striped table-sm audit-table mb-0" style="width: 100%;">
                         <thead>
                             <tr>
                                 <th>User</th>
