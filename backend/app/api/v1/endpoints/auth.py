@@ -225,6 +225,7 @@ async def login(
         resource_id=str(user_id),
         details="Login success"
     )
+    await db.commit()
     
     return {
         "access_token": access_token,
@@ -297,7 +298,8 @@ async def refresh_token(
 async def logout(
     refresh_token_in: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    audit: AuditService = Depends(get_audit_service)
 ):
     """Logout and revoke refresh token"""
     result = await db.execute(
@@ -307,6 +309,16 @@ async def logout(
     if db_token:
         db_token.revoked = True
         await db.commit()
+
+    await audit.log(
+        "logout",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="auth",
+        resource_id=str(current_user.id),
+        details="Logout success"
+    )
+    await db.commit()
     
     return {"msg": "Successfully logged out"}
 
