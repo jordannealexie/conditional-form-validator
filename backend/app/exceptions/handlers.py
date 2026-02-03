@@ -37,7 +37,11 @@ def add_exception_handlers(app: FastAPI) -> None:
             detail = "Cannot perform this operation due to related records"
             status_code_val = status.HTTP_400_BAD_REQUEST
             error_code = "FOREIGN_KEY_VIOLATION"
-        elif "not null constraint" in error_msg.lower():
+        elif (
+            "not null constraint" in error_msg.lower()
+            or "not-null constraint" in error_msg.lower()
+            or "null value in column" in error_msg.lower()
+        ):
             detail = "Required field is missing"
             status_code_val = status.HTTP_400_BAD_REQUEST
             error_code = "MISSING_REQUIRED_FIELD"

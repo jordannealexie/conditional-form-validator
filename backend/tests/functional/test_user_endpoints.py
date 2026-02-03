@@ -112,6 +112,39 @@ class TestUserEndpointsWithAuth:
         assert data["success"] is True
         assert data["data"] is None
 
+    async def test_update_current_user_profile_success(self, client: AsyncClient, created_user: User):
+        """test updating current user profile"""
+        headers = await create_auth_headers(created_user.username)
+
+        payload = {
+            "email": created_user.email,
+            "first_name": "Updated",
+            "last_name": "Name",
+            "department": "General",
+            "location": "Makati",
+        }
+
+        response = await client.patch("/api/v1/users/me", headers=headers, json=payload)
+        if response.status_code != status.HTTP_200_OK:
+            print(f"DEBUG: Status {response.status_code}, Body: {response.text}")
+        assert response.status_code == status.HTTP_200_OK
+        body = response.json()
+        assert body["success"] is True
+        assert body["data"]["email"] == created_user.email
+        assert body["data"]["first_name"] == "Updated"
+        assert body["data"]["last_name"] == "Name"
+        assert body["data"]["department"] == "General"
+        assert body["data"]["location"] == "Makati"
+
+    async def test_update_current_user_profile_rejects_null_email(self, client: AsyncClient, created_user: User):
+        """test that null email is rejected before hitting DB constraints"""
+        headers = await create_auth_headers(created_user.username)
+
+        response = await client.patch("/api/v1/users/me", headers=headers, json={"email": None})
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        body = response.json()
+        assert body["success"] is False
+
 
 @pytest.mark.functional
 class TestUserEndpointsWithRoleAuth:

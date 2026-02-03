@@ -81,10 +81,14 @@ async def update_user_me(
 ) -> CustomResponse[UserResponse]:
     """Update current user profile"""
     upd = user_in.model_dump(exclude_unset=True) if hasattr(user_in, "model_dump") else user_in.dict(exclude_unset=True)
+    if "email" in upd and upd["email"] is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email cannot be null")
     if "is_active" in upd:
         upd["active"] = upd.pop("is_active")
     updated_user = await user_service.update(current_user.id, upd)
     await audit.log("update_profile", user_id=current_user.id, username=current_user.username, details="User updated their profile")
+    await user_service.db.commit()
+    await user_service.db.refresh(updated_user)
     return create_response(data=UserResponse.model_validate(updated_user))
 
 @router.post(

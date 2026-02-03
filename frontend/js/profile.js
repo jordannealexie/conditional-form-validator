@@ -124,13 +124,23 @@ async function loadActivityLogs() {
  */
 async function handleProfileUpdate(ev) {
     ev.preventDefault();
-    const fd = new FormData(ev.target);
+    const emailValue = (document.getElementById('profile_email')?.value || '').trim();
+    if (!emailValue) {
+        showToast('Email is required', 'error');
+        return;
+    }
+
+    const firstNameValue = (document.getElementById('profile_first_name')?.value || '').trim();
+    const lastNameValue = (document.getElementById('profile_last_name')?.value || '').trim();
+    const departmentValue = (document.getElementById('profile_department')?.value || '').trim();
+    const locationValue = (document.getElementById('profile_location')?.value || '').trim();
+
     const payload = {
-        first_name: fd.get('first_name') ? fd.get('first_name') : null,
-        last_name: fd.get('last_name') ? fd.get('last_name') : null,
-        email: fd.get('email'),
-        department: fd.get('department') ? fd.get('department') : null,
-        location: fd.get('location') ? fd.get('location') : null
+        email: emailValue,
+        first_name: firstNameValue ? firstNameValue : null,
+        last_name: lastNameValue ? lastNameValue : null,
+        department: departmentValue ? departmentValue : null,
+        location: locationValue ? locationValue : null
     };
     try {
         const updated = await apiUpdateProfile(payload);

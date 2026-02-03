@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.session import async_session_maker
+from app.db.session import AsyncSessionLocal as async_session_maker
 from app.models.forms import Bank, FormTemplate
 from sqlalchemy import select
 
@@ -289,7 +289,7 @@ BDO_HOUSING_LOAN_TEMPLATE = {
         "co_borrower_required": {
             "type": "boolean",
             "title": "Add Co-Borrower",
-            "default": false
+            "default": False
         }
     },
     "allOf": [
@@ -392,7 +392,7 @@ BDO_HOUSING_LOAN_TEMPLATE = {
         {
             "if": {
                 "properties": {
-                    "co_borrower_required": {"const": true}
+                    "co_borrower_required": {"const": True}
                 }
             },
             "then": {
@@ -602,12 +602,12 @@ METROBANK_INVESTMENT_TEMPLATE = {
         "beneficiary_designation": {
             "type": "boolean",
             "title": "Designate Beneficiary",
-            "default": false
+            "default": False
         },
         "agrees_to_terms": {
             "type": "boolean",
             "title": "I agree to Terms and Conditions",
-            "const": true
+            "const": True
         }
     },
     "allOf": [
@@ -684,7 +684,7 @@ METROBANK_INVESTMENT_TEMPLATE = {
         {
             "if": {
                 "properties": {
-                    "beneficiary_designation": {"const": true}
+                    "beneficiary_designation": {"const": True}
                 }
             },
             "then": {
@@ -1023,17 +1023,17 @@ SECURITY_BANK_PERSONAL_LOAN_TEMPLATE = {
         "existing_loans": {
             "type": "boolean",
             "title": "Do you have existing loans?",
-            "default": false
+            "default": False
         },
         "data_privacy_consent": {
             "type": "boolean",
             "title": "I consent to data privacy policy",
-            "const": true
+            "const": True
         },
         "terms_and_conditions": {
             "type": "boolean",
             "title": "I agree to terms and conditions",
-            "const": true
+            "const": True
         }
     },
     "$defs": {
@@ -1127,7 +1127,7 @@ SECURITY_BANK_PERSONAL_LOAN_TEMPLATE = {
                                     "is_employed": {
                                         "type": "boolean",
                                         "title": "Is Spouse Employed?",
-                                        "default": false
+                                        "default": False
                                     },
                                     "monthly_income": {
                                         "type": "number",
@@ -1145,7 +1145,7 @@ SECURITY_BANK_PERSONAL_LOAN_TEMPLATE = {
         {
             "if": {
                 "properties": {
-                    "existing_loans": {"const": true}
+                    "existing_loans": {"const": True}
                 }
             },
             "then": {
