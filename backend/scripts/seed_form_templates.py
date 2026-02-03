@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.session import AsyncSessionLocal as async_session_maker
+from app.db.session import async_session_maker
 from app.models.forms import Bank, FormTemplate
 from sqlalchemy import select
 
