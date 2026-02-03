@@ -453,20 +453,26 @@ Shell script to run database seeding.
 #### seed_database.py
 Script to seed the database with initial data.
 
-#### seed_data.py
-Data seeding script.
+#### seed_data.py (legacy)
+Legacy data seeding script (drops/recreates form tables and seeds
+sample data). Replaced in normal workflows by
+`backend/scripts/seed_all_templates.py` which is non-destructive.
 
-#### seed_field_types.py
-Script to seed field types.
+#### seed_field_types.py (legacy)
+Legacy script to seed field types. Its logic is now orchestrated by
+`backend/scripts/seed_all_templates.py`.
 
-#### seed_form_templates.py
-Script to seed form templates.
+#### seed_form_templates.py (legacy)
+Legacy script to seed form templates (JSON-schema based). It is now
+invoked via `backend/scripts/seed_all_templates.py`.
 
-#### seed_predefined_field_types.py
-Script to seed predefined field types.
+#### seed_predefined_field_types.py (legacy)
+Legacy script to seed predefined field types. It is now invoked via
+`backend/scripts/seed_all_templates.py`.
 
-#### seed_sample_templates.py
-Script to seed sample templates.
+#### seed_sample_templates.py (legacy)
+Legacy script to seed sample templates. It is now invoked via
+`backend/scripts/seed_all_templates.py`.
 
 #### setup.sh
 Setup shell script for the project.

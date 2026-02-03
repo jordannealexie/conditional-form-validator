@@ -85,9 +85,9 @@ The application follows a modular architecture with clear separation of concerns
    # Install dependencies
    pip install -r requirements.txt
    
-   # Seed database with test data
-   python seed_data.py
-   python test_templates.py
+   # Seed database with templates and lookup data (single seed entrypoint)
+   cd backend
+   python scripts/seed_all_templates.py
    
    # Start the application
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -137,15 +137,12 @@ The application follows a modular architecture with clear separation of concerns
 
 5. **Initialize Database and Seed Data**
    ```bash
-   # Create admin user (optional, seed_data.py includes this)
+   # Create admin user (if needed)
    python create_admin.py
-   
-   # Seed database with test data (includes ABAC/ReBAC policies)
-   python seed_data.py
-   python test_templates.py
-   
-   # Or seed only ABAC/ReBAC policies
-   python scripts/seed_abac_rebac.py
+
+   # Seed database with templates, field types, and lookup data
+   # This is the ONLY seed script teammates should run
+   python scripts/seed_all_templates.py
    ```
 
 6. **Run Application**

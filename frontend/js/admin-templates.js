@@ -513,7 +513,17 @@ async function saveTemplate() {
     }
 
     const version = document.getElementById('templateVersion');
-    const templateVersion = version ? version.value : '1.0.0';
+    const templateVersion = version ? version.value : '1.0';
+
+    // Backend expects version in FLOAT format (e.g., '1.0', '2.5')
+    const versionPattern = /^\d+\.\d+$/;
+    if (!templateVersion || !versionPattern.test(templateVersion)) {
+        showToast("Version must be in '1.0' or '2.5' format (no extra dots)", 'error');
+        if (version) {
+            version.focus();
+        }
+        return;
+    }
 
     const schema = generateJSONSchema(fields);
 
@@ -588,7 +598,7 @@ async function saveTemplate() {
         // Reset form fields
         if (templateName) templateName.value = '';
         if (bankSelect) bankSelect.value = '';
-        if (version) version.value = '1.0.0';
+        if (version) version.value = '1.0';
 
         loadTemplates(); // Reload the list
 
