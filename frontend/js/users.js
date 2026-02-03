@@ -336,6 +336,12 @@ async function confirmDeleteUser(userId) {
 async function showAuditTrail(options) {
     const opts = options || {};
     const resourceType = opts.resourceType || null;
+    if (!resourceType) {
+        if (typeof showToast === 'function') {
+            showToast('Audit trail type is required', 'error');
+        }
+        return;
+    }
     const subjectLabel = opts.subjectLabel || (resourceType === 'role' ? 'Role' : resourceType === 'template' ? 'Template' : 'User');
     const title = opts.title || (resourceType === 'role'
         ? 'Roles & Permissions Audit Trail'
@@ -355,8 +361,8 @@ async function showAuditTrail(options) {
                 <p>Loading audit logs...</p>
             </div>
             <div id="auditTrailContent" style="display: none;">
-                <div class="table-wrapper table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="table table-striped table-sm audit-table mb-0" style="width: 100%;">
+                <div class="audit-table-wrapper">
+                    <table class="table table-striped table-sm audit-table mb-0">
                         <thead>
                             <tr>
                                 <th>${escapeHtml(subjectLabel)}</th>
@@ -397,57 +403,20 @@ async function loadAuditTrail(options) {
     const tbody = document.getElementById('auditTrailTableBody');
     
     try {
-        const response = await apiGetAllAuditLogs(0, 100);
+        if (!resourceType) {
+            throw new Error('Missing resource type for audit trail');
+        }
+
+        const response = resourceType === 'user'
+            ? await apiGetUsersAuditTrail(0, 100)
+            : await apiGetAllAuditLogs(0, 100, resourceType);
         
         if (loading) loading.style.display = 'none';
         
         // Handle null or empty response
         const logs = Array.isArray(response) ? response : [];
 
-        // Optionally filter by resource type for page-specific audit views
-        const filteredLogs = resourceType
-            ? logs.filter(log => {
-                  if (!log) return false;
-                  const rt = (log.resource_type || '').toLowerCase();
-                  const actionName = (log.action || '').toLowerCase();
-                  const target = resourceType.toLowerCase();
-
-                  // Primary filter: exact resource_type match
-                  if (rt === target) return true;
-
-                  // User-specific logs: allow legacy/null resource_type but user_* actions
-                  if (target === 'user') {
-                      if (rt === 'users') return true;
-                      if (actionName.startsWith('user_')) return true;
-                      return false;
-                  }
-
-                  // Role-specific logs: match by resource_type or role_* actions
-                  if (target === 'role') {
-                      if (rt === 'roles') return true;
-                      if (actionName.startsWith('role_')) return true;
-                      return false;
-                  }
-
-                  // Template-specific logs: be tolerant to legacy keys and missing resource_type
-                  if (target === 'template') {
-                      // Backwards/alias compatibility for templates
-                      if (rt === 'templates' || rt === 'forms' || rt === 'form_template') return true;
-
-                      // Fallback: infer from action naming when resource_type is missing
-                      if (actionName.startsWith('template_') || actionName.includes('form_template')) {
-                          return true;
-                      }
-
-                      return false;
-                  }
-
-                  // Default: strict resource_type match only
-                  return false;
-              })
-            : logs;
-
-        if (filteredLogs.length === 0) {
+        if (logs.length === 0) {
             if (tbody) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No audit logs found</td></tr>';
             }
@@ -474,7 +443,7 @@ async function loadAuditTrail(options) {
 
         // Populate audit trail table
         tbody.innerHTML = '';
-        filteredLogs.forEach(log => {
+        logs.forEach(log => {
             const tr = document.createElement('tr');
             
             // Format subject (user/role/template/etc.)
@@ -570,20 +539,52 @@ function showChangesDetailFromIndex(index) {
  * @param {object} changes - Changes object
  */
 function showChangesDetail(changes) {
+    const before = changes.before || {};
+    const after = changes.after || {};
+    const allKeys = Array.from(new Set([
+        ...Object.keys(before),
+        ...Object.keys(after)
+    ])).sort();
+
+    const formatValue = (value) => {
+        if (value === null || value === undefined || value === '') {
+            return '<span class="text-muted">—</span>';
+        }
+        if (typeof value === 'object') {
+            return `<pre class="json-block">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+        }
+        return escapeHtml(String(value));
+    };
+
     let content = '<div class="changes-detail">';
-    
     if (changes.action) {
-        content += `<p><strong>Action:</strong> ${escapeHtml(changes.action)}</p>`;
+        content += `<div class="changes-meta"><span class="badge badge-info">${escapeHtml(changes.action)}</span></div>`;
     }
-    
-    if (changes.before) {
-        content += '<div style="margin-top: 15px;"><strong>Before:</strong><pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;">' + escapeHtml(JSON.stringify(changes.before, null, 2)) + '</pre></div>';
+
+    if (allKeys.length === 0) {
+        content += '<p class="text-muted">No field-level changes recorded.</p>';
+    } else {
+        content += `
+            <div class="changes-grid">
+                <div class="changes-header">Field</div>
+                <div class="changes-header">Before</div>
+                <div class="changes-header">After</div>
+        `;
+
+        allKeys.forEach((key) => {
+            const beforeVal = before[key];
+            const afterVal = after[key];
+            const changed = JSON.stringify(beforeVal) !== JSON.stringify(afterVal);
+            content += `
+                <div class="change-key ${changed ? 'change-key--changed' : ''}">${escapeHtml(key)}</div>
+                <div class="change-before ${changed ? 'change-cell--changed' : ''}">${formatValue(beforeVal)}</div>
+                <div class="change-after ${changed ? 'change-cell--changed' : ''}">${formatValue(afterVal)}</div>
+            `;
+        });
+
+        content += '</div>';
     }
-    
-    if (changes.after) {
-        content += '<div style="margin-top: 15px;"><strong>After:</strong><pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto;">' + escapeHtml(JSON.stringify(changes.after, null, 2)) + '</pre></div>';
-    }
-    
+
     content += '</div>';
     
     createModal('Change Details', content, [

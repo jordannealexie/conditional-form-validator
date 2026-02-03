@@ -19,6 +19,22 @@ class AuditRepository:
         result = await self.db.execute(query)
         return result.scalars().all()
 
+    async def get_by_resource_type(
+        self,
+        resource_type: str,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[AuditLog]:
+        query = (
+            select(AuditLog)
+            .where(func.lower(AuditLog.resource_type) == resource_type)
+            .order_by(AuditLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
     async def get_by_user(self, username: str, limit: int = 50) -> List[AuditLog]:
         query = select(AuditLog).where(AuditLog.username == username).limit(limit).order_by(AuditLog.created_at.desc())
         result = await self.db.execute(query)

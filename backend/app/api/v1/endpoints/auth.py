@@ -30,7 +30,12 @@ async def register(
     existing_user = result.scalar_one_or_none()
     
     if existing_user:
-        await audit.log("register", status="failure", details=f"Email already exists: {user_in.email}")
+        await audit.log(
+            "register",
+            status="failure",
+            resource_type="auth",
+            details=f"Email already exists: {user_in.email}"
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
@@ -65,7 +70,14 @@ async def register(
     user_id = user.id
     username = user.username
     
-    await audit.log("register", user_id=user_id, username=username, details={"msg": f"New user registered: {username}"})
+    await audit.log(
+        "register",
+        user_id=user_id,
+        username=username,
+        resource_type="auth",
+        resource_id=str(user_id),
+        details={"msg": f"New user registered: {username}"}
+    )
     
     return user
 
@@ -103,7 +115,14 @@ async def login(
         print(f"DEBUG: User found: {user is not None}, hash: {user.password_hash if user else None}")
         # Store user_id to avoid greenlet issues
         user_id = user.id if user else None
-        await audit.log("login_attempt", user_id=user_id, status="failure", details="Incorrect credentials")
+        await audit.log(
+            "login_attempt",
+            user_id=user_id,
+            resource_type="auth",
+            resource_id=str(user_id) if user_id is not None else None,
+            status="failure",
+            details="Incorrect credentials"
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -113,7 +132,14 @@ async def login(
     if not user.active:
         # Store user_id to avoid greenlet issues
         user_id = user.id
-        await audit.log("login_attempt", user_id=user_id, status="failure", details="Inactive account")
+        await audit.log(
+            "login_attempt",
+            user_id=user_id,
+            resource_type="auth",
+            resource_id=str(user_id),
+            status="failure",
+            details="Inactive account"
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
@@ -191,7 +217,14 @@ async def login(
     # Refresh user data to avoid greenlet issues
     await db.refresh(user)
     
-    await audit.log("login", user_id=user_id, username=username, details="Login success")
+    await audit.log(
+        "login",
+        user_id=user_id,
+        username=username,
+        resource_type="auth",
+        resource_id=str(user_id),
+        details="Login success"
+    )
     
     return {
         "access_token": access_token,

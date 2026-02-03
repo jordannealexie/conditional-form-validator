@@ -10,7 +10,7 @@ class AuditLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     username = Column(String, nullable=True, index=True)
     action = Column(String, nullable=False, index=True)
-    resource_type = Column(String, nullable=True, index=True)
+    resource_type = Column(String, nullable=False, index=True, server_default="system")
     resource_id = Column(String, nullable=True, index=True)
     status = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)

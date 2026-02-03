@@ -86,7 +86,14 @@ async def update_user_me(
     if "is_active" in upd:
         upd["active"] = upd.pop("is_active")
     updated_user = await user_service.update(current_user.id, upd)
-    await audit.log("update_profile", user_id=current_user.id, username=current_user.username, details="User updated their profile")
+    await audit.log(
+        "update_profile",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="user",
+        resource_id=str(current_user.id),
+        details="User updated their profile"
+    )
     await user_service.db.commit()
     await user_service.db.refresh(updated_user)
     return create_response(data=UserResponse.model_validate(updated_user))
@@ -104,15 +111,38 @@ async def change_password_me(
     """Change current user password"""
     # Ensure we compare against the stored password hash
     if not current_user.password_hash:
-        await audit.log("change_password", user_id=current_user.id, username=current_user.username, status="failure", details="Missing password hash on user")
+        await audit.log(
+            "change_password",
+            user_id=current_user.id,
+            username=current_user.username,
+            resource_type="auth",
+            resource_id=str(current_user.id),
+            status="failure",
+            details="Missing password hash on user"
+        )
         raise HTTPException(status_code=500, detail="Password data unavailable")
 
     if not verify_password(pwd_in.current_password, current_user.password_hash):
-        await audit.log("change_password", user_id=current_user.id, username=current_user.username, status="failure", details="Incorrect current password")
+        await audit.log(
+            "change_password",
+            user_id=current_user.id,
+            username=current_user.username,
+            resource_type="auth",
+            resource_id=str(current_user.id),
+            status="failure",
+            details="Incorrect current password"
+        )
         raise HTTPException(status_code=400, detail="Incorrect current password")
     
     await user_service.update(current_user.id, {"password": pwd_in.new_password})
-    await audit.log("change_password", user_id=current_user.id, username=current_user.username, details="User changed their password")
+    await audit.log(
+        "change_password",
+        user_id=current_user.id,
+        username=current_user.username,
+        resource_type="auth",
+        resource_id=str(current_user.id),
+        details="User changed their password"
+    )
     return create_response(message="Password updated successfully")
 
 @router.get(

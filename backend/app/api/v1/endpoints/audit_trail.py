@@ -12,6 +12,28 @@ router = APIRouter()
 
 
 @router.get(
+    "/users",
+    response_model=CustomResponse[list[AuditLogResponse]],
+    summary="Get audit trail for all user entity logs",
+    description="Get audit trail logs scoped strictly to user entities"
+)
+async def get_users_audit_trail(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    audit_service: AuditService = Depends(get_audit_service),
+    current_user: User = Depends(authorize(resource="users", action="read"))
+):
+    logs = await audit_service.get_logs_by_resource_type("user", skip, limit)
+
+    if not logs:
+        return create_response(data=[])
+
+    return create_response(
+        data=[AuditLogResponse.model_validate(log) for log in logs]
+    )
+
+
+@router.get(
     "/users/{user_id}",
     response_model=CustomResponse[UserAuditTrailResponse],
     summary="Get audit trail for a user",
@@ -57,11 +79,15 @@ async def get_user_audit_trail(
 async def get_all_audit_logs(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
+    resource_type: Optional[str] = Query(None, description="Filter by resource type (e.g., user, role, template)"),
     audit_service: AuditService = Depends(get_audit_service),
     current_user: User = Depends(authorize(resource="users", action="read"))
 ):
     """Get all audit logs with pagination"""
-    logs = await audit_service.get_logs(skip, limit)
+    if resource_type:
+        logs = await audit_service.get_logs_by_resource_type(resource_type.strip().lower(), skip, limit)
+    else:
+        logs = await audit_service.get_logs(skip, limit)
     
     if not logs:
         return create_response(data=[])

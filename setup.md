@@ -354,5 +354,3 @@ See full API documentation at http://localhost:8000/docs
 5. Start frontend: `cd ../frontend && python3 -m http.server 3000`
 6. Open browser: http://localhost:3000
 7. Use DBeaver for database inspection
-
-Happy coding! 🚀

@@ -315,14 +315,28 @@ async function apiGetUserAuditTrail(userId, skip = 0, limit = 100) {
 }
 
 /**
+ * Get audit trail for all user entity logs
+ * Backend endpoint: GET /audit-trail/users
+ * @param {number} skip - Number of records to skip (default: 0)
+ * @param {number} limit - Maximum number of records to return (default: 100)
+ * @returns {Promise<Array>}
+ */
+async function apiGetUsersAuditTrail(skip = 0, limit = 100) {
+    return await apiRequest(`/audit-trail/users?skip=${skip}&limit=${limit}`, {
+        method: 'GET'
+    });
+}
+
+/**
  * Get all audit logs
  * Backend endpoint: GET /audit-trail/
  * @param {number} skip - Number of records to skip (default: 0)
  * @param {number} limit - Maximum number of records to return (default: 100)
  * @returns {Promise<Array>}
  */
-async function apiGetAllAuditLogs(skip = 0, limit = 100) {
-    return await apiRequest(`/audit-trail/?skip=${skip}&limit=${limit}`, {
+async function apiGetAllAuditLogs(skip = 0, limit = 100, resourceType = null) {
+    const resourceParam = resourceType ? `&resource_type=${encodeURIComponent(resourceType)}` : '';
+    return await apiRequest(`/audit-trail/?skip=${skip}&limit=${limit}${resourceParam}`, {
         method: 'GET'
     });
 }

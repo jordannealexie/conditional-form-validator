@@ -42,6 +42,9 @@ class AuditService:
         ip_address = None
         user_agent = None
 
+        normalized_resource_type = (resource_type or "system").strip().lower()
+        normalized_resource_id = str(resource_id) if resource_id is not None else None
+
         if request:
             ip_address = request.client.host if request.client else None
             user_agent = request.headers.get("user-agent")
@@ -50,8 +53,8 @@ class AuditService:
             user_id=user_id,
             username=username,
             action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
+            resource_type=normalized_resource_type,
+            resource_id=normalized_resource_id,
             status=status,
             ip_address=ip_address,
             user_agent=user_agent,
@@ -148,6 +151,18 @@ class AuditService:
 
     async def get_logs(self, skip: int = 0, limit: int = 100):
         return await self.repository.get_all(skip, limit)
+
+    async def get_logs_by_resource_type(
+        self,
+        resource_type: str,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List:
+        return await self.repository.get_by_resource_type(
+            resource_type=resource_type,
+            skip=skip,
+            limit=limit
+        )
     
     async def get_user_audit_trail(
         self, 
