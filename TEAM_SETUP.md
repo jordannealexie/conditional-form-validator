@@ -38,24 +38,33 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_DB=fastapi_db
 SECRET_KEY=your-secret-key-change-in-production
 REDIS_URL=redis://localhost:6379/0
+
+# MinIO Configuration (for file storage)
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=uploads
+MINIO_SECURE=false
 ```
 
-Adjust values if your local PostgreSQL/Redis are different.
+Adjust values if your local PostgreSQL/Redis/MinIO are different.
 
-## 3. Start Infrastructure with Docker (Postgres + Redis)
+## 3. Start Infrastructure with Docker (Postgres + Redis + MinIO)
 
 From the `backend` directory:
 
 ```bash
 cd backend
 
-# Start Postgres and Redis (and optional API container)
+# Start Postgres, Redis, and MinIO
 docker-compose up -d
 ```
 
 This will expose:
 - PostgreSQL on `localhost:5434`
 - Redis on `localhost:6379`
+- MinIO API on `localhost:9000`
+- MinIO Console on `localhost:9001`
 
 ## 4. Initialize and Seed the Database
 
@@ -73,6 +82,16 @@ python scripts/seed_all_templates.py
 Legacy seed scripts (`seed_data.py`, `seed_form_templates.py`,
 `seed_sample_templates.py`, etc.) are kept only for reference and
 should not be used in normal team workflows.
+
+## 4.1 MinIO Object Storage Setup
+
+MinIO is automatically started with Docker Compose. To access the MinIO console:
+
+- **MinIO Console**: http://localhost:9001
+  - **Username**: `minioadmin`
+  - **Password**: `minioadmin`
+
+The application uses the `uploads` bucket for file storage. MinIO will be automatically configured when the application starts.
 
 ## 5. Run Database Migrations (Alembic)
 
@@ -101,6 +120,8 @@ Then open Swagger at:
 The frontend lives under `frontend/` and is served statically by the backend. After the backend is running, open:
 
 - http://localhost:8000
+
+**Note**: The frontend is configured to connect to `http://localhost:8000` for the API. If you need to run the frontend separately (e.g., for development), you may need to update the API URLs in `frontend/js/api.js` and `frontend/js/dropdown-loader.js`.
 
 Key pages:
 - User Management: `/users.html`

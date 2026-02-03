@@ -4,7 +4,7 @@
 
 // API Configuration
 const API_CONFIG = {
-    baseURL: '/api/v1',
+    baseURL: 'http://localhost:8000/api/v1',
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json'

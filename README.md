@@ -22,6 +22,7 @@ A comprehensive form management and validation platform built with FastAPI and V
 ### 🚀 Performance & Scalability
 - **Redis Cache**: High-performance caching for templates and user sessions.
 - **Async Database**: Fully asynchronous PostgreSQL operations with SQLAlchemy.
+- **MinIO Storage**: S3-compatible object storage for scalable file uploads.
 - **Background Tasks**: Asynchronous processing for notifications and heavy operations.
 - **Request Monitoring**: Comprehensive logging and performance tracking.
 
@@ -32,6 +33,7 @@ A comprehensive form management and validation platform built with FastAPI and V
 - **SQLAlchemy**: SQL toolkit and ORM with async support
 - **PostgreSQL**: Primary database for persistent storage
 - **Redis**: Caching and session management
+- **MinIO**: S3-compatible object storage for file uploads
 - **Pydantic**: Data validation using Python type annotations
 - **Casbin**: Authorization library for RBAC/ABAC/ReBAC
 - **Uvicorn**: ASGI server for FastAPI
@@ -58,9 +60,10 @@ The application follows a modular architecture with clear separation of concerns
 
 ### Prerequisites
 - Python 3.9+
-- Docker and Docker Compose (Recommended)
-- Redis (Optional, for RQ)
-- PostgreSQL (if not using Docker)
+- Docker and Docker Compose (Recommended - includes PostgreSQL, Redis, and MinIO)
+- Redis (Optional, for RQ - included in Docker setup)
+- PostgreSQL (Optional - included in Docker setup)
+- MinIO (Optional - included in Docker setup)
 
 ### Quick Start with Docker (Recommended)
 
@@ -74,7 +77,7 @@ The application follows a modular architecture with clear separation of concerns
    ```bash
    docker-compose up -d
    ```
-   This will start PostgreSQL (port 5434), Redis (port 6379), and the API (port 8001).
+   This will start PostgreSQL (port 5434), Redis (port 6379), MinIO (port 9000/9001), and the API (port 8001).
 
 3. **Setup Python environment and run application**
    ```bash
@@ -125,7 +128,7 @@ The application follows a modular architecture with clear separation of concerns
 
 4. **Configure Environment**
    
-   Create `.env` in the `backend/` directory:
+   Copy `.env.example` to `.env` in the `backend/` directory and update with your values:
    ```env
    DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5434/fastapi_db
    POSTGRES_SERVER=localhost
@@ -133,6 +136,13 @@ The application follows a modular architecture with clear separation of concerns
    POSTGRES_PASSWORD=postgres
    POSTGRES_DB=fastapi_db
    SECRET_KEY=your-secret-key-change-in-production
+   
+   # MinIO Configuration (for file storage)
+   MINIO_ENDPOINT=localhost:9000
+   MINIO_ACCESS_KEY=minioadmin
+   MINIO_SECRET_KEY=minioadmin
+   MINIO_BUCKET=uploads
+   MINIO_SECURE=false
    ```
 
 5. **Initialize Database and Seed Data**
@@ -163,7 +173,7 @@ For easier setup with all dependencies (PostgreSQL, Redis), use Docker Compose:
    ```bash
    docker-compose up -d
    ```
-   This runs PostgreSQL (port 5434), Redis (port 6379), and optionally the API container.
+   This runs PostgreSQL (port 5434), Redis (port 6379), MinIO (port 9000/9001), and optionally the API container.
 
 3. **Follow steps 3-6 from Quick Start to run the Python application locally**
 
@@ -190,6 +200,18 @@ Open your browser and navigate to: **[http://localhost:8000](http://localhost:80
 - **ReDoc**: [http://localhost:8000/api/v1/redoc](http://localhost:8000/api/v1/redoc)
 - **Health Check**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 - **Metrics**: [http://localhost:8000/api/v1/health/metrics](http://localhost:8000/api/v1/health/metrics)
+
+### MinIO Object Storage
+
+The application uses MinIO for scalable file storage. When running with Docker Compose, MinIO is automatically started.
+
+- **MinIO Console**: [http://localhost:9001](http://localhost:9001)
+  - **Username**: `minioadmin`
+  - **Password**: `minioadmin`
+- **API Endpoint**: `http://localhost:9000`
+- **Default Bucket**: `uploads`
+
+All file uploads are stored in the `uploads` bucket and can be accessed through the application's file endpoints.
 
 ### Frontend
 
@@ -224,12 +246,11 @@ Key frontend features:
 - Multi-bank form submissions
 - Real-time form validation
 
-🔧 **Recent Updates (Jan 2026):**
-- Fixed form template serialization issues
-- Updated version validation to accept float formats
-- Improved database connection handling
-- Enhanced error logging and debugging
-- Updated Docker configuration for easier setup
+🔧 **Recent Updates (Feb 2026):**
+- Integrated MinIO object storage for scalable file uploads
+- Updated Docker configuration with MinIO service
+- Enhanced file storage with S3-compatible backend
+- Improved environment configuration with .env.example
 
 ## Testing
 
@@ -269,7 +290,13 @@ python -m pytest --cov=app tests/ --cov-report=html
    - Start Redis: `docker-compose up redis -d`
    - Application will fallback to in-memory caching
 
-4. **Form templates not loading**
+4. **MinIO connection error**
+   - Ensure MinIO is running: `docker-compose ps minio`
+   - Check MinIO console: [http://localhost:9001](http://localhost:9001)
+   - Verify bucket exists in MinIO console
+   - Check MinIO environment variables in `.env`
+
+5. **Form templates not loading**
    - Run seed script: `python seed_data.py`
    - Check API endpoint: `curl -H "X-Client-ID: web-client-v1" http://localhost:8000/api/v1/health`
 

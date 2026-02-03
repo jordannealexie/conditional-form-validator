@@ -38,7 +38,7 @@ const DropdownLoader = (function() {
     };
 
     // API endpoint for form metadata
-    const METADATA_ENDPOINT = '/api/v1/metadata/form-dropdowns';
+    const METADATA_ENDPOINT = 'http://localhost:8000/api/v1/metadata/form-dropdowns';
 
     // ============ Private Methods ============
 

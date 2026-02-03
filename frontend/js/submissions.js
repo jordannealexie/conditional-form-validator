@@ -279,13 +279,31 @@ async function viewSubmission(id) {
         if (sub.data_json && Object.keys(sub.data_json).length > 0) {
             html += '<div class="form-data-grid">';
             for (const [key, value] of Object.entries(sub.data_json)) {
-                const displayValue = value === true ? 'Yes' : (value === false ? 'No' : (value || '-'));
-                html += `
-                    <div class="data-card">
-                        <span class="data-label">${formatFieldName(key)}</span>
-                        <span class="data-value">${escapeHtml(displayValue)}</span>
-                    </div>
-                `;
+                // Detect uploaded file tokens (heuristic)
+                let isFileToken = false;
+                if (typeof value === 'string') {
+                    // tokens are UUID-like and usually fairly long; use a permissive heuristic
+                    isFileToken = value.length >= 20 && /[0-9a-fA-F\-]/.test(value);
+                }
+
+                if (isFileToken) {
+                    const token = value;
+                    const safeKey = formatFieldName(key);
+                    html += `
+                        <div class="data-card">
+                            <span class="data-label">${safeKey}</span>
+                            <span class="data-value"><a href="#" onclick="openSubmissionFile('${token}', '${escapeHtml(safeKey)}'); return false;">Open attached file</a></span>
+                        </div>
+                    `;
+                } else {
+                    const displayValue = value === true ? 'Yes' : (value === false ? 'No' : (value || '-'));
+                    html += `
+                        <div class="data-card">
+                            <span class="data-label">${formatFieldName(key)}</span>
+                            <span class="data-value">${escapeHtml(displayValue)}</span>
+                        </div>
+                    `;
+                }
             }
             html += '</div>';
         } else {
@@ -493,4 +511,61 @@ document.addEventListener('click', (e) => {
         closeModal();
     }
 });
+
+
+/**
+ * Open a submission file by token. Called from modal links.
+ * This fetches the file using the current auth token, creates a blob URL and opens it.
+ */
+async function openSubmissionFile(token, fallbackName) {
+    return openFile(token, fallbackName);
+}
+
+
+async function openFile(token, fallbackName) {
+    if (!token) return showToast('Invalid file token', 'error');
+    const url = (typeof apiGetFileUrl === 'function') ? apiGetFileUrl(token) : (`/files/${token}`);
+    const headers = {};
+    if (typeof getAuthToken === 'function') {
+        const t = getAuthToken();
+        if (t) headers['Authorization'] = `Bearer ${t}`;
+    }
+
+    try {
+        const res = await fetch(url, { method: 'GET', headers });
+        if (!res.ok) throw new Error('Failed to fetch file');
+
+        const blob = await res.blob();
+
+        // Attempt to derive filename from Content-Disposition header
+        let filename = fallbackName || token;
+        try {
+            const cd = res.headers.get('content-disposition');
+            if (cd) {
+                const m = /filename\*=UTF-8''([^;]+)|filename="?([^\";]+)"?/.exec(cd);
+                if (m) filename = decodeURIComponent(m[1] || m[2]);
+            }
+        } catch (e) {
+            // ignore header parsing errors
+        }
+
+        const blobUrl = URL.createObjectURL(blob);
+        const w = window.open(blobUrl, '_blank');
+        if (!w) {
+            // Popup blocked — force download
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename || '';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        // Revoke after a minute
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60 * 1000);
+    } catch (err) {
+        console.error('openFile error', err);
+        showToast(err.message || 'Failed to open file', 'error');
+    }
+}
 

@@ -5,7 +5,7 @@ import uuid as _uuid
 import time
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -14,10 +14,11 @@ from app.models.user import User
 from app.models.forms import FormFile
 from app.repositories.forms import FormFileRepository
 from app.utils.response import create_response
+from app.utils.minio import minio_client
 
 router = APIRouter()
 
-# Directory for uploads: backend/uploads or env UPLOAD_DIR
+# Directory for uploads: backend/uploads or env UPLOAD_DIR (fallback for local dev)
 UPLOAD_BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "uploads"))
 
 
@@ -46,8 +47,6 @@ async def upload_file(
     
     Performance optimization: Uses aiofiles for non-blocking file writes
     """
-    await _ensure_upload_dir()
-    
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing filename")
     
@@ -55,24 +54,22 @@ async def upload_file(
     content = await file.read()
     size = len(content)
     
-    # Generate safe filename
+    # Generate safe filename for MinIO object name
     fname = _safe_filename(file.filename)
     ts = int(time.time() * 1000)
     uid = str(_uuid.uuid4())[:8]
-    storage_name = f"file_{uid}_{ts}_{fname}"
-    storage_path = os.path.join(UPLOAD_BASE, storage_name)
+    object_name = f"file_{uid}_{ts}_{fname}"
     
-    # Write file asynchronously (non-blocking)
-    async with aiofiles.open(storage_path, "wb") as f:
-        await f.write(content)
+    # Upload to MinIO
+    try:
+        minio_client.upload_file(object_name, content, file.content_type or "application/octet-stream")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to upload file: {str(e)}")
     
-    # Store relative path for portability
-    rel_path = storage_name
-    
-    # Create database record
+    # Store object name in database (not local path)
     rec = FormFile(
         original_filename=file.filename,
-        storage_path=rel_path,
+        storage_path=object_name,  # This is now the MinIO object name
         mime_type=file.content_type or "application/octet-stream",
         file_size=size,
         submission_id=submission_id,
@@ -101,19 +98,27 @@ async def get_file(
 ):
     """
     Download a file by token.
-    Returns the file stream.
+    Returns the file stream from MinIO or local storage.
     
-    Performance: FileResponse handles streaming efficiently
+    Performance: Streaming response for efficient file serving
     """
     rec = await FormFileRepository.get_by_token(db, token)
     if not rec:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
     
-    full_path = os.path.join(UPLOAD_BASE, rec.storage_path)
-    
-    # Check file exists (async check would be ideal but os.path.isfile is fast enough)
-    if not os.path.isfile(full_path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
-    
-    # FileResponse handles streaming efficiently
-    return FileResponse(full_path, filename=rec.original_filename, media_type=rec.mime_type)
+    # Try MinIO first (for new files)
+    try:
+        file_data, content_type = minio_client.download_file(rec.storage_path)
+        return Response(
+            content=file_data,
+            media_type=content_type,
+            headers={"Content-Disposition": f"attachment; filename={rec.original_filename}"}
+        )
+    except Exception:
+        # Fallback to local storage for existing files
+        full_path = os.path.join(UPLOAD_BASE, rec.storage_path)
+        if not os.path.isfile(full_path):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found in storage")
+        
+        from fastapi.responses import FileResponse
+        return FileResponse(full_path, filename=rec.original_filename, media_type=rec.mime_type)
