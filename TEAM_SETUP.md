@@ -65,13 +65,14 @@ Still inside `backend` (and with the virtualenv activated):
 # (Optional) Create an admin user
 python create_admin.py
 
-# Seed database with sample data, templates, and ABAC/ReBAC policies
-python scripts/seed_data.py
-python scripts/seed_templates.py  # if present in repo
-python scripts/seed_abac_rebac.py
+# Seed database with templates, field types, and lookup data
+# This is the ONLY seed script your team should run
+python scripts/seed_all_templates.py
 ```
 
-If any script name differs (for example `seed_database.py`, `seed_form_templates.py`, etc.), use the exact names in the `backend/scripts` directory.
+Legacy seed scripts (`seed_data.py`, `seed_form_templates.py`,
+`seed_sample_templates.py`, etc.) are kept only for reference and
+should not be used in normal team workflows.
 
 ## 5. Run Database Migrations (Alembic)
 

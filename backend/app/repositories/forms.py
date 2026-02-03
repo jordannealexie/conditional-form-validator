@@ -10,7 +10,7 @@ from app.models.forms import Bank, FormTemplate, FormSubmission, FormFile, Submi
 from datetime import datetime
 
 # Import cache layer
-from app.core.cache import template_cache
+from app.core.cache import template_cache, CacheKeys
 
 
 class BankRepository:
@@ -185,23 +185,24 @@ class FormTemplateRepository:
     
     @staticmethod
     async def create(db: AsyncSession, **kwargs) -> FormTemplate:
-        """Create a new form template without committing.
+        """Create a new form template and commit immediately.
 
-        Commit is handled at the endpoint level so that the template
-        creation and its corresponding audit log can be part of the
-        same transaction.
+        This mirrors the pattern used by other repositories: the
+        repository is responsible for persisting and refreshing the
+        entity. Callers can perform additional work (such as audit
+        logging) afterwards and issue a second commit if needed.
         """
         template = FormTemplate(**kwargs)
         db.add(template)
 
-        # Flush so the template gets an ID and related FKs are valid
-        await db.flush()
+        # Commit so the template gets a permanent ID and timestamps
+        await db.commit()
 
         # Eager load bank while the session/transaction is active
         await db.refresh(template, attribute_names=["bank"])
 
         # Cache the new template (best-effort; cache layer is async-safe)
-        FormTemplateRepository._cache_template(template)
+        await FormTemplateRepository._cache_template(template)
 
         return template
     
@@ -214,7 +215,7 @@ class FormTemplateRepository:
         """
         # Try cache first
         if use_cache:
-            cached = template_cache.get(template_id)
+            cached = await template_cache.get(CacheKeys.template(template_id))
             if cached:
                 # Reconstruct model from cache (simplified - in production use proper deserialization)
                 return FormTemplateRepository._from_cache(cached)
@@ -229,12 +230,12 @@ class FormTemplateRepository:
         
         # Cache result
         if template and use_cache:
-            FormTemplateRepository._cache_template(template)
+            await FormTemplateRepository._cache_template(template)
         
         return template
     
     @staticmethod
-    def _cache_template(template: FormTemplate) -> None:
+    async def _cache_template(template: FormTemplate) -> None:
         """Store template in cache"""
         cache_data = {
             "id": template.id,
@@ -262,7 +263,8 @@ class FormTemplateRepository:
                 "updated_at": template.bank.updated_at.isoformat() if template.bank.updated_at else None
             } if template.bank else None
         }
-        template_cache.set(template.id, cache_data)
+        # Use namespaced key so invalidate/delete_pattern work correctly
+        await template_cache.set(CacheKeys.template(template.id), cache_data)
     
     @staticmethod
     def _from_cache(cached: dict) -> FormTemplate:
@@ -395,7 +397,7 @@ class FormTemplateRepository:
         updated = result.unique().scalar_one()
         
         # Re-cache updated template
-        FormTemplateRepository._cache_template(updated)
+        await FormTemplateRepository._cache_template(updated)
         
         return updated
     

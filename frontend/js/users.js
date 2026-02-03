@@ -406,7 +406,45 @@ async function loadAuditTrail(options) {
 
         // Optionally filter by resource type for page-specific audit views
         const filteredLogs = resourceType
-            ? logs.filter(log => log && log.resource_type === resourceType)
+            ? logs.filter(log => {
+                  if (!log) return false;
+                  const rt = (log.resource_type || '').toLowerCase();
+                  const actionName = (log.action || '').toLowerCase();
+                  const target = resourceType.toLowerCase();
+
+                  // Primary filter: exact resource_type match
+                  if (rt === target) return true;
+
+                  // User-specific logs: allow legacy/null resource_type but user_* actions
+                  if (target === 'user') {
+                      if (rt === 'users') return true;
+                      if (actionName.startsWith('user_')) return true;
+                      return false;
+                  }
+
+                  // Role-specific logs: match by resource_type or role_* actions
+                  if (target === 'role') {
+                      if (rt === 'roles') return true;
+                      if (actionName.startsWith('role_')) return true;
+                      return false;
+                  }
+
+                  // Template-specific logs: be tolerant to legacy keys and missing resource_type
+                  if (target === 'template') {
+                      // Backwards/alias compatibility for templates
+                      if (rt === 'templates' || rt === 'forms' || rt === 'form_template') return true;
+
+                      // Fallback: infer from action naming when resource_type is missing
+                      if (actionName.startsWith('template_') || actionName.includes('form_template')) {
+                          return true;
+                      }
+
+                      return false;
+                  }
+
+                  // Default: strict resource_type match only
+                  return false;
+              })
             : logs;
 
         if (filteredLogs.length === 0) {
@@ -450,16 +488,19 @@ async function loadAuditTrail(options) {
                 targetSubject = `${prefix}: ${log.resource_id}`;
             }
             
-            // Format action
-            let actionLabel = log.action || 'Unknown';
+            // Format action (support both top-level action and changes.action)
+            let rawAction = (log && (log.action || (log.changes && log.changes.action))) || 'Unknown';
+            const actionLower = String(rawAction).toLowerCase();
+            let actionLabel = rawAction;
             let actionBadge = 'badge-secondary';
-            if (actionLabel.includes('created')) {
+
+            if (actionLower.includes('created')) {
                 actionLabel = 'Created';
                 actionBadge = 'badge-success';
-            } else if (actionLabel.includes('updated')) {
+            } else if (actionLower.includes('updated')) {
                 actionLabel = 'Updated';
                 actionBadge = 'badge-primary';
-            } else if (actionLabel.includes('deleted')) {
+            } else if (actionLower.includes('deleted')) {
                 actionLabel = 'Deleted';
                 actionBadge = 'badge-danger';
             }

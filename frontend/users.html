@@ -89,7 +89,7 @@
                             onkeyup="debounce(() => filterTable('usersTable', this.value), 300)()">
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-info" onclick="showAuditTrail()" data-permission="users"
+                        <button class="btn btn-info" onclick="showAuditTrail({ resourceType: 'user' })" data-permission="users"
                             data-action="read">
                             📋 Audit Trail
                         </button>
