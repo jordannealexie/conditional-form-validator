@@ -4,7 +4,7 @@ from typing import Optional
 class Settings(BaseSettings):
     # API Settings
     API_V1_STR: str = "/api/v1"
-    PROJECT_NAME: str = "FastAPI RBAC/ABAC/ReBAC Project"
+    PROJECT_NAME: str = "FastAPI RBAC/ABAC Project"
     
     # Security
     SECRET_KEY: str = "your-secret-key-change-in-production"

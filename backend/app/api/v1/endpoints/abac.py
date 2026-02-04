@@ -185,7 +185,7 @@ async def check_abac_permission(
         raise HTTPException(status_code=404, detail="User not found")
     
     service = ABACService(db)
-    has_permission, matched_policies = await service.evaluate_policy(
+    has_permission, matched_policies, failed_policies = await service.evaluate_policy(
         user=user,
         resource=check_request.resource,
         action=check_request.action,
@@ -193,7 +193,12 @@ async def check_abac_permission(
         resource_id=check_request.resource_id
     )
     
-    reason = f"Matched policies: {', '.join(matched_policies)}" if matched_policies else "No policies matched"
+    if failed_policies:
+        reason = f"Failed policies: {', '.join(failed_policies)}"
+    elif matched_policies:
+        reason = f"Matched policies: {', '.join(matched_policies)}"
+    else:
+        reason = "No applicable policies"
     
     return ABACCheckResponse(
         username=check_request.username,
@@ -375,10 +380,10 @@ async def get_available_attributes(
     resource_attr_result = await db.execute(select(distinct(ResourceAttribute.attribute_key)))
     dynamic_resource_attrs = [row[0] for row in resource_attr_result.fetchall()]
     
-    # Build User Attributes group
+    # Build Subject (User) Attributes group
     user_attributes = [
         AttributeDefinition(
-            key="user.id",
+            key="subject.user_id",
             label="User ID",
             description="The unique identifier of the user",
             value_type="number",
@@ -387,16 +392,16 @@ async def get_available_attributes(
             input_placeholder="Enter user ID (e.g., 1, 2, 3)"
         ),
         AttributeDefinition(
-            key="user.user_role",
-            label="User Role",
-            description="The primary role assigned to the user",
+            key="subject.roles",
+            label="Roles",
+            description="Roles assigned to the user",
             value_type="enum",
             operators=ENUM_OPERATORS,
             value_source="/api/v1/roles",
             static_values=role_options if role_options else None
         ),
         AttributeDefinition(
-            key="user.department",
+            key="subject.department",
             label="Department",
             description="The department the user belongs to",
             value_type="enum",
@@ -405,7 +410,18 @@ async def get_available_attributes(
             static_values=dept_options if dept_options else None
         ),
         AttributeDefinition(
-            key="user.location",
+            key="subject.account_status",
+            label="Account Status",
+            description="Whether the user account is active",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            static_values=[
+                ValueOption(value="active", label="Active"),
+                ValueOption(value="inactive", label="Inactive")
+            ]
+        ),
+        AttributeDefinition(
+            key="subject.location",
             label="Location",
             description="The physical location or office of the user",
             value_type="enum",
@@ -414,7 +430,7 @@ async def get_available_attributes(
             static_values=loc_options if loc_options else None
         ),
         AttributeDefinition(
-            key="user.level",
+            key="subject.level",
             label="User Level",
             description="The authorization level of the user (1-3)",
             value_type="enum",
@@ -427,7 +443,7 @@ async def get_available_attributes(
             ]
         ),
         AttributeDefinition(
-            key="user.bank_id",
+            key="subject.bank_id",
             label="Bank ID",
             description="The bank the user is associated with",
             value_type="number",
@@ -435,35 +451,13 @@ async def get_available_attributes(
             value_source="/api/v1/banks",
             input_placeholder="Enter bank ID"
         ),
-        AttributeDefinition(
-            key="user.is_superuser",
-            label="Is Superuser",
-            description="Whether the user has superuser privileges",
-            value_type="boolean",
-            operators=BOOLEAN_OPERATORS,
-            static_values=[
-                ValueOption(value="true", label="Yes"),
-                ValueOption(value="false", label="No")
-            ]
-        ),
-        AttributeDefinition(
-            key="user.active",
-            label="Is Active",
-            description="Whether the user account is active",
-            value_type="boolean",
-            operators=BOOLEAN_OPERATORS,
-            static_values=[
-                ValueOption(value="true", label="Yes"),
-                ValueOption(value="false", label="No")
-            ]
-        ),
     ]
     
     # Add dynamic user attributes from database
     for attr_key in dynamic_user_attrs:
-        if not any(a.key == f"user.{attr_key}" for a in user_attributes):
+        if not any(a.key == f"subject.{attr_key}" for a in user_attributes):
             user_attributes.append(AttributeDefinition(
-                key=f"user.{attr_key}",
+                key=f"subject.{attr_key}",
                 label=attr_key.replace("_", " ").title(),
                 description=f"Custom attribute: {attr_key}",
                 value_type="string",
@@ -484,19 +478,19 @@ async def get_available_attributes(
         AttributeDefinition(
             key="resource.type",
             label="Resource Type",
-            description="The type of resource (e.g., document, form, submission)",
+            description="The type of resource (e.g., submission, template)",
             value_type="enum",
             operators=ENUM_OPERATORS,
             static_values=[
-                ValueOption(value="document", label="Document"),
-                ValueOption(value="form", label="Form"),
                 ValueOption(value="submission", label="Submission"),
                 ValueOption(value="template", label="Template"),
                 ValueOption(value="bank", label="Bank"),
+                ValueOption(value="form", label="Form"),
+                ValueOption(value="document", label="Document"),
             ]
         ),
         AttributeDefinition(
-            key="resource.user_id",
+            key="resource.owner_id",
             label="Resource Owner ID",
             description="The ID of the user who owns the resource",
             value_type="number",
@@ -519,11 +513,18 @@ async def get_available_attributes(
             operators=ENUM_OPERATORS,
             static_values=[
                 ValueOption(value="draft", label="Draft"),
-                ValueOption(value="pending", label="Pending"),
+                ValueOption(value="submitted", label="Submitted"),
                 ValueOption(value="approved", label="Approved"),
                 ValueOption(value="rejected", label="Rejected"),
-                ValueOption(value="published", label="Published"),
             ]
+        ),
+        AttributeDefinition(
+            key="resource.created_at",
+            label="Created At",
+            description="Creation timestamp of the resource",
+            value_type="string",
+            operators=STRING_OPERATORS,
+            input_placeholder="YYYY-MM-DD or ISO timestamp"
         ),
         AttributeDefinition(
             key="resource.classification",
@@ -552,11 +553,48 @@ async def get_available_attributes(
                 input_placeholder=f"Enter {attr_key}"
             ))
     
+    action_attributes = [
+        AttributeDefinition(
+            key="action",
+            label="Action",
+            description="Action being performed",
+            value_type="enum",
+            operators=ENUM_OPERATORS,
+            static_values=[
+                ValueOption(value="read", label="Read"),
+                ValueOption(value="create", label="Create"),
+                ValueOption(value="update", label="Update"),
+                ValueOption(value="delete", label="Delete"),
+                ValueOption(value="submit", label="Submit"),
+                ValueOption(value="review", label="Review"),
+            ]
+        )
+    ]
+
+    env_attributes = [
+        AttributeDefinition(
+            key="env.time",
+            label="Request Time",
+            description="Time of the request (server)",
+            value_type="string",
+            operators=STRING_OPERATORS,
+            input_placeholder="HH:MM or ISO timestamp"
+        ),
+        AttributeDefinition(
+            key="env.request_origin",
+            label="Request Origin",
+            description="Origin of the request (IP, domain, or app)",
+            value_type="string",
+            operators=STRING_OPERATORS,
+            input_placeholder="e.g., web, mobile, 10.0.0.1"
+        )
+    ]
+
     # Build the response
     metadata = ABACMetadataResponse(
         attribute_groups=[
             AttributeGroup(
-                name="User Attributes",
+                name="Subject Attributes",
                 description="Attributes related to the user requesting access",
                 attributes=user_attributes
             ),
@@ -564,6 +602,16 @@ async def get_available_attributes(
                 name="Resource Attributes",
                 description="Attributes related to the resource being accessed",
                 attributes=resource_attributes
+            ),
+            AttributeGroup(
+                name="Action Attributes",
+                description="Attributes related to the action being performed",
+                attributes=action_attributes
+            ),
+            AttributeGroup(
+                name="Environment Attributes",
+                description="Environmental attributes for the request",
+                attributes=env_attributes
             )
         ],
         global_operators=[

@@ -1,5 +1,5 @@
 """
-Dependencies for RBAC, ABAC, and ReBAC authorization
+Dependencies for RBAC and ABAC authorization
 """
 from typing import Optional, List, Set
 from fastapi import Depends, HTTPException, status
@@ -18,7 +18,7 @@ from app.db.session import get_db
 # This system reads permissions directly from the database (roles.permissions JSON)
 # and does NOT rely on Casbin policies or hardcoded superuser checks.
 # 
-# Permission format in database: ["resource:action", "policies:read", "relationships:create"]
+# Permission format in database: ["resource:action", "policies:read"]
 # ============================================================================
 
 async def get_user_permissions_from_db(user: User, db: AsyncSession) -> Set[str]:
@@ -28,7 +28,7 @@ async def get_user_permissions_from_db(user: User, db: AsyncSession) -> Set[str]
     This function:
     1. Queries all roles assigned to the user
     2. Extracts the permissions JSON from each role
-    3. Returns a set of all unique permissions (e.g., {"policies:read", "relationships:write"})
+    3. Returns a set of all unique permissions (e.g., {"policies:read"})
     
     Args:
         user: The authenticated user
@@ -69,7 +69,7 @@ def require_permission(required_permission: str):
     
     Args:
         required_permission: Permission string in format "resource:action" 
-                           (e.g., "policies:read", "relationships:create")
+                           (e.g., "policies:read")
     
     Usage:
         @router.get("/abac/policies")
@@ -219,7 +219,10 @@ def require_abac(resource: str, action: str):
         ):
             ...
     """
-    async def check_permission(current_user: User = Depends(get_current_user)) -> User:
+    async def check_permission(
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db)
+    ) -> User:
         if not current_user.active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -230,20 +233,9 @@ def require_abac(resource: str, action: str):
         if current_user.is_superuser:
             return current_user
         
-        # Build attributes from user
-        attributes = {
-            "department": current_user.department or "",
-            "level": current_user.level or 1,
-            "location": current_user.location or "",
-            "is_superuser": current_user.is_superuser
-        }
-        
-        # Check ABAC permission
-        has_permission = await casbin_enforcer.check_abac_permission_async(
-            attributes,
-            resource,
-            action
-        )
+        from app.services.abac_service import ABACService
+        service = ABACService(db)
+        has_permission = (await service.evaluate_policy(current_user, resource, action))[0]
         
         if not has_permission:
             raise HTTPException(
@@ -255,46 +247,6 @@ def require_abac(resource: str, action: str):
     
     return check_permission
 
-
-def require_rebac(resource: str, action: str):
-    """
-    Dependency factory for ReBAC permission checking.
-    
-    Usage:
-        @router.get("/resource/{resource_id}")
-        async def get_resource(
-            resource_id: str,
-            user: User = Depends(require_rebac("resource", "read"))
-        ):
-            ...
-    """
-    async def check_permission(current_user: User = Depends(get_current_user)) -> User:
-        if not current_user.active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Inactive user"
-            )
-        
-        # Superuser bypass
-        if current_user.is_superuser:
-            return current_user
-        
-        # Check ReBAC permission
-        has_permission = await casbin_enforcer.check_rebac_permission_async(
-            current_user.username,
-            resource,
-            action
-        )
-        
-        if not has_permission:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions based on relationships: cannot {action} {resource}"
-            )
-        
-        return current_user
-    
-    return check_permission
 
 
 def require_superuser(current_user: User = Depends(get_current_user)) -> User:

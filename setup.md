@@ -229,12 +229,13 @@ python recreate_db.py
 cd backend/scripts
 
 # Grant permissions
+# ABAC permissions grant script
 ./grant_abac_rebac_permissions.sql
 
 # Quick fix permissions
 ./fix_permissions.sh
 
-# Note: ABAC/ReBAC data is included in the database dump
+# Note: ABAC data is included in the database dump
 ```
 
 ## 11. Environment Configuration

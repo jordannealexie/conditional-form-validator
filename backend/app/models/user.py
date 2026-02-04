@@ -85,21 +85,3 @@ class RefreshToken(Base):
     # Relationships
     user = relationship("User", back_populates="refresh_tokens")
 
-
-class ResourceRelationship(Base):
-    """For ReBAC - defines relationships between subjects (users/roles) and resources"""
-    __tablename__ = "resource_relationships"
-
-    id = Column(Integer, primary_key=True, index=True)
-    # Subject of the relationship (who/what has the relationship)
-    subject_type = Column(String, nullable=False)  # "user", "role", "resource"
-    subject_id = Column(String, nullable=False)    # username, role name, or resource identifier
-    # Target resource
-    resource_type = Column(String, nullable=False)  # e.g., "document", "project"
-    resource_id = Column(String, nullable=False)    # e.g., "doc_123", "proj_456"
-    # Relationship type
-    parent_resource_type = Column(String, nullable=False)  # parent resource type (kept for backward compatibility)
-    parent_resource_id = Column(String, nullable=False)    # parent resource id (kept for backward compatibility)
-    relationship_type = Column(String, nullable=False)     # e.g., "owner_of", "member_of", "parent_of", "manages"
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

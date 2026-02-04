@@ -15,6 +15,7 @@ from app.services.user_service import UserService
 
 
 from app.core.security import verify_password, decode_access_token
+from app.services.abac_service import ABACService
 
 
 security_bearer = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login", auto_error=False)
@@ -88,17 +89,20 @@ async def get_current_superuser(current_user: User = Depends(get_current_active_
 
 def authorize(resource: Optional[str] = None, action: Optional[str] = None, allowed_roles: Optional[List[str]] = None, alternate_actions: Optional[List[str]] = None):
     """
-    Dependency for unified access control (RBAC, ABAC, ReBAC).
-    Resource and action are used for Casbin enforcement.
+    Dependency for unified access control (RBAC + ABAC).
+    Resource and action are used for RBAC enforcement.
     allowed_roles is kept for backward compatibility and simpler role-based checks.
     alternate_actions allows checking multiple actions (e.g., ['read', 'viewDetails', 'review'])
     """
-    async def access_checker(current_user: User = Depends(get_current_active_user)):
+    async def access_checker(
+        current_user: User = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_db)
+    ):
         # 1. Superuser/Admin bypass
         if current_user.is_superuser or current_user.user_role == "admin":
             return current_user
 
-        # 2. Casbin Unified Enforcement (if resource and action are provided)
+        # 2. RBAC Enforcement (if resource and action are provided)
         if resource and action:
             from app.core.casbin_enforcer import casbin_enforcer
             # Build a lightweight user object to avoid lazy-loading attributes inside threadpool
@@ -112,15 +116,43 @@ def authorize(resource: Optional[str] = None, action: Optional[str] = None, allo
             su.level = int(getattr(current_user, 'level', 1) or 1)
             su.location = getattr(current_user, 'location', None)
 
-            has_access = await casbin_enforcer.enforce_unified_async(su, resource, action)
-            if has_access:
-                return current_user
+            rbac_allowed = await casbin_enforcer.check_rbac_permission_async(su.username, resource, action)
+            if not rbac_allowed:
+                # RBAC denied - do not evaluate ABAC
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Access denied: RBAC denied '{action}' on '{resource}'"
+                )
+
+            # RBAC passed - evaluate ABAC policies
+            abac_service = ABACService(db)
+            abac_allowed, matched_policies, failed_policies = await abac_service.evaluate_policy(
+                current_user,
+                resource,
+                action
+            )
+            if not abac_allowed:
+                reason = f"Failed policies: {', '.join(failed_policies)}" if failed_policies else "ABAC denied"
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Access denied: {reason}"
+                )
+
+            return current_user
 
             # Check alternate actions if primary action failed
             if alternate_actions:
                 for alt_action in alternate_actions:
-                    has_access = await casbin_enforcer.enforce_unified_async(su, resource, alt_action)
-                    if has_access:
+                    rbac_allowed = await casbin_enforcer.check_rbac_permission_async(su.username, resource, alt_action)
+                    if not rbac_allowed:
+                        continue
+                    abac_service = ABACService(db)
+                    abac_allowed, _, failed_policies = await abac_service.evaluate_policy(
+                        current_user,
+                        resource,
+                        alt_action
+                    )
+                    if abac_allowed:
                         return current_user
 
         # 3. Backward Compatibility: Role-based check

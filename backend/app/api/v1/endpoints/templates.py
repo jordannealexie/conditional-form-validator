@@ -29,7 +29,7 @@ async def list_templates(
             bank_id = bank.id
         
         # If not admin/superuser, force bank_id filter for supervisor/fieldman
-        # This acts as data-level permission (ABAC/ReBAC lite)
+        # This acts as data-level permission (ABAC)
         if not getattr(current_user, 'is_superuser', False) and current_user.user_role != "admin" and current_user.bank_id:
             bank_id = current_user.bank_id
         if bank_id:

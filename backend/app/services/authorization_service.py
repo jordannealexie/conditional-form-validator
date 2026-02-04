@@ -1,22 +1,20 @@
 """
-Unified Authorization Service - Combines RBAC, ABAC, and ReBAC
+Unified Authorization Service - Combines RBAC and ABAC
 """
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
 from app.services.abac_service import ABACService
-from app.services.rebac_service import REBACService
 from app.core.casbin_enforcer import casbin_enforcer
 from app.schemas.authorization import AuthorizationModel, AuthorizationResult
 
 
 class AuthorizationService:
-    """Unified authorization service that combines all three models"""
+    """Unified authorization service that combines RBAC and ABAC"""
     
     def __init__(self, db: AsyncSession):
         self.db = db
         self.abac_service = ABACService(db)
-        self.rebac_service = REBACService(db)
     
     async def check_permission(
         self,
@@ -27,7 +25,7 @@ class AuthorizationService:
         resource_id: Optional[str] = None
     ) -> tuple[bool, List[AuthorizationModel], List[AuthorizationResult]]:
         """
-        Check permission across all authorization models
+        Check permission across RBAC and ABAC
         Returns: (has_permission, granted_by_models, detailed_results)
         """
         results = []
@@ -44,12 +42,20 @@ class AuthorizationService:
         ))
         if rbac_permission:
             granted_by.append(AuthorizationModel.RBAC)
+        else:
+            # RBAC failed - deny immediately
+            return False, granted_by, results
         
         # 2. Check ABAC
-        abac_permission, matched_policies = await self.abac_service.evaluate_policy(
+        abac_permission, matched_policies, failed_policies = await self.abac_service.evaluate_policy(
             user, resource, action, resource_type, resource_id
         )
-        reason = f"Matched policies: {', '.join(matched_policies)}" if matched_policies else "No policies matched"
+        if failed_policies:
+            reason = f"Failed policies: {', '.join(failed_policies)}"
+        elif matched_policies:
+            reason = f"Matched policies: {', '.join(matched_policies)}"
+        else:
+            reason = "No applicable policies"
         results.append(AuthorizationResult(
             model=AuthorizationModel.ABAC,
             has_permission=abac_permission,
@@ -57,21 +63,6 @@ class AuthorizationService:
         ))
         if abac_permission:
             granted_by.append(AuthorizationModel.ABAC)
-        
-        # 3. Check ReBAC
-        rebac_permission, relationship_path = await self.rebac_service.check_access_path(
-            user.username, resource, action
-        )
-        path_str = " -> ".join(relationship_path) if relationship_path else "No relationship path found"
-        results.append(AuthorizationResult(
-            model=AuthorizationModel.REBAC,
-            has_permission=rebac_permission,
-            reason=path_str
-        ))
-        if rebac_permission:
-            granted_by.append(AuthorizationModel.REBAC)
-        
-        # Permission granted if ANY model grants access
-        has_permission = len(granted_by) > 0
-        
-        return has_permission, granted_by, results
+
+        # Permission granted only if RBAC and ABAC both allow
+        return abac_permission, granted_by, results

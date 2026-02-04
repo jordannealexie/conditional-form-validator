@@ -3,21 +3,17 @@
 A comprehensive form management and validation platform built with FastAPI and Vanilla JavaScript.
 
 ## Key Features
-
-### 🛠 Dynamic Form Engine
-- **JSONSchema Validation**: Strict data typing and structure enforcement.
-- **Nested Conditional Logic**: Advanced `show_if` rules (all/any/not) for complex business requirements.
+ **Full RBAC/ABAC authorization system with sample policies**
+ **Database seeding with test data (including ABAC)**
+ **Frontend interfaces for ABAC management**
 - **Real-time Rendering**: Vanilla JS renderer that handles dynamic DOM updates and visibility.
 - **Multi-bank Support**: BDO, Maya Bank, and Security Bank templates.
 
 ### 🔐 Unified Authorization
 - **RBAC**: Role-Based Access Control for distinct user roles (Admin, Supervisor, Fieldman).
 - **ABAC**: Attribute-Based Access Control for fine-grained resource permissions with sample policies.
-- **ReBAC**: Relationship-Based Access Control for hierarchical data ownership with sample relationships.
 - **Multi-tenant Visibility**: Banks can only see their own data and forms.
-- **Sample Policies**: Pre-configured ABAC policies and ReBAC relationships for testing.
-
-📖 **See [ABAC_REBAC_README.md](backend/ABAC_REBAC_README.md) for detailed documentation on ABAC and ReBAC features.**
+- **Sample Policies**: Pre-configured ABAC policies for testing.
 
 ### 🚀 Performance & Scalability
 - **Redis Cache**: High-performance caching for templates and user sessions.
@@ -35,7 +31,7 @@ A comprehensive form management and validation platform built with FastAPI and V
 - **Redis**: Caching and session management
 - **MinIO**: S3-compatible object storage for file uploads
 - **Pydantic**: Data validation using Python type annotations
-- **Casbin**: Authorization library for RBAC/ABAC/ReBAC
+- **Casbin**: Authorization library for RBAC/ABAC
 - **Uvicorn**: ASGI server for FastAPI
 
 ### Frontend
@@ -221,20 +217,19 @@ Key frontend features:
 - Admin panel for template management
 - Role-based UI components
 - **ABAC Policy Management** (`/abac.html`): View, create, edit, and test attribute-based access policies
-- **ReBAC Relationship Management** (`/rebac.html`): Manage relationships between users and resources
 
 ## Project Status
 
 ✅ **Completed Features:**
-- Full RBAC/ABAC/ReBAC authorization system with sample policies
+- Full RBAC/ABAC authorization system with sample policies
 - Multi-tenant bank support (BDO, Maya Bank, Security Bank)
 - Dynamic form templates with conditional logic
 - User management and authentication
-- Database seeding with test data (including ABAC/ReBAC)
+- Database seeding with test data (including ABAC)
 - API documentation and health monitoring
 - Redis caching and session management
 - Comprehensive logging and error handling
-- Frontend interfaces for ABAC and ReBAC management
+- Frontend interfaces for ABAC management
 
 ✅ **Current Functionality:**
 - Login system with role-based access

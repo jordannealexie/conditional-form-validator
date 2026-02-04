@@ -10,7 +10,6 @@ class AuthorizationModel(str, Enum):
     """Enum for authorization models"""
     RBAC = "rbac"
     ABAC = "abac"
-    REBAC = "rebac"
 
 
 class UnifiedAuthorizationRequest(BaseModel):
@@ -18,8 +17,8 @@ class UnifiedAuthorizationRequest(BaseModel):
     username: str = Field(..., description="Username to check")
     resource: str = Field(..., description="Resource to access")
     action: str = Field(..., description="Action to perform")
-    resource_type: Optional[str] = Field(None, description="Resource type (for ABAC/ReBAC)")
-    resource_id: Optional[str] = Field(None, description="Resource ID (for ABAC/ReBAC)")
+    resource_type: Optional[str] = Field(None, description="Resource type (for ABAC)")
+    resource_id: Optional[str] = Field(None, description="Resource ID (for ABAC)")
 
 
 class AuthorizationResult(BaseModel):
@@ -34,10 +33,10 @@ class UnifiedAuthorizationResponse(BaseModel):
     username: str
     resource: str
     action: str
-    has_permission: bool  # True if ANY model granted access
+    has_permission: bool  # True only if RBAC and ABAC allow
     granted_by: List[AuthorizationModel] = Field(default_factory=list, description="Which models granted access")
     results: List[AuthorizationResult] = Field(default_factory=list, description="Detailed results from each model")
     evaluation_order: List[AuthorizationModel] = Field(
-        default_factory=lambda: [AuthorizationModel.RBAC, AuthorizationModel.ABAC, AuthorizationModel.REBAC],
+        default_factory=lambda: [AuthorizationModel.RBAC, AuthorizationModel.ABAC],
         description="Order in which models were evaluated"
     )

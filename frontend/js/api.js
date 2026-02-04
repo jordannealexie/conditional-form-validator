@@ -520,55 +520,6 @@ async function apiTestPolicy(userAttributes, resourceAttributes, policyId) {
     });
 }
 
-// ============ ReBAC Endpoints ============
-
-/**
- * Get all relationships
- * Backend endpoint: GET /rebac/relationships
- * @returns {Promise<Array>}
- */
-async function apiGetRelationships() {
-    return await apiRequest('/rebac/relationships');
-}
-
-/**
- * Create relationship
- * Backend endpoint: POST /rebac/relationships
- * @param {object} relationshipData 
- * @returns {Promise<object>}
- */
-async function apiCreateRelationship(relationshipData) {
-    return await apiRequest('/rebac/relationships', {
-        method: 'POST',
-        body: relationshipData
-    });
-}
-
-/**
- * Delete relationship
- * Backend endpoint: DELETE /rebac/relationships/{relationship_id}
- * @param {number} relationshipId 
- * @returns {Promise<{success: boolean}>}
- */
-async function apiDeleteRelationship(relationshipId) {
-    return await apiRequest(`/rebac/relationships/${relationshipId}`, {
-        method: 'DELETE'
-    });
-}
-
-/**
- * Update relationship
- * Backend endpoint: PUT /rebac/relationships/{relationship_id}
- * @param {number} relationshipId 
- * @param {object} relationshipData 
- * @returns {Promise<object>}
- */
-async function apiUpdateRelationship(relationshipId, relationshipData) {
-    return await apiRequest(`/rebac/relationships/${relationshipId}`, {
-        method: 'PUT',
-        body: relationshipData
-    });
-}
 
 /**
  * Get ABAC Policy Stats
@@ -694,37 +645,6 @@ async function apiDeleteLocation(id) {
     return await apiRequest(`/lookups/locations/${id}`, {
         method: 'DELETE'
     });
-}
-
-/**
- * Get ReBAC options for dropdowns
- * Backend endpoint: GET /rebac/metadata/options
- * @returns {Promise<object>}
- */
-async function apiGetRebacOptions() {
-    return await apiRequest('/rebac/metadata/options');
-}
-
-/**
- * Check relationship path
- * Backend endpoint: POST /rebac/check-path
- * @param {string} sourceId 
- * @param {string} targetId 
- * @returns {Promise<{has_path: boolean, path: Array}>}
- */
-async function apiCheckPath(sourceId, targetId) {
-    // TODO: Replace mock with real API call
-    // return await apiRequest('/rebac/check-path', {
-    //     method: 'POST',
-    //     body: { source_id: sourceId, target_id: targetId }
-    // });
-
-    // Mock implementation
-    const path = findRelationshipPath(sourceId, targetId);
-    return {
-        has_path: path !== null,
-        path: path || []
-    };
 }
 
 // ============ Form System Endpoints ============

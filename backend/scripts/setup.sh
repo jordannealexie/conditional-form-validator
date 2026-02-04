@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Setting up FastAPI RBAC/ABAC/ReBAC Project..."
+echo "🚀 Setting up FastAPI RBAC/ABAC Project..."
 
 # Create necessary directories
 mkdir -p app/api/v1/endpoints

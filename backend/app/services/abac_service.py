@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.abac import UserAttribute, ResourceAttribute, ABACPolicy
 from app.models.user import User
-from app.core.casbin_enforcer import casbin_enforcer
 
 
 class ABACService:
@@ -212,18 +211,24 @@ class ABACService:
         resource: str,
         action: str,
         resource_type: Optional[str] = None,
-        resource_id: Optional[str] = None
-    ) -> tuple[bool, List[str]]:
+        resource_id: Optional[str] = None,
+        resource_attrs_override: Optional[Dict[str, Any]] = None,
+        env_attrs_override: Optional[Dict[str, Any]] = None
+    ) -> tuple[bool, List[str], List[str]]:
         """
         Evaluate ABAC policies for a user
-        Returns: (has_permission, matched_policy_names)
+        Returns: (has_permission, matched_policy_names, failed_policy_names)
         """
         # Gather user attributes
         user_attrs = {
+            "user_id": user.id,
+            "roles": [r.name for r in getattr(user, "roles", [])] if getattr(user, "roles", None) else [],
             "department": user.department or "",
-            "level": user.level or 1,
+            "account_status": "active" if user.active else "inactive",
             "location": user.location or "",
-            "is_superuser": user.is_superuser
+            "level": user.level or 1,
+            "bank_id": getattr(user, "bank_id", None),
+            "is_superuser": user.is_superuser,
         }
         
         # Add custom attributes
@@ -231,54 +236,107 @@ class ABACService:
         user_attrs.update(custom_attrs)
         
         # Gather resource attributes if provided
-        resource_attrs = {}
-        if resource_type and resource_id:
+        resource_attrs = resource_attrs_override or {}
+        if not resource_attrs and resource_type and resource_id:
             resource_attrs = await self.get_resource_attributes_dict(resource_type, resource_id)
         
+        # Environment attributes
+        env_attrs = env_attrs_override or {
+            "time": None,
+            "request_origin": None,
+        }
+
         # Get active policies
         policies = await self.get_policies(active_only=True)
         matched_policies = []
-        
-        # Evaluate each policy
+        failed_policies = []
+
+        # Evaluate each policy that targets this resource/action
         for policy in policies:
-            if self._evaluate_policy_rules(policy.rules, user_attrs, resource_attrs, resource, action):
+            is_applicable, is_allowed = self._evaluate_policy_rules(
+                policy.rules,
+                user_attrs,
+                resource_attrs,
+                env_attrs,
+                resource,
+                action
+            )
+            if not is_applicable:
+                continue
+            if is_allowed:
                 matched_policies.append(policy.name)
-        
-        # Use Casbin for final decision
-        has_permission = await casbin_enforcer.check_abac_permission_async(
-            user_attrs, resource, action
-        )
-        
-        return has_permission, matched_policies
+            else:
+                failed_policies.append(policy.name)
+
+        # If no applicable policies, allow (RBAC already passed)
+        if not matched_policies and not failed_policies:
+            return True, [], []
+
+        # Deny if any applicable policy fails
+        has_permission = len(failed_policies) == 0
+        return has_permission, matched_policies, failed_policies
     
     def _evaluate_policy_rules(
         self,
         rules: Dict[str, Any],
         user_attrs: Dict[str, Any],
         resource_attrs: Dict[str, Any],
+        env_attrs: Dict[str, Any],
         resource: str,
         action: str
-    ) -> bool:
-        """Evaluate policy rules against attributes"""
+    ) -> tuple[bool, bool]:
+        """Evaluate policy rules against attributes.
+
+        Returns (is_applicable, is_allowed).
+        """
         # Check if permissions match
         perms = rules.get("permissions", {})
         if perms.get("resource") != resource or perms.get("action") != action:
-            return False
-        
+            return False, False
+
         # Check conditions
         conditions = rules.get("conditions", [])
         for condition in conditions:
             attr_name = condition.get("attribute")
             operator = condition.get("operator")
             expected_value = condition.get("value")
-            
-            # Try to get attribute from user or resource
-            actual_value = user_attrs.get(attr_name) or resource_attrs.get(attr_name)
-            
+
+            actual_value = self._resolve_attribute_value(
+                attr_name,
+                user_attrs=user_attrs,
+                resource_attrs=resource_attrs,
+                env_attrs=env_attrs,
+                action_value=action
+            )
+
             if not self._compare_values(actual_value, operator, expected_value):
-                return False
-        
-        return True
+                return True, False
+
+        return True, True
+
+    def _resolve_attribute_value(
+        self,
+        attr_name: str,
+        user_attrs: Dict[str, Any],
+        resource_attrs: Dict[str, Any],
+        env_attrs: Dict[str, Any],
+        action_value: str
+    ) -> Any:
+        if not attr_name:
+            return None
+
+        if attr_name.startswith("subject."):
+            return user_attrs.get(attr_name.replace("subject.", "", 1))
+        if attr_name.startswith("user."):
+            return user_attrs.get(attr_name.replace("user.", "", 1))
+        if attr_name.startswith("resource."):
+            return resource_attrs.get(attr_name.replace("resource.", "", 1))
+        if attr_name.startswith("env."):
+            return env_attrs.get(attr_name.replace("env.", "", 1))
+        if attr_name == "action":
+            return action_value
+
+        return user_attrs.get(attr_name) or resource_attrs.get(attr_name) or env_attrs.get(attr_name)
     
     def _compare_values(self, actual: Any, operator: str, expected: Any) -> bool:
         """Compare values based on operator"""
@@ -296,7 +354,21 @@ class ABACService:
             elif operator == "<=":
                 return float(actual) <= float(expected)
             elif operator == "in":
+                if isinstance(actual, (list, tuple, set)):
+                    return expected in actual or str(expected) in [str(v) for v in actual]
                 return str(actual) in expected
+            elif operator == "not_in":
+                if isinstance(actual, (list, tuple, set)):
+                    return expected not in actual and str(expected) not in [str(v) for v in actual]
+                return str(actual) not in expected
+            elif operator == "contains":
+                if isinstance(actual, (list, tuple, set)):
+                    return expected in actual or str(expected) in [str(v) for v in actual]
+                return str(expected) in str(actual)
+            elif operator == "startswith":
+                return str(actual).startswith(str(expected))
+            elif operator == "endswith":
+                return str(actual).endswith(str(expected))
             else:
                 return False
         except (ValueError, TypeError):

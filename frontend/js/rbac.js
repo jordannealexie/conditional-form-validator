@@ -112,7 +112,7 @@ function loadPermissionsGrid() {
         'users:read', 'users:write', 'users:delete',
         'roles:read', 'roles:write', 'roles:delete',
         'policies:read', 'policies:write', 'policies:delete',
-        'relationships:read', 'relationships:write', 'relationships:delete',
+        'submissions:viewDetails',
         'system:configure'
     ];
 

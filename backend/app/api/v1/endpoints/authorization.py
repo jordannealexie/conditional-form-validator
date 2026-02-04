@@ -23,7 +23,7 @@ async def check_unified_authorization(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Check permission across all authorization models (RBAC, ABAC, ReBAC)
+    Check permission across RBAC and ABAC
     Returns detailed information about which models granted access
     """
     # Get the user to check
@@ -62,7 +62,7 @@ async def get_user_permissions(
 ):
     """
     Get all effective permissions for the current user.
-    Uses RBAC roles, ABAC policies, and ReBAC relationships.
+    Uses RBAC roles and ABAC policies.
     """
     # For now, return a list of permissions based on RBAC roles
     # In a full implementation, this might query all Casbin policies

@@ -79,7 +79,7 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title=settings.PROJECT_NAME,
         version="1.0.0",
-        description="FastAPI project with RBAC, ABAC, and ReBAC authorization using Casbin and PostgreSQL",
+        description="FastAPI project with RBAC and ABAC authorization using Casbin and PostgreSQL",
         routes=app.routes,
     )
     
@@ -141,7 +141,7 @@ else:
 # async def root():
 #     """Root endpoint"""
 #     return {
-#         "message": "Welcome to FastAPI RBAC/ABAC/ReBAC API",
+#         "message": "Welcome to FastAPI RBAC/ABAC API",
 #         "docs": f"{settings.API_V1_STR}/docs",
 #         "version": "1.0.0"
 #     }

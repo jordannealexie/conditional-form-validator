@@ -5,7 +5,6 @@ from app.api.v1.endpoints import users
 from app.api.v1.endpoints import auth
 from app.api.v1.endpoints import rbac
 from app.api.v1.endpoints import abac
-from app.api.v1.endpoints import rebac
 from app.api.v1.endpoints import authorization
 from app.api.v1.endpoints import banks
 from app.api.v1.endpoints import templates
@@ -26,7 +25,6 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication (Optional)"])
 api_router.include_router(rbac.router, prefix="/rbac", tags=["RBAC Management"])
 api_router.include_router(abac.router, prefix="/abac", tags=["ABAC Management"])
-api_router.include_router(rebac.router, prefix="/rebac", tags=["ReBAC Management"])
 api_router.include_router(authorization.router, prefix="/authorization", tags=["Unified Authorization"])
 api_router.include_router(banks.router, prefix="/banks", tags=["Form System - Banks"])
 api_router.include_router(templates.router, prefix="/templates", tags=["Form System - Templates"])

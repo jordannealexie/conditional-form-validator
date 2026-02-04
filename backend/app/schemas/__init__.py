@@ -14,9 +14,7 @@ from .abac import (
 )
 from .rbac import (
     RoleResponse, RoleAssignment, PermissionResponse, PermissionAssignment,
-    ResourceRelationshipCreate, ResourceRelationshipResponse,
-    RBACCheckRequest, RBACCheckResponse,
-    REBACCheckRequest, REBACCheckResponse
+    RBACCheckRequest, RBACCheckResponse
 )
 from .authorization import (
     AuthorizationModel, UnifiedAuthorizationRequest, 

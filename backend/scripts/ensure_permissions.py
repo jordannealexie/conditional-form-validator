@@ -43,6 +43,7 @@ async def ensure_permissions():
         # Submissions
         "submissions:create",
         "submissions:read",
+        "submissions:viewDetails",
         "submissions:update",
         "submissions:delete",
         "submissions:review",
@@ -59,11 +60,6 @@ async def ensure_permissions():
         "policies:update",
         "policies:delete",
         
-        # ReBAC Relationships
-        "relationships:create",
-        "relationships:read",
-        "relationships:update",
-        "relationships:delete",
     ]
     
     supervisor_permissions = [

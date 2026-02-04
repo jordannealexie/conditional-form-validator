@@ -88,8 +88,7 @@ function protectCurrentPage() {
         'roles.html': { resource: 'roles', action: 'read' },
         'admin-templates.html': { resource: 'templates', action: 'read' },
         'submissions.html': { resource: 'submissions', action: 'read' },
-        'abac.html': { resource: 'policies', action: 'read' },
-        'rebac.html': { resource: 'relationships', action: 'read' }
+        'abac.html': { resource: 'policies', action: 'read' }
     };
 
     for (const [page, perm] of Object.entries(routePermissions)) {

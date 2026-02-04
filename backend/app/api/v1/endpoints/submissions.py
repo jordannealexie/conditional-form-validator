@@ -1,4 +1,5 @@
 from app.services.form_validation import FormValidationService
+from app.services.abac_service import ABACService
 from app.utils.queue import QueueService, send_submission_notification
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, UploadFile, File, Form
 from app.models.user import User
@@ -101,6 +102,32 @@ def _can_access_submission(submission, user: User) -> bool:
         return True
     return False
 
+
+async def _enforce_submission_abac(
+    db: AsyncSession,
+    current_user: User,
+    submission: FormSubmissionModel,
+    action: str
+) -> None:
+    resource_attrs = {
+        "owner_id": submission.submitted_by,
+        "status": (submission.status or "").lower(),
+        "created_at": submission.created_at.isoformat() if submission.created_at else None,
+        "type": "submission",
+    }
+    service = ABACService(db)
+    allowed, _, failed = await service.evaluate_policy(
+        user=current_user,
+        resource="submissions",
+        action=action,
+        resource_type="submission",
+        resource_id=str(submission.id),
+        resource_attrs_override=resource_attrs
+    )
+    if not allowed:
+        reason = f"Failed policies: {', '.join(failed)}" if failed else "ABAC denied"
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=reason)
+
 @router.post("/validate", response_model=ValidationResult)
 async def validate_submission(
     request: ValidateSubmissionRequest,
@@ -174,7 +201,7 @@ async def create_submission(
     # Determine if this is a draft or final submission
     requested_status = (submission_in.status or "draft").lower()
     
-    # Enforce ReBAC: If user is restricted to a bank, they can only submit for that bank
+    # Bank restriction: If user is restricted to a bank, they can only submit for that bank
     # UNLESS they have explicit permissions (checked by authorize dependency)
     # Note: authorize(resource="submissions", action="create") already passed at this point,
     # so if user has the permission explicitly, we trust it.
@@ -473,6 +500,7 @@ async def get_submission(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
     if (submission.status or "").lower() == "draft" and submission.fieldman_id != current_user.username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can view this draft")
+    await _enforce_submission_abac(db, current_user, submission, action="read")
     # Authorization is handled by authorize() dependency - no need for ownership check
     # Users with proper permissions can view any submission (except drafts)
     return create_response(data=FormSubmissionResponse.model_validate(submission))
@@ -500,6 +528,7 @@ async def update_submission(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only drafts can be updated")
     if submission.fieldman_id != current_user.username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can update this draft")
+    await _enforce_submission_abac(db, current_user, submission, action="update")
     upd = body.model_dump(exclude_unset=True)
     if upd:
         # Check if status is changing to submitted
@@ -561,6 +590,7 @@ async def delete_submission(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only drafts can be deleted")
     if submission.fieldman_id != current_user.username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can delete this draft")
+    await _enforce_submission_abac(db, current_user, submission, action="delete")
     await FormSubmissionRepository.delete(db, submission)
     return create_response(message="Submission deleted")
 
@@ -585,6 +615,7 @@ async def review_submission(
     submission = await FormSubmissionRepository.get_by_id(db, id)
     if not submission:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    await _enforce_submission_abac(db, current_user, submission, action="review")
     
     # Authorization is handled by authorize() dependency
     # Users with submissions:review permission can review ANY submission

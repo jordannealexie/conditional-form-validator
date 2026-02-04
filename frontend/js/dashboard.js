@@ -44,11 +44,10 @@ async function loadDashboard() {
         const canReadUsers = isAdmin || (typeof hasPermission === 'function' && hasPermission('users:read'));
         const canReadRoles = isAdmin || (typeof hasPermission === 'function' && hasPermission('roles:read'));
         
-        const [users, roles, abacStats, relationships] = await Promise.all([
+        const [users, roles, abacStats] = await Promise.all([
             canReadUsers ? apiGetUsers().catch(() => []) : Promise.resolve([]),
             canReadRoles ? apiGetRoles().catch(() => []) : Promise.resolve([]),
-            isAdmin ? apiGetAbacStats().catch(() => ({ total_policies: 0, applied_policies: 0 })) : Promise.resolve({ total_policies: 0, applied_policies: 0 }),
-            isAdmin ? apiGetRelationships().catch(() => []) : Promise.resolve([])
+            isAdmin ? apiGetAbacStats().catch(() => ({ total_policies: 0, applied_policies: 0 })) : Promise.resolve({ total_policies: 0, applied_policies: 0 })
         ]);
 
         // Update stats cards (show '-' for unavailable data)
@@ -57,7 +56,6 @@ async function loadDashboard() {
         if (totalUsersEl) totalUsersEl.textContent = canReadUsers ? users.length : '-';
         if (totalRolesEl) totalRolesEl.textContent = canReadRoles ? roles.length : '-';
         // document.getElementById('totalPolicies').textContent = `${abacStats.total_policies} (${abacStats.applied_policies} Applied)`;
-        // document.getElementById('totalRelationships').textContent = relationships.length;
 
     } catch (error) {
         console.error('Error loading dashboard data:', error);
