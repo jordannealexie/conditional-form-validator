@@ -1,0 +1,24 @@
+                 List of relations
+ Schema |          Name          | Type  |  Owner   
+--------+------------------------+-------+----------
+ public | abac_policies          | table | postgres
+ public | audit_logs             | table | postgres
+ public | banks                  | table | postgres
+ public | casbin_rule            | table | postgres
+ public | departments            | table | postgres
+ public | enum_definitions       | table | postgres
+ public | field_type_definitions | table | postgres
+ public | file_uploads           | table | postgres
+ public | form_field_mappings    | table | postgres
+ public | form_submissions       | table | postgres
+ public | form_templates         | table | postgres
+ public | locations              | table | postgres
+ public | refresh_tokens         | table | postgres
+ public | resource_attributes    | table | postgres
+ public | resource_relationships | table | postgres
+ public | roles                  | table | postgres
+ public | user_attributes        | table | postgres
+ public | user_roles             | table | postgres
+ public | users                  | table | postgres
+(19 rows)
+

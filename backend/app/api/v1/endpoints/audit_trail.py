@@ -252,6 +252,7 @@ async def get_users_audit_trail(
     current_user: User = Depends(authorize(resource="users", action="read"))
 ):
     logs = await audit_service.get_logs_by_resource_type("user", skip, limit)
+    logs = [log for log in logs if (log.action or "").lower() != "update_profile"]
 
     if not logs:
         return create_response(data=[])
