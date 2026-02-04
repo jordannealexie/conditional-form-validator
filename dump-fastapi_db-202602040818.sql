@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict tKhMZfrBFmyvFnhohC5Jm8fjEH6G8Y0ODbL3RMvOrKZ7NHtxtpJyFcE1Bisnohn
+\restrict Te6H1lx00Sx1xnPxBEKxNVYKBvkmxeCEucGWhcvxpG1CbFdHUxKAM1ibnxdw5io
 
 -- Dumped from database version 15.15
 -- Dumped by pg_dump version 16.11 (Ubuntu 16.11-0ubuntu0.24.04.1)
 
--- Started on 2026-02-04 01:15:25 UTC
+-- Started on 2026-02-04 08:18:09 UTC
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -1042,7 +1042,7 @@ ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- TOC entry 3353 (class 2604 OID 26869)
+-- TOC entry 3353 (class 2604 OID 42446)
 -- Name: abac_policies id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1050,7 +1050,7 @@ ALTER TABLE ONLY public.abac_policies ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
--- TOC entry 3380 (class 2604 OID 27104)
+-- TOC entry 3380 (class 2604 OID 42447)
 -- Name: audit_logs id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1058,7 +1058,7 @@ ALTER TABLE ONLY public.audit_logs ALTER COLUMN id SET DEFAULT nextval('public.a
 
 
 --
--- TOC entry 3355 (class 2604 OID 26881)
+-- TOC entry 3355 (class 2604 OID 42448)
 -- Name: banks id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1066,7 +1066,7 @@ ALTER TABLE ONLY public.banks ALTER COLUMN id SET DEFAULT nextval('public.banks_
 
 
 --
--- TOC entry 3384 (class 2604 OID 27184)
+-- TOC entry 3384 (class 2604 OID 42449)
 -- Name: casbin_rule id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1074,7 +1074,7 @@ ALTER TABLE ONLY public.casbin_rule ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
--- TOC entry 3362 (class 2604 OID 26919)
+-- TOC entry 3362 (class 2604 OID 42450)
 -- Name: departments id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1082,7 +1082,7 @@ ALTER TABLE ONLY public.departments ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
--- TOC entry 3357 (class 2604 OID 26894)
+-- TOC entry 3357 (class 2604 OID 42451)
 -- Name: enum_definitions id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1090,7 +1090,7 @@ ALTER TABLE ONLY public.enum_definitions ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
--- TOC entry 3359 (class 2604 OID 26906)
+-- TOC entry 3359 (class 2604 OID 42452)
 -- Name: field_type_definitions id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1098,7 +1098,7 @@ ALTER TABLE ONLY public.field_type_definitions ALTER COLUMN id SET DEFAULT nextv
 
 
 --
--- TOC entry 3382 (class 2604 OID 27155)
+-- TOC entry 3382 (class 2604 OID 42453)
 -- Name: file_uploads id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1106,7 +1106,7 @@ ALTER TABLE ONLY public.file_uploads ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
--- TOC entry 3379 (class 2604 OID 27078)
+-- TOC entry 3379 (class 2604 OID 42454)
 -- Name: form_field_mappings id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1114,7 +1114,7 @@ ALTER TABLE ONLY public.form_field_mappings ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
--- TOC entry 3377 (class 2604 OID 27041)
+-- TOC entry 3377 (class 2604 OID 42455)
 -- Name: form_submissions id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1122,7 +1122,7 @@ ALTER TABLE ONLY public.form_submissions ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
--- TOC entry 3369 (class 2604 OID 26967)
+-- TOC entry 3369 (class 2604 OID 42456)
 -- Name: form_templates id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1130,7 +1130,7 @@ ALTER TABLE ONLY public.form_templates ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- TOC entry 3364 (class 2604 OID 26931)
+-- TOC entry 3364 (class 2604 OID 42457)
 -- Name: locations id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1138,7 +1138,7 @@ ALTER TABLE ONLY public.locations ALTER COLUMN id SET DEFAULT nextval('public.lo
 
 
 --
--- TOC entry 3373 (class 2604 OID 27007)
+-- TOC entry 3373 (class 2604 OID 42458)
 -- Name: refresh_tokens id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1146,7 +1146,7 @@ ALTER TABLE ONLY public.refresh_tokens ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- TOC entry 3351 (class 2604 OID 26858)
+-- TOC entry 3351 (class 2604 OID 42459)
 -- Name: resource_attributes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1154,7 +1154,7 @@ ALTER TABLE ONLY public.resource_attributes ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
--- TOC entry 3349 (class 2604 OID 26847)
+-- TOC entry 3349 (class 2604 OID 42460)
 -- Name: resource_relationships id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1162,7 +1162,7 @@ ALTER TABLE ONLY public.resource_relationships ALTER COLUMN id SET DEFAULT nextv
 
 
 --
--- TOC entry 3371 (class 2604 OID 26985)
+-- TOC entry 3371 (class 2604 OID 42461)
 -- Name: roles id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1170,7 +1170,7 @@ ALTER TABLE ONLY public.roles ALTER COLUMN id SET DEFAULT nextval('public.roles_
 
 
 --
--- TOC entry 3375 (class 2604 OID 27025)
+-- TOC entry 3375 (class 2604 OID 42462)
 -- Name: user_attributes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1178,7 +1178,7 @@ ALTER TABLE ONLY public.user_attributes ALTER COLUMN id SET DEFAULT nextval('pub
 
 
 --
--- TOC entry 3366 (class 2604 OID 26943)
+-- TOC entry 3366 (class 2604 OID 42463)
 -- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -1191,6 +1191,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 -- Data for Name: abac_policies; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.abac_policies VALUES (6, 'Fieldman Draft Management', 'Fieldmen can create, update, submit, and delete their own draft submissions only', '{"condition": "all", "rules": [{"field": "subject.roles", "operator": "==", "value": "fieldman"}, {"field": "resource.owner_id", "operator": "==", "value": {"attribute": "subject.user_id"}}, {"field": "resource.type", "operator": "==", "value": "submission"}, {"field": "resource.status", "operator": "==", "value": "draft"}, {"field": "resource.status", "operator": "==", "value": "submitted"}, {"field": "resource.status", "operator": "==", "value": "approved"}, {"field": "resource.status", "operator": "==", "value": "rejected"}, {"field": "action", "operator": "==", "value": "read"}, {"field": "action", "operator": "==", "value": "create"}, {"field": "action", "operator": "==", "value": "update"}, {"field": "action", "operator": "==", "value": "delete"}, {"field": "action", "operator": "==", "value": "submit"}, {"field": "action", "operator": "==", "value": "review"}]}', true, '2026-02-04 07:56:35.833588+00', '2026-02-04 08:12:52.086453+00');
 
 
 --
@@ -1222,6 +1223,10 @@ INSERT INTO public.audit_logs VALUES (115, 1, 'harrypotter', 'update_profile', '
 INSERT INTO public.audit_logs VALUES (118, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 00:39:11.085328+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (121, 1, 'BDO Loan Application Form', 'template_updated', 'template', '12', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 2 fields"}, "after": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.1", "form_type": null, "active": true, "description": "Form template created with 2 fields"}}', NULL, 1, NULL, '2026-02-04 00:50:59.352014+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (130, 1, 'supervisor', 'user_updated', 'user', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "admin", "department": "Operations", "location": "Quezon City", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T01:00:20.240257+00:00"}, "after": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "admin", "department": "Customer Support", "location": "Quezon City", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T01:00:20.240257+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 01:02:02.570807+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (136, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 01:25:52.758723+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (148, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:25:07.673902+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (153, 1, 'BDO Loan Application Form', 'template_deleted', 'template', '12', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 2 fields"}}', NULL, NULL, 1, '2026-02-04 02:39:17.077252+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (156, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:15:35.396152+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (75, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "relationships:create", "relationships:read", "relationships:update", "relationships:delete"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-02T07:21:47.412937+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "relationships:create", "relationships:read", "relationships:update", "relationships:delete"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-02T07:21:47.412937+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-03 06:56:17.36978+00', NULL, 'role', '1', '[]');
 INSERT INTO public.audit_logs VALUES (78, 1, 'ddd', 'template_deleted', 'template', '25', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 25, "bank_id": 2, "name": "ddd", "version": "1.1", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, NULL, 1, '2026-02-03 07:01:19.156709+00', NULL, 'template', '25', '["version", "bank_id", "active", "description", "name", "id"]');
 INSERT INTO public.audit_logs VALUES (79, 1, 'fieldman1', 'update', 'user', '4', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 4, "username": "fieldman1", "email": "fieldman1@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Quezon City", "level": 1, "active": true, "bank_id": null, "first_name": "John ", "last_name": "Doe", "full_name": "John  Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:43.106727+00:00", "updated_at": "2026-02-03T00:01:35.179499+00:00"}, "after": {"id": 4, "username": "fieldman1", "email": "fieldman1@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Tagum", "level": 1, "active": true, "bank_id": null, "first_name": "John ", "last_name": "Doe", "full_name": "John  Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:43.106727+00:00", "updated_at": "2026-02-03T00:01:35.179499+00:00"}}', NULL, 1, NULL, '2026-02-03 07:02:57.731428+00', 'User Management', 'user', '4', '["location"]');
@@ -1247,6 +1252,10 @@ INSERT INTO public.audit_logs VALUES (117, 1, 'sample 2', 'template_deleted', 't
 INSERT INTO public.audit_logs VALUES (123, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "relationships:create", "relationships:read", "relationships:update", "relationships:delete"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-02T07:21:47.412937+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "relationships:create", "relationships:read", "relationships:update", "relationships:delete"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-02T07:21:47.412937+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 00:56:23.76015+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (124, 1, 'harrypotter', 'user_updated', 'user', '6', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 6, "username": "fieldman3", "email": "fieldman3@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Pampanga", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:29.341319+00:00", "updated_at": "2026-02-03T07:08:09.886328+00:00"}, "after": {"id": 6, "username": "fieldman3", "email": "fieldman3@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Pampanga", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:29.341319+00:00", "updated_at": "2026-02-03T07:08:09.886328+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 00:56:33.401303+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (134, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 01:07:56.372891+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (139, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 01:26:22.793398+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (149, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:25:25.797048+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (150, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:25:57.4145+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (151, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:26:12.392696+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (13, 1, 'Credit Card Application', 'template_deleted', 'template', '10', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 10, "bank_id": 2, "name": "Credit Card Application", "version": "1.0.0", "form_type": "credit_card", "active": true, "description": "BPI Credit Card Application Form"}}', NULL, NULL, 1, '2026-02-02 07:25:34.884206+00', NULL, 'template', '10', NULL);
 INSERT INTO public.audit_logs VALUES (81, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-03 07:17:27.370005+00', NULL, 'auth', '1', 'null');
 INSERT INTO public.audit_logs VALUES (90, 1, 'BDO Loan Application Form', 'template_updated', 'template', '12', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.1", "form_type": null, "active": true, "description": "Form template created with 1 fields"}, "after": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, 1, NULL, '2026-02-03 07:50:13.726268+00', NULL, NULL, NULL, NULL);
@@ -1260,10 +1269,15 @@ INSERT INTO public.audit_logs VALUES (111, 1, 'harrypotter', 'login', 'auth', '1
 INSERT INTO public.audit_logs VALUES (119, 3, 'supervisor', 'user_updated', 'user', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Legal", "location": "General Santos", "level": 1, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-03T01:12:02.879515+00:00"}, "after": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Legal", "location": "Pagadian", "level": 1, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-03T01:12:02.879515+00:00"}}', NULL, 1, NULL, '2026-02-04 00:45:37.288569+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (125, 1, 'harrypotter', 'user_updated', 'user', '6', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 6, "username": "fieldman3", "email": "fieldman3@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Pampanga", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:29.341319+00:00", "updated_at": "2026-02-03T07:08:09.886328+00:00"}, "after": {"id": 6, "username": "fieldman3", "email": "fieldman3@example.com", "user_role": "fieldman", "department": "Operations", "location": "Tagum", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:29.341319+00:00", "updated_at": "2026-02-03T07:08:09.886328+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 00:58:22.39243+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (126, 1, 'harrypotter', 'user_updated', 'user', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Legal", "location": "Pagadian", "level": 1, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T00:45:37.288569+00:00"}, "after": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Customer Support", "location": "Bulacan", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T00:45:37.288569+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 00:58:35.533735+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (141, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 01:26:36.977804+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (142, 3, 'supervisor', 'update_profile', 'user', '3', 'success', NULL, NULL, 'null', '"User updated their profile"', 'null', NULL, NULL, NULL, '2026-02-04 01:27:03.540559+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (82, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-03 07:18:59.705073+00', NULL, 'auth', '1', 'null');
 INSERT INTO public.audit_logs VALUES (83, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-03 07:19:36.560276+00', NULL, 'auth', '1', 'null');
 INSERT INTO public.audit_logs VALUES (84, 1, 'fieldman2', 'update', 'user', '5', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 5, "username": "fieldman2", "email": "fieldman2@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Pagadian", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:04.856124+00:00", "updated_at": "2026-02-03T00:01:40.343708+00:00"}, "after": {"id": 5, "username": "fieldman2", "email": "fieldman2@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Tagum", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:04.856124+00:00", "updated_at": "2026-02-03T00:01:40.343708+00:00"}}', NULL, 1, NULL, '2026-02-03 07:19:53.93658+00', 'User Management', 'user', '5', '["location"]');
 INSERT INTO public.audit_logs VALUES (91, 2, 'admin', 'user_updated', 'user', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 2, "username": "admin", "email": "admin@example.com", "user_role": "admin", "department": "Engineering", "location": "Makati", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-02T07:50:36.536601+00:00", "updated_at": "2026-02-03T00:27:32.577988+00:00"}, "after": {"id": 2, "username": "admin", "email": "admin@example.com", "user_role": "admin", "department": "Engineering", "location": "Makati", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-02T07:50:36.536601+00:00", "updated_at": "2026-02-03T00:27:32.577988+00:00"}}', NULL, 1, NULL, '2026-02-03 07:50:21.877346+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (180, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:31:27.057228+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (145, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 01:44:33.743697+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (152, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:26:21.435174+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (3, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": [], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": null, "updated_by": null}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "relationships:create", "relationships:read", "relationships:update", "relationships:delete"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-02T07:21:47.412937+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-02 07:21:47.432652+00', NULL, 'role', '1', NULL);
 INSERT INTO public.audit_logs VALUES (5, 1, 'Credit Card Application', 'template_deleted', 'template', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 1, "bank_id": 1, "name": "Credit Card Application", "version": "1.0.0", "form_type": "credit_card_application", "active": true, "description": "Apply for a BDO credit card"}}', NULL, NULL, 1, '2026-02-02 07:25:04.443502+00', NULL, 'template', '1', NULL);
 INSERT INTO public.audit_logs VALUES (6, 1, 'Personal Loan Application', 'template_deleted', 'template', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 2, "bank_id": 1, "name": "Personal Loan Application", "version": "1.0.0", "form_type": "personal_loan_application", "active": true, "description": "Apply for a personal loan from BDO"}}', NULL, NULL, 1, '2026-02-02 07:25:10.174631+00', NULL, 'template', '2', NULL);
@@ -1300,6 +1314,8 @@ INSERT INTO public.audit_logs VALUES (50, 1, 'sample', 'template_deleted', 'temp
 INSERT INTO public.audit_logs VALUES (51, 1, 'sample', 'template_deleted', 'template', '22', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 22, "bank_id": 3, "name": "sample", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, NULL, 1, '2026-02-03 01:03:03.658146+00', NULL, 'template', '22', NULL);
 INSERT INTO public.audit_logs VALUES (52, 1, 'sample', 'template_deleted', 'template', '23', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 23, "bank_id": 3, "name": "sample", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, NULL, 1, '2026-02-03 01:04:48.955677+00', NULL, 'template', '23', NULL);
 INSERT INTO public.audit_logs VALUES (53, 1, 'sample', 'template_deleted', 'template', '24', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 24, "bank_id": 3, "name": "sample", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, NULL, 1, '2026-02-03 01:05:22.873795+00', NULL, 'template', '24', NULL);
+INSERT INTO public.audit_logs VALUES (146, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:07:25.001389+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (155, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:43:27.533127+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (54, 1, 'BDO Loan Application Form', 'template_updated', 'template', '12', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.1", "form_type": null, "active": true, "description": "Form template created with 1 fields"}, "after": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.1", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, 1, NULL, '2026-02-03 01:11:50.360402+00', NULL, 'template', '12', NULL);
 INSERT INTO public.audit_logs VALUES (56, 3, 'supervisor', 'user_updated', 'user', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Legal", "location": "Tagum", "level": 1, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-03T00:01:33.110477+00:00"}, "after": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Legal", "location": "General Santos", "level": 1, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-03T00:01:33.110477+00:00"}}', NULL, 1, NULL, '2026-02-03 01:12:02.879515+00', NULL, 'user', '3', NULL);
 INSERT INTO public.audit_logs VALUES (59, 1, 'harrypotter', 'update_profile', 'user', '1', 'success', NULL, NULL, 'null', '"User updated their profile"', 'null', NULL, NULL, NULL, '2026-02-03 01:14:13.874465+00', NULL, 'user', '1', NULL);
@@ -1319,6 +1335,80 @@ INSERT INTO public.audit_logs VALUES (103, 1, 'fieldman', 'role_updated', 'role'
 INSERT INTO public.audit_logs VALUES (105, 4, 'fieldman1', 'update_profile', 'user', '4', 'success', NULL, NULL, 'null', '"User updated their profile"', 'null', NULL, NULL, NULL, '2026-02-03 08:19:15.046848+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (113, 1, 'supervisor', 'role_updated', 'role', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": null, "updated_by": 1}, "after": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["roles:read", "forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T00:23:15.216566+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 00:23:15.237185+00', NULL, NULL, NULL, NULL);
 INSERT INTO public.audit_logs VALUES (135, 1, 'Auto Loan Application', 'template_updated', 'template', '13', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 13, "bank_id": 2, "name": "Auto Loan Application", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}, "after": {"id": 13, "bank_id": 2, "name": "Auto Loan Application", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 2 fields"}}', NULL, 1, NULL, '2026-02-04 01:08:06.554486+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (147, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 02:24:05.584298+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (137, 1, 'fieldman2', 'user_updated', 'user', '5', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 5, "username": "fieldman2", "email": "fieldman2@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Bacolod", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:04.856124+00:00", "updated_at": "2026-02-03T07:25:20.217272+00:00"}, "after": {"id": 5, "username": "fieldman2", "email": "fieldman2@example.com", "user_role": "fieldman", "department": "Customer Support", "location": "Bacolod", "level": 1, "active": true, "bank_id": null, "first_name": "John", "last_name": "Doe", "full_name": "John Doe", "is_superuser": false, "created_at": "2026-02-03T00:01:04.856124+00:00", "updated_at": "2026-02-03T07:25:20.217272+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 01:25:59.580936+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (138, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 01:26:08.039218+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (143, 3, 'supervisor', 'update_profile', 'user', '3', 'success', NULL, NULL, 'null', '"User updated their profile"', 'null', NULL, NULL, NULL, '2026-02-04 01:27:11.912048+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (144, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 01:27:18.120774+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (183, 1, 'BDO Loan Application Form', 'template_updated', 'template', '12', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 2 fields"}, "after": {"id": 12, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.1", "form_type": null, "active": true, "description": "Form template created with 2 fields"}}', NULL, 1, NULL, '2026-02-04 06:33:30.999842+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (185, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:26:44.115814+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:26:44.115814+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 06:33:53.385323+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (190, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:34:59.040053+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (191, 2, 'admin', 'login', 'auth', '2', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:35:23.192049+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (192, 2, 'supervisor', 'role_updated', 'role', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T03:47:01.409415+00:00", "updated_by": 1}, "after": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T06:35:42.438833+00:00", "updated_by": 2}}', NULL, 2, NULL, '2026-02-04 06:35:42.462153+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (197, 2, 'admin', 'login', 'auth', '2', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:36:24.365745+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (198, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:36:53.777681+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (206, 1, 'Personal Loan Application', 'template_deleted', 'template', '17', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 17, "bank_id": 4, "name": "Personal Loan Application", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, NULL, 1, '2026-02-04 07:00:54.281403+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (215, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 07:28:40.405915+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (224, 4, 'fieldman1', 'login', 'auth', '4', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 08:15:57.329541+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (225, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 08:16:43.800687+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (140, 1, 'supervisor', 'user_updated', 'user', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "admin", "department": "Customer Support", "location": "Quezon City", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T01:02:02.570807+00:00"}, "after": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Customer Support", "location": "Quezon City", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T01:02:02.570807+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 01:26:30.516882+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (178, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:26:44.115814+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:26:44.115814+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 06:29:22.019787+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (184, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:26:44.115814+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:26:44.115814+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 06:33:49.45864+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (189, 2, 'supervisor', 'user_updated', 'user', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Customer Support", "location": "Davao", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T06:33:16.879378+00:00"}, "after": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Customer Support", "location": "Paranaque", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T06:33:16.879378+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 2, NULL, '2026-02-04 06:34:50.288717+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (194, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:35:52.447613+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (195, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:36:11.785511+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (199, 2, 'admin', 'login', 'auth', '2', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:37:48.276766+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (201, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:38:34.852454+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (154, 1, 'Personal Loan Application', 'template_deleted', 'template', '17', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "deleted", "before": {"id": 17, "bank_id": 4, "name": "Personal Loan Application", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, NULL, 1, '2026-02-04 02:39:23.779479+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (181, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:31:28.220291+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (182, 1, 'supervisor', 'user_updated', 'user', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Customer Support", "location": "Quezon City", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T01:27:11.912048+00:00"}, "after": {"id": 3, "username": "supervisor", "email": "supervisor@example.com", "user_role": "supervisor", "department": "Customer Support", "location": "Davao", "level": 2, "active": true, "bank_id": null, "first_name": "Jane", "last_name": "Doe", "full_name": "Jane Doe", "is_superuser": false, "created_at": "2026-02-03T00:00:09.962869+00:00", "updated_at": "2026-02-04T01:27:11.912048+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 06:33:16.879378+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (186, 1, 'harrypotter', 'update_profile', 'user', '1', 'success', NULL, NULL, 'null', '"User updated their profile"', 'null', NULL, NULL, NULL, '2026-02-04 06:34:14.102537+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (187, 2, 'admin', 'login', 'auth', '2', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:34:28.374946+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (188, 2, 'admin', 'login', 'auth', '2', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:34:43.938999+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (200, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:38:00.743041+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (208, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 07:12:00.342051+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (220, 4, 'fieldman1', 'login', 'auth', '4', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 08:07:33.916579+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (223, 5, 'fieldman2', 'login', 'auth', '5', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 08:13:42.852427+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (157, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:41:03.643199+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (158, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:43:02.320398+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (159, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:43:24.183119+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (160, 1, 'supervisor', 'role_updated', 'role', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T00:23:20.323729+00:00", "updated_by": 1}, "after": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T00:23:20.323729+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 03:43:36.854412+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (161, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "relationships:create", "relationships:read", "relationships:update", "relationships:delete"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-02T07:21:47.412937+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T03:44:16.394541+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 03:44:16.438459+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (162, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:44:27.07643+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (163, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:46:42.436344+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (164, 1, 'supervisor', 'role_updated', 'role', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T00:23:20.323729+00:00", "updated_by": 1}, "after": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T03:47:01.409415+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 03:47:01.457267+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (165, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:47:11.500963+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (166, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 03:47:37.909784+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (167, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 05:08:31.914199+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (168, 1, 'BDO Loan Application Form', 'template_updated', 'template', '28', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 28, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}, "after": {"id": 28, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, 1, NULL, '2026-02-04 05:18:19.413657+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (169, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 05:24:37.996624+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (170, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 05:45:21.062488+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (171, 1, 'harrypotter', 'update_profile', 'user', '1', 'success', NULL, NULL, 'null', '"User updated their profile"', 'null', NULL, NULL, NULL, '2026-02-04 05:49:08.837433+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (172, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T03:44:16.394541+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "submissions:submit", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T05:59:13.889298+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 05:59:13.908201+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (173, 2, 'admin', 'login', 'auth', '2', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 05:59:29.19873+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (174, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 05:59:53.107137+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (177, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:00:42.412394+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (203, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:47:01.717393+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (213, 1, 'harrypotter', 'update_profile', 'user', '1', 'success', NULL, NULL, 'null', '"User updated their profile"', 'null', NULL, NULL, NULL, '2026-02-04 07:14:06.598602+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (175, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "submissions:submit", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T05:59:13.889298+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "submissions:submit", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T05:59:13.889298+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 06:00:04.641113+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (176, 2, 'admin', 'login', 'auth', '2', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 06:00:13.489214+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (179, 1, 'fieldman', 'role_updated', 'role', '3', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 3, "name": "fieldman", "description": "Submit forms and manage own submissions", "permissions": ["users:read", "roles:read", "forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update"], "created_at": "2026-02-02T07:50:01.041905+00:00", "created_by": 1, "updated_at": "2026-02-03T08:18:52.780766+00:00", "updated_by": 1}, "after": {"id": 3, "name": "fieldman", "description": "Submit forms and manage own submissions", "permissions": ["users:read", "roles:read", "forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update"], "created_at": "2026-02-02T07:50:01.041905+00:00", "created_by": 1, "updated_at": "2026-02-03T08:18:52.780766+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 06:29:35.516924+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (196, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:26:44.115814+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:36:18.903178+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 06:36:18.932866+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (202, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:36:18.903178+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:38:44.048269+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 06:38:44.069638+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (204, 1, 'harrypotter', 'user_updated', 'user', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 1, "username": "harrypotter", "email": "harrypotter@example.com", "user_role": "admin", "department": "Legal", "location": "Makati", "level": 3, "active": true, "bank_id": null, "first_name": "Harry", "last_name": "Potter", "full_name": "Harry Potter", "is_superuser": true, "created_at": "2026-02-02T07:20:24.175792+00:00", "updated_at": "2026-02-04T06:34:14.102537+00:00"}, "after": {"id": 1, "username": "harrypotter", "email": "harrypotter@example.com", "user_role": "admin", "department": "Legal", "location": "Makati", "level": 3, "active": true, "bank_id": null, "first_name": "Harry", "last_name": "Potter", "full_name": "Harry Potter", "is_superuser": true, "created_at": "2026-02-02T07:20:24.175792+00:00", "updated_at": "2026-02-04T06:34:14.102537+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 06:47:07.700105+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (205, 1, 'harrypotter', 'user_updated', 'user', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 1, "username": "harrypotter", "email": "harrypotter@example.com", "user_role": "admin", "department": "Legal", "location": "Makati", "level": 3, "active": true, "bank_id": null, "first_name": "Harry", "last_name": "Potter", "full_name": "Harry Potter", "is_superuser": true, "created_at": "2026-02-02T07:20:24.175792+00:00", "updated_at": "2026-02-04T06:34:14.102537+00:00"}, "after": {"id": 1, "username": "harrypotter", "email": "harrypotter@example.com", "user_role": "admin", "department": "Legal", "location": "Makati", "level": 3, "active": true, "bank_id": null, "first_name": "Harry", "last_name": "Potter", "full_name": "Harry Potter", "is_superuser": true, "created_at": "2026-02-02T07:20:24.175792+00:00", "updated_at": "2026-02-04T06:34:14.102537+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 07:00:40.353928+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (207, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:38:44.048269+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:38:44.048269+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 07:00:59.545919+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (214, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 07:15:11.059939+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (222, 4, 'fieldman1', 'login', 'auth', '4', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 08:13:00.960207+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (209, 1, 'harrypotter', 'user_updated', 'user', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', NULL, NULL, '{"before": {"id": 1, "username": "harrypotter", "email": "harrypotter@example.com", "user_role": "admin", "department": "Legal", "location": "Makati", "level": 3, "active": true, "bank_id": null, "first_name": "Harry", "last_name": "Potter", "full_name": "Harry Potter", "is_superuser": true, "created_at": "2026-02-02T07:20:24.175792+00:00", "updated_at": "2026-02-04T06:34:14.102537+00:00"}, "after": {"id": 1, "username": "harrypotter", "email": "harrypotter@example.com", "user_role": "admin", "department": "Legal", "location": "Makati", "level": 3, "active": true, "bank_id": null, "first_name": "Harry", "last_name": "Potter", "full_name": "Harry Potter", "is_superuser": true, "created_at": "2026-02-02T07:20:24.175792+00:00", "updated_at": "2026-02-04T06:34:14.102537+00:00"}, "edited_fields": ["email", "user_role", "active", "department", "location", "first_name", "last_name", "level"]}', NULL, 1, NULL, '2026-02-04 07:13:21.302113+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (212, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:38:44.048269+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:38:44.048269+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 07:13:53.642832+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (210, 1, 'BDO Loan Application Form', 'template_updated', 'template', '28', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 28, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.0", "form_type": null, "active": true, "description": "Form template created with 1 fields"}, "after": {"id": 28, "bank_id": 1, "name": "BDO Loan Application Form", "version": "1.1", "form_type": null, "active": true, "description": "Form template created with 1 fields"}}', NULL, 1, NULL, '2026-02-04 07:13:32.396774+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (211, 1, 'admin', 'role_updated', 'role', '1', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:38:44.048269+00:00", "updated_by": 1}, "after": {"id": 1, "name": "admin", "description": "Administrator", "permissions": ["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"], "created_at": "2026-02-02T07:20:24.175792+00:00", "created_by": null, "updated_at": "2026-02-04T06:38:44.048269+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 07:13:49.833232+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (216, 1, 'supervisor', 'role_updated', 'role', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T06:35:42.438833+00:00", "updated_by": 2}, "after": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T07:38:13.389065+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 07:38:13.425287+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (217, 3, 'supervisor', 'login', 'auth', '3', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 07:38:18.584985+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (218, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 07:38:31.43714+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (219, 1, 'supervisor', 'role_updated', 'role', '2', 'success', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36', 'null', 'null', '{"action": "updated", "before": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T07:38:13.389065+00:00", "updated_by": 1}, "after": {"id": 2, "name": "supervisor", "description": "Review and approve submissions for their bank", "permissions": ["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"], "created_at": "2026-02-02T07:49:05.887430+00:00", "created_by": 1, "updated_at": "2026-02-04T07:38:13.389065+00:00", "updated_by": 1}}', NULL, 1, NULL, '2026-02-04 08:07:15.735164+00', NULL, NULL, NULL, NULL);
+INSERT INTO public.audit_logs VALUES (221, 1, 'harrypotter', 'login', 'auth', '1', 'success', NULL, NULL, 'null', '"Login success"', 'null', NULL, NULL, NULL, '2026-02-04 08:08:00.924002+00', NULL, NULL, NULL, NULL);
 
 
 --
@@ -1340,59 +1430,58 @@ INSERT INTO public.banks VALUES (5, 'Rizal Commercial Banking Corporation', 'RCB
 -- Data for Name: casbin_rule; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.casbin_rule VALUES (4848, 'p', 'fieldman', 'users', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4849, 'p', 'fieldman', 'roles', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4850, 'p', 'fieldman', 'forms', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4851, 'p', 'fieldman', 'templates', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4852, 'p', 'fieldman', 'submissions', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4853, 'p', 'fieldman', 'submissions', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4854, 'p', 'fieldman', 'submissions', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4855, 'p', 'admin', 'users', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4856, 'p', 'admin', 'users', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4857, 'p', 'admin', 'users', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4858, 'p', 'admin', 'users', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4859, 'p', 'admin', 'roles', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4860, 'p', 'admin', 'roles', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4861, 'p', 'admin', 'roles', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4862, 'p', 'admin', 'roles', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4863, 'p', 'admin', 'forms', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4864, 'p', 'admin', 'forms', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4865, 'p', 'admin', 'forms', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4866, 'p', 'admin', 'forms', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4867, 'p', 'admin', 'templates', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4868, 'p', 'admin', 'templates', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4869, 'p', 'admin', 'templates', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4870, 'p', 'admin', 'templates', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4871, 'p', 'admin', 'submissions', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4872, 'p', 'admin', 'submissions', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4873, 'p', 'admin', 'submissions', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4874, 'p', 'admin', 'submissions', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4875, 'p', 'admin', 'submissions', 'review', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4876, 'p', 'admin', 'banks', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4877, 'p', 'admin', 'banks', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4878, 'p', 'admin', 'banks', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4879, 'p', 'admin', 'banks', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4880, 'p', 'admin', 'policies', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4881, 'p', 'admin', 'policies', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4882, 'p', 'admin', 'policies', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4883, 'p', 'admin', 'policies', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4884, 'p', 'admin', 'relationships', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4885, 'p', 'admin', 'relationships', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4886, 'p', 'admin', 'relationships', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4887, 'p', 'admin', 'relationships', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4888, 'p', 'supervisor', 'forms', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4889, 'p', 'supervisor', 'templates', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4890, 'p', 'supervisor', 'submissions', 'create', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4891, 'p', 'supervisor', 'submissions', 'read', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4892, 'p', 'supervisor', 'submissions', 'update', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4893, 'p', 'supervisor', 'submissions', 'delete', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4894, 'p', 'supervisor', 'submissions', 'review', NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4895, 'g', 'fieldman2', 'fieldman', NULL, NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4896, 'g', 'admin', 'admin', NULL, NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4897, 'g', 'fieldman1', 'fieldman', NULL, NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4898, 'g', 'fieldman3', 'fieldman', NULL, NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4899, 'g', 'supervisor', 'admin', NULL, NULL, NULL, NULL);
-INSERT INTO public.casbin_rule VALUES (4900, 'g', 'harrypotter', 'admin', NULL, NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8254, 'p', 'fieldman', 'users', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8255, 'p', 'fieldman', 'roles', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8256, 'p', 'fieldman', 'forms', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8257, 'p', 'fieldman', 'templates', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8258, 'p', 'fieldman', 'submissions', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8259, 'p', 'fieldman', 'submissions', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8260, 'p', 'fieldman', 'submissions', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8261, 'p', 'admin', 'users', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8262, 'p', 'admin', 'users', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8263, 'p', 'admin', 'users', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8264, 'p', 'admin', 'users', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8265, 'p', 'admin', 'roles', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8266, 'p', 'admin', 'roles', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8267, 'p', 'admin', 'roles', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8268, 'p', 'admin', 'roles', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8269, 'p', 'admin', 'forms', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8270, 'p', 'admin', 'forms', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8271, 'p', 'admin', 'forms', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8272, 'p', 'admin', 'forms', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8273, 'p', 'admin', 'templates', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8274, 'p', 'admin', 'templates', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8275, 'p', 'admin', 'templates', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8276, 'p', 'admin', 'templates', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8277, 'p', 'admin', 'submissions', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8278, 'p', 'admin', 'submissions', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8279, 'p', 'admin', 'submissions', 'viewDetails', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8280, 'p', 'admin', 'submissions', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8281, 'p', 'admin', 'submissions', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8282, 'p', 'admin', 'submissions', 'review', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8283, 'p', 'admin', 'banks', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8284, 'p', 'admin', 'banks', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8285, 'p', 'admin', 'banks', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8286, 'p', 'admin', 'banks', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8287, 'p', 'admin', 'policies', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8288, 'p', 'admin', 'policies', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8289, 'p', 'admin', 'policies', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8290, 'p', 'admin', 'policies', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8291, 'p', 'admin', 'system', 'configure', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8292, 'p', 'supervisor', 'forms', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8293, 'p', 'supervisor', 'templates', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8294, 'p', 'supervisor', 'submissions', 'create', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8295, 'p', 'supervisor', 'submissions', 'read', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8296, 'p', 'supervisor', 'submissions', 'viewDetails', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8297, 'p', 'supervisor', 'submissions', 'update', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8298, 'p', 'supervisor', 'submissions', 'delete', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8299, 'p', 'supervisor', 'submissions', 'review', NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8300, 'g', 'fieldman3', 'fieldman', NULL, NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8301, 'g', 'fieldman3', 'fieldman', NULL, NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8302, 'g', 'admin', 'admin', NULL, NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8303, 'g', 'supervisor', 'supervisor', NULL, NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8304, 'g', 'fieldman1', 'fieldman', NULL, NULL, NULL, NULL);
+INSERT INTO public.casbin_rule VALUES (8305, 'g', 'harrypotter', 'admin', NULL, NULL, NULL, NULL);
 
 
 --
@@ -1466,9 +1555,7 @@ INSERT INTO public.field_type_definitions VALUES (24, 'monthly_salary', 'Monthly
 -- Data for Name: file_uploads; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.file_uploads VALUES (1, '7c643ad1-79b5-4460-881d-8027a1b064ed', 'samplefile.pdf', 'file_6808df3b_1770167295716_samplefile.pdf', 'application/pdf', 1377202, NULL, 'field_1770167284559', '2026-02-04 01:08:15.709754+00', 'harrypotter');
-INSERT INTO public.file_uploads VALUES (2, '537a23d5-8961-478b-b7c3-420d1db473de', 'samplefile.pdf', 'file_f554c5ce_1770167308775_samplefile.pdf', 'application/pdf', 1377202, NULL, 'field_1770167284559', '2026-02-04 01:08:28.767088+00', 'harrypotter');
-INSERT INTO public.file_uploads VALUES (3, 'ce39a63d-eb0f-4689-b45b-2eb678ebc9de', 'samplefile.pdf', 'file_f4b004ba_1770167373254_samplefile.pdf', 'application/pdf', 1377202, NULL, 'field_1770167284559', '2026-02-04 01:09:33.249275+00', 'harrypotter');
+INSERT INTO public.file_uploads VALUES (1, 'c905f90b-6d48-4383-a426-1649f421ac3b', 'samplefile.pdf', 'file_530f77c9_1770192789914_samplefile.pdf', 'application/pdf', 1377202, 1, 'field_1770167284559', '2026-02-04 08:13:09.896931+00', 'fieldman1');
 
 
 --
@@ -1485,9 +1572,8 @@ INSERT INTO public.file_uploads VALUES (3, 'ce39a63d-eb0f-4689-b45b-2eb678ebc9de
 -- Data for Name: form_submissions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.form_submissions VALUES (1, 12, 'harrypotter', 1, 'validated', '{"field_1770016947597": "ertyjui"}', 'null', '[]', true, 1, '2026-02-04 01:03:09.202609+00', NULL, 1, '2026-02-04 01:03:09.202609+00', '2026-02-02 07:25:56.643872+00', '2026-02-02 07:25:56.634671+00', '2026-02-04 01:03:09.190163+00');
-INSERT INTO public.form_submissions VALUES (2, 13, 'harrypotter', 1, 'submitted', '{"field_1770017215469": "", "field_1770167284559": "537a23d5-8961-478b-b7c3-420d1db473de"}', 'null', '[]', true, NULL, NULL, NULL, NULL, NULL, '2026-02-04 01:08:29.873695+00', '2026-02-04 01:08:29.868821+00', NULL);
-INSERT INTO public.form_submissions VALUES (3, 13, 'harrypotter', 1, 'submitted', '{"field_1770017215469": "", "field_1770167284559": "ce39a63d-eb0f-4689-b45b-2eb678ebc9de"}', 'null', '[]', true, NULL, NULL, NULL, NULL, NULL, '2026-02-04 01:09:34.844985+00', '2026-02-04 01:09:34.837159+00', NULL);
+INSERT INTO public.form_submissions VALUES (1, 13, 'fieldman1', 4, 'submitted', '{"field_1770017215469": "", "field_1770167284559": "c905f90b-6d48-4383-a426-1649f421ac3b"}', '["c905f90b-6d48-4383-a426-1649f421ac3b"]', '[]', true, NULL, NULL, NULL, NULL, NULL, '2026-02-04 08:13:09.90768+00', '2026-02-04 08:13:09.896931+00', '2026-02-04 08:13:09.896931+00');
+INSERT INTO public.form_submissions VALUES (2, 13, 'fieldman1', 4, 'draft', '{"field_1770017215469": "", "field_1770167284559": null}', '[]', '[{"field": "field_1770167284559", "message": "None is not of type ''string''", "constraint": "type"}]', false, NULL, NULL, NULL, NULL, NULL, NULL, '2026-02-04 08:13:28.536997+00', NULL);
 
 
 --
@@ -1496,9 +1582,10 @@ INSERT INTO public.form_submissions VALUES (3, 13, 'harrypotter', 1, 'submitted'
 -- Data for Name: form_templates; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.form_templates VALUES (17, 4, 'Personal Loan Application', '1.0', NULL, '{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "title": "Form", "properties": {"field_1770079822646": {"title": "Text Input", "type": "string"}}, "required": []}', '[{"id": "field_1770079822646", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}]', 'null', 'Form template created with 1 fields', true, '2026-02-03 00:50:28.231991+00', NULL, NULL);
-INSERT INTO public.form_templates VALUES (12, 1, 'BDO Loan Application Form', '1.0', NULL, '{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "title": "Form", "properties": {"field_1770016947597": {"title": "Text Input", "type": "string"}, "field_1770106069052": {"title": "Text Input", "type": "string"}}, "required": []}', '[{"id": "field_1770016947597", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}, {"id": "field_1770106069052", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}]', 'null', 'Form template created with 2 fields', true, '2026-02-02 07:22:33.648871+00', '2026-02-04 01:02:59.864029+00', NULL);
+INSERT INTO public.form_templates VALUES (12, 1, 'BDO Loan Application Form', '1.1', NULL, '{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "title": "Form", "properties": {"field_1770016947597": {"title": "Text Input", "type": "string"}, "field_1770106069052": {"title": "Text Input", "type": "string"}}, "required": []}', '[{"id": "field_1770016947597", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}, {"id": "field_1770106069052", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}]', 'null', 'Form template created with 2 fields', true, '2026-02-02 07:22:33.648871+00', '2026-02-04 06:33:30.837503+00', NULL);
+INSERT INTO public.form_templates VALUES (28, 1, 'BDO Loan Application Form', '1.1', NULL, '{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "title": "Form", "properties": {"field_1770172771678": {"title": "Text Input", "type": "string"}}, "required": []}', '[{"id": "field_1770172771678", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}]', 'null', 'Form template created with 1 fields', true, '2026-02-04 02:39:34.084219+00', '2026-02-04 07:13:32.375003+00', NULL);
 INSERT INTO public.form_templates VALUES (13, 2, 'Auto Loan Application', '1.0', NULL, '{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "title": "Form", "properties": {"field_1770017215469": {"title": "Text Input", "type": "string"}, "field_1770167284559": {"title": "File Upload", "type": "string"}}, "required": []}', '[{"id": "field_1770017215469", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}, {"id": "field_1770167284559", "type": "file", "label": "File Upload", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}]', 'null', 'Form template created with 2 fields', true, '2026-02-02 07:26:59.92817+00', '2026-02-04 01:08:06.519973+00', NULL);
+INSERT INTO public.form_templates VALUES (29, 3, 'Personal Loan Application', '1.0', NULL, '{"$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "title": "Form", "properties": {"field_1770172784851": {"title": "Text Input", "type": "string"}}, "required": []}', '[{"id": "field_1770172784851", "type": "text", "label": "Text Input", "required": false, "placeholder": "", "options": null, "validation": {}, "show_if": null}]', 'null', 'Form template created with 1 fields', true, '2026-02-04 02:39:47.238211+00', NULL, NULL);
 
 
 --
@@ -1578,6 +1665,60 @@ INSERT INTO public.refresh_tokens VALUES (43, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ik
 INSERT INTO public.refresh_tokens VALUES (44, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3MDM1MSwidHlwZSI6InJlZnJlc2gifQ.qJ4FLNICOZj_iahWBVJs0n-qqhSInhdpywMIVRcKuTc', '2026-02-11 00:39:11.077573+00', false, '2026-02-04 00:39:10.64484+00');
 INSERT INTO public.refresh_tokens VALUES (45, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3MTgxNywidHlwZSI6InJlZnJlc2gifQ.aJPyLMuWkNgRMzUCQU47voeNTlhxn0PKDmC1apHRFZ0', '2026-02-11 01:03:37.767962+00', false, '2026-02-04 01:03:37.364719+00');
 INSERT INTO public.refresh_tokens VALUES (46, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3MjA3NiwidHlwZSI6InJlZnJlc2gifQ.TbX5s2QjhOCq2-FN8JyGL7JU1K4TxiLwf2jXLjh2s-Y', '2026-02-11 01:07:56.364058+00', false, '2026-02-04 01:07:55.943672+00');
+INSERT INTO public.refresh_tokens VALUES (47, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3MzE1MiwidHlwZSI6InJlZnJlc2gifQ.m-OxDuPpiUtZQ6Hv67E-kOQk5fSTSzJoKggL3B1K9b0', '2026-02-11 01:25:52.73954+00', false, '2026-02-04 01:25:52.123295+00');
+INSERT INTO public.refresh_tokens VALUES (48, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzczMTY4LCJ0eXBlIjoicmVmcmVzaCJ9.K_tdHDR77iukFW2vLcy1M3I-0YNx0zwhWXS3apShOCE', '2026-02-11 01:26:08.02987+00', false, '2026-02-04 01:26:07.688592+00');
+INSERT INTO public.refresh_tokens VALUES (49, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3MzE4MiwidHlwZSI6InJlZnJlc2gifQ.NFKq3xD2WdZa_0qnPCFTZieK-gqVtc6As4v-JBTJjR8', '2026-02-11 01:26:22.789033+00', false, '2026-02-04 01:26:22.400746+00');
+INSERT INTO public.refresh_tokens VALUES (50, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzczMTk2LCJ0eXBlIjoicmVmcmVzaCJ9.NM6xqm1zYcOTvMBCna9Txnuk0RP8Cun1v6FCHMr-Eac', '2026-02-11 01:26:36.972763+00', false, '2026-02-04 01:26:36.554242+00');
+INSERT INTO public.refresh_tokens VALUES (51, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3MzIzOCwidHlwZSI6InJlZnJlc2gifQ.F8IqktgGG2jhSJnd9gSyD_w4Nk9pPXOvABDEaw8VRd4', '2026-02-11 01:27:18.11542+00', false, '2026-02-04 01:27:17.651382+00');
+INSERT INTO public.refresh_tokens VALUES (52, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3NDI3MywidHlwZSI6InJlZnJlc2gifQ.dzToCuHf56VllbTHjyFcBRbm8LGc1TQsEi11PolPN4U', '2026-02-11 01:44:33.735855+00', false, '2026-02-04 01:44:33.308734+00');
+INSERT INTO public.refresh_tokens VALUES (53, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3NTY0NCwidHlwZSI6InJlZnJlc2gifQ.3aKY_hmavR4gvzvIr8QHcze7P3zrjKLKSCY5lWiB4FA', '2026-02-11 02:07:24.989266+00', false, '2026-02-04 02:07:24.468338+00');
+INSERT INTO public.refresh_tokens VALUES (54, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3NjY0NSwidHlwZSI6InJlZnJlc2gifQ.7soGSIay8cKyLMlgry0iwTfYrhBh7rqQDd_GxVDudgE', '2026-02-11 02:24:05.573127+00', false, '2026-02-04 02:24:05.068348+00');
+INSERT INTO public.refresh_tokens VALUES (55, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzc2NzA3LCJ0eXBlIjoicmVmcmVzaCJ9.wXf82ncIN3JoskPImPvCWDQ-_f_t24IFq1FKXsENyAw', '2026-02-11 02:25:07.667378+00', false, '2026-02-04 02:25:07.255354+00');
+INSERT INTO public.refresh_tokens VALUES (56, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3NjcyNSwidHlwZSI6InJlZnJlc2gifQ.lIuUXN3E9aXbqGTlic8npZA0cbrZ08xtNuZaDb0rqTw', '2026-02-11 02:25:25.789816+00', false, '2026-02-04 02:25:25.451674+00');
+INSERT INTO public.refresh_tokens VALUES (57, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3Njc1NywidHlwZSI6InJlZnJlc2gifQ.pn1_OvbHmhxxtJ-00sVIxCPdlqgHxrfko2Su9XBoNSw', '2026-02-11 02:25:57.409273+00', false, '2026-02-04 02:25:57.042006+00');
+INSERT INTO public.refresh_tokens VALUES (58, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzc2NzcyLCJ0eXBlIjoicmVmcmVzaCJ9.dDfO5GF8wY6vKW2smXeNreqUxvNQQPMQBCbzfEVYCv4', '2026-02-11 02:26:12.386982+00', false, '2026-02-04 02:26:12.01475+00');
+INSERT INTO public.refresh_tokens VALUES (59, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3Njc4MSwidHlwZSI6InJlZnJlc2gifQ.il1ICEux4dqnm9oaEMZtm6zsBnsGpSX9hhhYBYb0yL0', '2026-02-11 02:26:21.429193+00', false, '2026-02-04 02:26:21.024281+00');
+INSERT INTO public.refresh_tokens VALUES (60, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3NzgwNywidHlwZSI6InJlZnJlc2gifQ.Ohx3wAwcY00hhgSACF9FkepC4Hnp-ptb72zNVmwavA4', '2026-02-11 02:43:27.524352+00', false, '2026-02-04 02:43:26.988739+00');
+INSERT INTO public.refresh_tokens VALUES (61, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc3OTczNSwidHlwZSI6InJlZnJlc2gifQ.WI1fMaZbpGBmsplvXyCK2MAY8Jh7twtFVmAeLBRzRTQ', '2026-02-11 03:15:35.383131+00', false, '2026-02-04 03:15:34.87977+00');
+INSERT INTO public.refresh_tokens VALUES (62, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4MTI2MywidHlwZSI6InJlZnJlc2gifQ.twx82i4SATCkZV1nFVdBppBrc7jxElTkGmG8-_DL6-E', '2026-02-11 03:41:03.607997+00', false, '2026-02-04 03:41:01.220532+00');
+INSERT INTO public.refresh_tokens VALUES (63, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzgxMzgyLCJ0eXBlIjoicmVmcmVzaCJ9.tP7rI2Xeg8F-PoNzR4wQFP8vuzlJ1M68bYWnPbYPr-A', '2026-02-11 03:43:02.261015+00', false, '2026-02-04 03:43:00.512388+00');
+INSERT INTO public.refresh_tokens VALUES (64, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4MTQwNCwidHlwZSI6InJlZnJlc2gifQ.x6ws2dlgoow0lwGciENhZAlR-6F02Nskni1SSdnDqEQ', '2026-02-11 03:43:24.046382+00', false, '2026-02-04 03:43:22.097842+00');
+INSERT INTO public.refresh_tokens VALUES (65, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzgxNDY3LCJ0eXBlIjoicmVmcmVzaCJ9.qeqtcGMjOW-ugTqBE6pIvaJgfFImnrMV-ZnTrE2h2AM', '2026-02-11 03:44:27.026551+00', false, '2026-02-04 03:44:25.469594+00');
+INSERT INTO public.refresh_tokens VALUES (66, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4MTYwMiwidHlwZSI6InJlZnJlc2gifQ.6rL2HpwmF8AP8lWrKngJRIkmlM11OoKLQnqmd9sVbIg', '2026-02-11 03:46:42.377141+00', false, '2026-02-04 03:46:40.579644+00');
+INSERT INTO public.refresh_tokens VALUES (67, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzgxNjMxLCJ0eXBlIjoicmVmcmVzaCJ9.Fh_oO204qKm4jRqqVCAfpEeRK-meroonupa5F3l3Ru8', '2026-02-11 03:47:11.469367+00', false, '2026-02-04 03:47:08.928656+00');
+INSERT INTO public.refresh_tokens VALUES (68, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4MTY1NywidHlwZSI6InJlZnJlc2gifQ.J3U3cF_tbJP5WF9SdezSUltJGJlu76aHqIQYEPGUx9o', '2026-02-11 03:47:37.869728+00', false, '2026-02-04 03:47:35.877922+00');
+INSERT INTO public.refresh_tokens VALUES (69, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4NjUxMSwidHlwZSI6InJlZnJlc2gifQ.9OA7gZK-dAg26cVsrCsitbbehi5JykJBrz0ueTe3QQ0', '2026-02-11 05:08:31.84706+00', false, '2026-02-04 05:08:27.130737+00');
+INSERT INTO public.refresh_tokens VALUES (70, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4NzQ3NywidHlwZSI6InJlZnJlc2gifQ.TwZCdgyo1vtGx4EKMxJolqJls-EObl-ZS0xlylv0nJU', '2026-02-11 05:24:37.9856+00', false, '2026-02-04 05:24:37.580069+00');
+INSERT INTO public.refresh_tokens VALUES (71, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4ODcyMSwidHlwZSI6InJlZnJlc2gifQ.w-lpsPIh2e_OVGf_7fZfR3xoYqy69VAP0hlRLPuoJqo', '2026-02-11 05:45:21.052581+00', false, '2026-02-04 05:45:20.557746+00');
+INSERT INTO public.refresh_tokens VALUES (72, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc3MDc4OTU2OSwidHlwZSI6InJlZnJlc2gifQ.OPtw-fqTJz4mGXt_KmiN7vVsYut5J4Ww4J-FT-tlkzw', '2026-02-11 05:59:29.188996+00', false, '2026-02-04 05:59:28.888759+00');
+INSERT INTO public.refresh_tokens VALUES (73, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4OTU5MywidHlwZSI6InJlZnJlc2gifQ.xzwz8JkMMN7t_2jeEJ0Q_yNdDnQ_9rJRjC6Langp5aw', '2026-02-11 05:59:53.100687+00', false, '2026-02-04 05:59:52.734325+00');
+INSERT INTO public.refresh_tokens VALUES (74, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc3MDc4OTYxMywidHlwZSI6InJlZnJlc2gifQ.MJKEIRsZ5W2fFwDgTcawqPT8FhopmqZzThfw1nrmkek', '2026-02-11 06:00:13.475002+00', false, '2026-02-04 06:00:13.120496+00');
+INSERT INTO public.refresh_tokens VALUES (75, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc4OTY0MiwidHlwZSI6InJlZnJlc2gifQ.F9ip7VubPZN4sX6PTLWBrWXd3l4aLCTLPNaLMkPQvyU', '2026-02-11 06:00:42.404881+00', false, '2026-02-04 06:00:42.07989+00');
+INSERT INTO public.refresh_tokens VALUES (76, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5MTQ4NywidHlwZSI6InJlZnJlc2gifQ.hAA0Jms7ImE-olb3i6nstKetobQo9p2DDfbegFHkemg', '2026-02-11 06:31:27.040901+00', false, '2026-02-04 06:31:26.633761+00');
+INSERT INTO public.refresh_tokens VALUES (77, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5MTQ4OCwidHlwZSI6InJlZnJlc2gifQ.SrvwZzbWKwQELHjmmWzSNnv__CZde4BZpUN2QXLlnYE', '2026-02-11 06:31:28.203509+00', false, '2026-02-04 06:31:27.346431+00');
+INSERT INTO public.refresh_tokens VALUES (78, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc3MDc5MTY2OCwidHlwZSI6InJlZnJlc2gifQ.-2h77ZCwBQvW08EBsWN7AKclRSzYW0BkNbi-DkTSns8', '2026-02-11 06:34:28.367296+00', false, '2026-02-04 06:34:27.914298+00');
+INSERT INTO public.refresh_tokens VALUES (79, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc3MDc5MTY4MywidHlwZSI6InJlZnJlc2gifQ.ekj1LooxXGIARAPjHIrCaVeyCyTgqR-PoBwVrJQ_vMw', '2026-02-11 06:34:43.925676+00', false, '2026-02-04 06:34:43.531921+00');
+INSERT INTO public.refresh_tokens VALUES (80, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzkxNjk5LCJ0eXBlIjoicmVmcmVzaCJ9.uS7Na7QFBMHB2U5z5Jygoypm9PlqN5lD81oGyoCCpVo', '2026-02-11 06:34:59.034883+00', false, '2026-02-04 06:34:58.575153+00');
+INSERT INTO public.refresh_tokens VALUES (81, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc3MDc5MTcyMywidHlwZSI6InJlZnJlc2gifQ.lzcaNobYitB5NhDV23WlF2elQuzGq1THeRxiqbcibnM', '2026-02-11 06:35:23.187388+00', false, '2026-02-04 06:35:22.80507+00');
+INSERT INTO public.refresh_tokens VALUES (82, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzkxNzUyLCJ0eXBlIjoicmVmcmVzaCJ9.NZq13ai55KgOJ_veqYd-bQ_xUmAY0qPQl-qX67ru4Xw', '2026-02-11 06:35:52.44308+00', false, '2026-02-04 06:35:52.072707+00');
+INSERT INTO public.refresh_tokens VALUES (83, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5MTc3MSwidHlwZSI6InJlZnJlc2gifQ.q7uv43zbR72wYlcU4ReC3aFOdcVSFP-LxG7LS7ruEFA', '2026-02-11 06:36:11.777944+00', false, '2026-02-04 06:36:11.384486+00');
+INSERT INTO public.refresh_tokens VALUES (84, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc3MDc5MTc4NCwidHlwZSI6InJlZnJlc2gifQ.BQn-aS3mbeVJ5joeg_LL49gDY78NlpAs-pXAGXE3alw', '2026-02-11 06:36:24.359255+00', false, '2026-02-04 06:36:23.924032+00');
+INSERT INTO public.refresh_tokens VALUES (85, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5MTgxMywidHlwZSI6InJlZnJlc2gifQ.158XkeL_4tWA3eeMnDseNcjrcW5fiN545GsxT84-17g', '2026-02-11 06:36:53.771835+00', false, '2026-02-04 06:36:53.347108+00');
+INSERT INTO public.refresh_tokens VALUES (86, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc3MDc5MTg2OCwidHlwZSI6InJlZnJlc2gifQ.ZpLXUvIIZ0KTy5KosRuQS-FbcouQyFa2IAAyJdV-0eE', '2026-02-11 06:37:48.266026+00', false, '2026-02-04 06:37:47.849854+00');
+INSERT INTO public.refresh_tokens VALUES (87, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzkxODgwLCJ0eXBlIjoicmVmcmVzaCJ9.QdhXLqDIqnGuzuXa530Ri14fycCSOH7Leh-rjNdioL0', '2026-02-11 06:38:00.736631+00', false, '2026-02-04 06:38:00.306291+00');
+INSERT INTO public.refresh_tokens VALUES (88, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5MTkxNCwidHlwZSI6InJlZnJlc2gifQ.W8uf3qFDxK39G3SQeFda1jX497LcOEfJnowp0xndL9M', '2026-02-11 06:38:34.847093+00', false, '2026-02-04 06:38:34.454453+00');
+INSERT INTO public.refresh_tokens VALUES (89, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5MjQyMSwidHlwZSI6InJlZnJlc2gifQ.8B6mFLMtry9s0Cu8rdEy_U5u7-6fwKpzMQzgseUDoIA', '2026-02-11 06:47:01.709785+00', false, '2026-02-04 06:47:01.314989+00');
+INSERT INTO public.refresh_tokens VALUES (90, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5MzkyMCwidHlwZSI6InJlZnJlc2gifQ.lT-ijDNj5l0gq7_iky-_QyPhU_o-gbsaCoCZGRYNB_s', '2026-02-11 07:12:00.32275+00', false, '2026-02-04 07:11:59.644085+00');
+INSERT INTO public.refresh_tokens VALUES (91, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5NDExMSwidHlwZSI6InJlZnJlc2gifQ.iAt6Xrp5JI8e79ukr4VOXu01xZ8Eamczjtx6VK9-9BQ', '2026-02-11 07:15:11.054755+00', false, '2026-02-04 07:15:10.679319+00');
+INSERT INTO public.refresh_tokens VALUES (92, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5NDkyMCwidHlwZSI6InJlZnJlc2gifQ.l9iIdKlXsZy26lx3569KuY3Gtj64QzEEOQXW5f2Hyxw', '2026-02-11 07:28:40.396253+00', false, '2026-02-04 07:28:39.984271+00');
+INSERT INTO public.refresh_tokens VALUES (93, 3, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdXBlcnZpc29yIiwiZXhwIjoxNzcwNzk1NDk4LCJ0eXBlIjoicmVmcmVzaCJ9.lkprG6R-kvJh4wMda5IZUOl41_wvgEyZS9wcMRU-jkY', '2026-02-11 07:38:18.576884+00', false, '2026-02-04 07:38:18.165745+00');
+INSERT INTO public.refresh_tokens VALUES (94, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5NTUxMSwidHlwZSI6InJlZnJlc2gifQ.t1iiHgAfZnNAzKAL5eLgqvoxb13-JGWexSa0nhheETk', '2026-02-11 07:38:31.432161+00', false, '2026-02-04 07:38:31.041786+00');
+INSERT INTO public.refresh_tokens VALUES (95, 4, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmaWVsZG1hbjEiLCJleHAiOjE3NzA3OTcyNTMsInR5cGUiOiJyZWZyZXNoIn0.dEZttDybeKlgdVTiiPec0Ax_OMUPiYUYMfb7bnflDNs', '2026-02-11 08:07:33.906796+00', false, '2026-02-04 08:07:33.666281+00');
+INSERT INTO public.refresh_tokens VALUES (96, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5NzI4MCwidHlwZSI6InJlZnJlc2gifQ.pG6RUnkHv5WpTyGdSuLtsqGnUzXGPqd5gZN6-dP2Wps', '2026-02-11 08:08:00.915117+00', false, '2026-02-04 08:08:00.467203+00');
+INSERT INTO public.refresh_tokens VALUES (97, 4, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmaWVsZG1hbjEiLCJleHAiOjE3NzA3OTc1ODAsInR5cGUiOiJyZWZyZXNoIn0.fVqRXZoPmjrSKNwPyBmLkCNY6kcsz7UZeBC14fNFwNs', '2026-02-11 08:13:00.953717+00', false, '2026-02-04 08:13:00.592788+00');
+INSERT INTO public.refresh_tokens VALUES (98, 5, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmaWVsZG1hbjIiLCJleHAiOjE3NzA3OTc2MjIsInR5cGUiOiJyZWZyZXNoIn0.YMSQqgCKqoVDm9YYkarptolKsS6TdKOObPaidFJTl5c', '2026-02-11 08:13:42.845487+00', false, '2026-02-04 08:13:42.589517+00');
+INSERT INTO public.refresh_tokens VALUES (99, 4, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmaWVsZG1hbjEiLCJleHAiOjE3NzA3OTc3NTcsInR5cGUiOiJyZWZyZXNoIn0.ybyQNapgwNHdqBOD15nlLLdeYzAyaCbBhLM7tG_Iaoc', '2026-02-11 08:15:57.322365+00', false, '2026-02-04 08:15:56.908782+00');
+INSERT INTO public.refresh_tokens VALUES (100, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJoYXJyeXBvdHRlciIsImV4cCI6MTc3MDc5NzgwMywidHlwZSI6InJlZnJlc2gifQ.ybgxhxFWy7azuCnyeefBhFy0pVlFmQr7_LanGgViFjk', '2026-02-11 08:16:43.797654+00', false, '2026-02-04 08:16:43.392025+00');
 
 
 --
@@ -1602,9 +1743,9 @@ INSERT INTO public.refresh_tokens VALUES (46, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ik
 -- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.roles VALUES (1, 'admin', 'Administrator', '["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "relationships:create", "relationships:read", "relationships:update", "relationships:delete"]', '2026-02-02 07:20:24.175792+00', NULL, '2026-02-02 07:21:47.412937+00', 1);
+INSERT INTO public.roles VALUES (2, 'supervisor', 'Review and approve submissions for their bank', '["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review"]', '2026-02-02 07:49:05.88743+00', 1, '2026-02-04 07:38:13.389065+00', 1);
 INSERT INTO public.roles VALUES (3, 'fieldman', 'Submit forms and manage own submissions', '["users:read", "roles:read", "forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update"]', '2026-02-02 07:50:01.041905+00', 1, '2026-02-03 08:18:52.780766+00', 1);
-INSERT INTO public.roles VALUES (2, 'supervisor', 'Review and approve submissions for their bank', '["forms:read", "templates:read", "submissions:create", "submissions:read", "submissions:update", "submissions:delete", "submissions:review"]', '2026-02-02 07:49:05.88743+00', 1, '2026-02-04 00:23:20.323729+00', 1);
+INSERT INTO public.roles VALUES (1, 'admin', 'Administrator', '["users:create", "users:read", "users:update", "users:delete", "roles:create", "roles:read", "roles:update", "roles:delete", "forms:create", "forms:read", "forms:update", "forms:delete", "templates:create", "templates:read", "templates:update", "templates:delete", "submissions:create", "submissions:read", "submissions:viewDetails", "submissions:update", "submissions:delete", "submissions:review", "banks:create", "banks:read", "banks:update", "banks:delete", "policies:create", "policies:read", "policies:update", "policies:delete", "system:configure"]', '2026-02-02 07:20:24.175792+00', NULL, '2026-02-04 06:38:44.048269+00', 1);
 
 
 --
@@ -1622,11 +1763,11 @@ INSERT INTO public.roles VALUES (2, 'supervisor', 'Review and approve submission
 --
 
 INSERT INTO public.user_roles VALUES (4, 3);
-INSERT INTO public.user_roles VALUES (5, 3);
 INSERT INTO public.user_roles VALUES (2, 1);
 INSERT INTO public.user_roles VALUES (6, 3);
+INSERT INTO public.user_roles VALUES (5, 3);
+INSERT INTO public.user_roles VALUES (3, 2);
 INSERT INTO public.user_roles VALUES (1, 1);
-INSERT INTO public.user_roles VALUES (3, 1);
 
 
 --
@@ -1635,12 +1776,12 @@ INSERT INTO public.user_roles VALUES (3, 1);
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
+INSERT INTO public.users VALUES (1, 'harrypotter', 'harrypotter@example.com', '$2b$12$zC.HaSyhwcpb0cf94ifY3.HR6C7zZwNI8YpT8s.gu1fo2BrbMWGiu', 'admin', NULL, true, true, 'Harry', 'Potter', 'Harry Potter', 'Legal', 3, 'Makati', '2026-02-02 07:20:24.175792+00', '2026-02-04 06:34:14.102537+00', 1);
+INSERT INTO public.users VALUES (3, 'supervisor', 'supervisor@example.com', '$2b$12$jDg289xtNo24OIlrbRKi3ecRTd.Lg/MqhxfLetv.GY7Z14DxTA3o6', 'supervisor', NULL, true, false, 'Jane', 'Doe', 'Jane Doe', 'Customer Support', 2, 'Paranaque', '2026-02-03 00:00:09.962869+00', '2026-02-04 06:34:50.288717+00', 2);
 INSERT INTO public.users VALUES (5, 'fieldman2', 'fieldman2@example.com', '$2b$12$1rOgqvoXUjLDZUCDSncIQuk37u3G0dRgxeEIGB18sm8hAmQXc7aBa', 'fieldman', NULL, true, false, 'John', 'Doe', 'John Doe', 'Customer Support', 1, 'Bacolod', '2026-02-03 00:01:04.856124+00', '2026-02-03 07:25:20.217272+00', 1);
 INSERT INTO public.users VALUES (2, 'admin', 'admin@example.com', '$2b$12$pvGZXiMLcUzfAJXYJBdBsuaF5KEcIY1lpawS2x6JR87EApo5i0qwK', 'admin', NULL, true, false, 'John', 'Doe', 'John Doe', 'Legal', 1, 'Quezon City', '2026-02-02 07:50:36.536601+00', '2026-02-03 08:14:27.195567+00', 1);
 INSERT INTO public.users VALUES (4, 'fieldman1', 'fieldman1@example.com', '$2b$12$eZS6L/HpSdgyAXGSSzTnQOvPXHDJR7TTVMtBpXcPp0HQdZuSrwZDq', 'fieldman', NULL, true, false, 'John', 'Doe', 'John  Doe', 'Customer Support', 1, 'Tagum', '2026-02-03 00:00:43.106727+00', '2026-02-03 08:19:15.046848+00', 1);
 INSERT INTO public.users VALUES (6, 'fieldman3', 'fieldman3@example.com', '$2b$12$OmF1gTWwwGC0FGTJ9nYrfOKfoofRMqzga.J8grN/Rg176u1PH/kHa', 'fieldman', NULL, true, false, 'John', 'Doe', 'John Doe', 'Operations', 1, 'Tagum', '2026-02-03 00:01:29.341319+00', '2026-02-04 00:58:22.39243+00', 1);
-INSERT INTO public.users VALUES (1, 'harrypotter', 'harrypotter@example.com', '$2b$12$zC.HaSyhwcpb0cf94ifY3.HR6C7zZwNI8YpT8s.gu1fo2BrbMWGiu', 'admin', NULL, true, true, 'Harry', 'Potter', 'Harry Potter', 'Operations', 3, 'Makati', '2026-02-02 07:20:24.175792+00', '2026-02-04 00:59:11.656856+00', 1);
-INSERT INTO public.users VALUES (3, 'supervisor', 'supervisor@example.com', '$2b$12$jDg289xtNo24OIlrbRKi3ecRTd.Lg/MqhxfLetv.GY7Z14DxTA3o6', 'admin', NULL, true, false, 'Jane', 'Doe', 'Jane Doe', 'Customer Support', 2, 'Quezon City', '2026-02-03 00:00:09.962869+00', '2026-02-04 01:02:02.570807+00', 1);
 
 
 --
@@ -1649,7 +1790,7 @@ INSERT INTO public.users VALUES (3, 'supervisor', 'supervisor@example.com', '$2b
 -- Name: abac_policies_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.abac_policies_id_seq', 1, false);
+SELECT pg_catalog.setval('public.abac_policies_id_seq', 6, true);
 
 
 --
@@ -1658,7 +1799,7 @@ SELECT pg_catalog.setval('public.abac_policies_id_seq', 1, false);
 -- Name: audit_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.audit_logs_id_seq', 135, true);
+SELECT pg_catalog.setval('public.audit_logs_id_seq', 225, true);
 
 
 --
@@ -1676,7 +1817,7 @@ SELECT pg_catalog.setval('public.banks_id_seq', 5, true);
 -- Name: casbin_rule_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.casbin_rule_id_seq', 4900, true);
+SELECT pg_catalog.setval('public.casbin_rule_id_seq', 8305, true);
 
 
 --
@@ -1712,7 +1853,7 @@ SELECT pg_catalog.setval('public.field_type_definitions_id_seq', 24, true);
 -- Name: file_uploads_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.file_uploads_id_seq', 3, true);
+SELECT pg_catalog.setval('public.file_uploads_id_seq', 1, true);
 
 
 --
@@ -1730,7 +1871,7 @@ SELECT pg_catalog.setval('public.form_field_mappings_id_seq', 1, false);
 -- Name: form_submissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.form_submissions_id_seq', 3, true);
+SELECT pg_catalog.setval('public.form_submissions_id_seq', 2, true);
 
 
 --
@@ -1739,7 +1880,7 @@ SELECT pg_catalog.setval('public.form_submissions_id_seq', 3, true);
 -- Name: form_templates_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.form_templates_id_seq', 27, true);
+SELECT pg_catalog.setval('public.form_templates_id_seq', 30, false);
 
 
 --
@@ -1757,7 +1898,7 @@ SELECT pg_catalog.setval('public.locations_id_seq', 17, true);
 -- Name: refresh_tokens_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.refresh_tokens_id_seq', 46, true);
+SELECT pg_catalog.setval('public.refresh_tokens_id_seq', 100, true);
 
 
 --
@@ -2602,11 +2743,11 @@ ALTER TABLE ONLY public.users
 REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 
 
--- Completed on 2026-02-04 01:15:26 UTC
+-- Completed on 2026-02-04 08:18:10 UTC
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict tKhMZfrBFmyvFnhohC5Jm8fjEH6G8Y0ODbL3RMvOrKZ7NHtxtpJyFcE1Bisnohn
+\unrestrict Te6H1lx00Sx1xnPxBEKxNVYKBvkmxeCEucGWhcvxpG1CbFdHUxKAM1ibnxdw5io
 

@@ -575,6 +575,7 @@ async def get_available_attributes(
                 ValueOption(value="delete", label="Delete"),
                 ValueOption(value="submit", label="Submit"),
                 ValueOption(value="review", label="Review"),
+                ValueOption(value="viewDetails", label="View Details"),
             ]
         )
     ]
