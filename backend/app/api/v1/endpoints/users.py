@@ -13,6 +13,7 @@ from app.dtos.custom_response_dto import CustomResponse
 from app.schemas.user import UserUpdate
 from app.schemas.auth import UserResponse, UserCreate, UserAdminUpdate
 from app.services.user_service import UserService
+from app.services.bulk_audit import BulkAuditService
 from app.utils.response import create_response
 from app.dependencies.audit import get_audit_service
 from app.services.audit import AuditService
@@ -179,7 +180,7 @@ async def create_user(
     try:
         # Use the same DB session for service and audit repository
         user_service = UserService(db, UserRepository(db))
-        audit = AuditService(AuditRepository(db))
+        bulk_audit_service = BulkAuditService(AuditRepository(db))
 
         # Validate input
         if not user_in.username or not user_in.username.strip():
@@ -233,13 +234,18 @@ async def create_user(
 
         # Log user creation in audit trail (best-effort; don't block on failures)
         try:
-            await audit.log_user_created(
-                user_id=user_data["id"],
-                username=user_data["username"],
-                created_by_id=current_user.id,
-                user_data=user_data,
-                request=request
-            )
+            async with bulk_audit_service.create_collector() as collector:
+                collector.add_entry(
+                    action="user_created",
+                    entity_type="user",
+                    entity_id=user_data["id"],
+                    actor_user_id=current_user.id,
+                    actor_username=current_user.username,
+                    target_username=user_data["username"],
+                    after_json=user_data,
+                    status="success",
+                    request=request
+                )
         except Exception as audit_err:
             print(f"Audit logging failed for user create {user_data['id']}: {audit_err}")
 
@@ -296,7 +302,7 @@ async def update_user(
         stage = "init"
         # Use the same DB session for service and audit repository
         user_service = UserService(db, UserRepository(db))
-        audit = AuditService(AuditRepository(db))
+        bulk_audit_service = BulkAuditService(AuditRepository(db))
 
         # Get existing user
         stage = "get_user"
@@ -361,14 +367,21 @@ async def update_user(
         # Log update in audit trail (after update succeeds) - best-effort
         stage = "log_audit"
         try:
-            await audit.log_user_updated(
-                user_id=id,
-                username=username_for_audit,
-                updated_by_id=current_user.id,
-                before_data=before_data,
-                after_data=after_data,
-                request=request
-            )
+            edited_fields = [key for key in upd.keys() if key != "updated_by"]
+            async with bulk_audit_service.create_collector() as collector:
+                collector.add_entry(
+                    action="user_updated",
+                    entity_type="user",
+                    entity_id=id,
+                    actor_user_id=current_user.id,
+                    actor_username=current_user.username,
+                    target_username=username_for_audit,
+                    before_json=before_data,
+                    after_json=after_data,
+                    edited_fields=edited_fields,
+                    status="success",
+                    request=request
+                )
         except Exception as audit_err:
             print(f"Audit logging failed for user update {id}: {audit_err}")
         
@@ -482,7 +495,7 @@ async def delete_user(
 
     # Use the same DB session for service and audit repository
     user_service = UserService(db, UserRepository(db))
-    audit = AuditService(AuditRepository(db))
+    bulk_audit_service = BulkAuditService(AuditRepository(db))
 
     target_user = await user_service.get(id)
     if not target_user:
@@ -526,13 +539,18 @@ async def delete_user(
         
         # Log soft delete in audit trail (best-effort)
         try:
-            await audit.log_user_deleted(
-                user_id=id,
-                username=username_for_audit,
-                deleted_by_id=current_user.id,
-                user_data=user_data,
-                request=request
-            )
+            async with bulk_audit_service.create_collector() as collector:
+                collector.add_entry(
+                    action="user_deleted",
+                    entity_type="user",
+                    entity_id=id,
+                    actor_user_id=current_user.id,
+                    actor_username=current_user.username,
+                    target_username=username_for_audit,
+                    before_json=user_data,
+                    status="success",
+                    request=request
+                )
         except Exception as audit_err:
             print(f"Audit logging failed for user soft delete {id}: {audit_err}")
         
@@ -558,13 +576,18 @@ async def delete_user(
         
         # Log hard delete in audit trail (best-effort)
         try:
-            await audit.log_user_deleted(
-                user_id=id,
-                username=username_for_audit,
-                deleted_by_id=current_user.id,
-                user_data=user_data,
-                request=request
-            )
+            async with bulk_audit_service.create_collector() as collector:
+                collector.add_entry(
+                    action="user_deleted",
+                    entity_type="user",
+                    entity_id=id,
+                    actor_user_id=current_user.id,
+                    actor_username=current_user.username,
+                    target_username=username_for_audit,
+                    before_json=user_data,
+                    status="success",
+                    request=request
+                )
         except Exception as audit_err:
             print(f"Audit logging failed for user hard delete {id}: {audit_err}")
         

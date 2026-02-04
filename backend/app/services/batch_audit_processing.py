@@ -31,6 +31,32 @@ class BatchAuditProcessingService:
         """Initialize with audit repository"""
         self.repository = repository
 
+    def _has_active_workers(self) -> bool:
+        """Check if any Celery workers are available."""
+        try:
+            inspector = celery_app.control.inspect(timeout=0.5)
+            ping = inspector.ping() or {}
+            return bool(ping)
+        except Exception as exc:
+            logger.warning(f"Celery worker check failed: {exc}")
+            return False
+
+    def _dispatch_task(self, task, *args, **kwargs):
+        """Dispatch a task to Celery or execute eagerly if no workers are available."""
+        if self._has_active_workers():
+            return task.delay(*args, **kwargs)
+
+        logger.warning("No Celery workers detected. Executing task eagerly.")
+        previous_always_eager = celery_app.conf.task_always_eager
+        previous_store_result = celery_app.conf.task_store_eager_result
+        celery_app.conf.task_always_eager = True
+        celery_app.conf.task_store_eager_result = True
+        try:
+            return task.delay(*args, **kwargs)
+        finally:
+            celery_app.conf.task_always_eager = previous_always_eager
+            celery_app.conf.task_store_eager_result = previous_store_result
+
     def _convert_batch_item_to_dict(self, item: AuditBatchItem) -> Dict[str, Any]:
         """Convert a batch item schema to dictionary format for task processing"""
         entry = {
@@ -73,9 +99,13 @@ class BatchAuditProcessingService:
         
         # Submit to Celery
         if use_validation:
-            task = process_audit_batch_with_validation.delay(entry_dicts, validate_entities=False)
+            task = self._dispatch_task(
+                process_audit_batch_with_validation,
+                entry_dicts,
+                validate_entities=False
+            )
         else:
-            task = bulk_create_audit_logs.delay(entry_dicts)
+            task = self._dispatch_task(bulk_create_audit_logs, entry_dicts)
         
         logger.info(f"Submitted batch audit task {task.id} with {len(entries)} entries")
         
@@ -100,7 +130,8 @@ class BatchAuditProcessingService:
         Returns:
             Task ID
         """
-        task = batch_delete_audit_logs.delay(
+        task = self._dispatch_task(
+            batch_delete_audit_logs,
             entity_type=entity_type,
             entity_ids=entity_ids,
             older_than_days=older_than_days,
@@ -134,7 +165,8 @@ class BatchAuditProcessingService:
         Returns:
             Task ID
         """
-        task = batch_export_audit_logs.delay(
+        task = self._dispatch_task(
+            batch_export_audit_logs,
             entity_type=entity_type,
             entity_id=entity_id,
             actor_user_id=actor_user_id,
@@ -162,7 +194,8 @@ class BatchAuditProcessingService:
         Returns:
             Task ID
         """
-        task = batch_archive_audit_logs.delay(
+        task = self._dispatch_task(
+            batch_archive_audit_logs,
             older_than_days=older_than_days,
             entity_type=entity_type
         )
@@ -219,7 +252,7 @@ class BatchAuditProcessingService:
         """
         # Try Celery task first (fast path if worker is available)
         try:
-            task = get_audit_statistics.delay()
+            task = self._dispatch_task(get_audit_statistics)
             result = task.get(timeout=10)
             if result and result.get("success"):
                 return result

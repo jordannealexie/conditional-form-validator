@@ -6,6 +6,7 @@ from typing import Optional, Any, Dict, List, Tuple
 from fastapi import Request
 from app.repositories.audit import AuditRepository
 from app.tasks.audit_tasks import bulk_create_audit_logs
+from app.core.celery_app import celery_app
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ class BulkAuditCollector:
         entity_id: int,
         actor_user_id: Optional[int] = None,
         actor_username: Optional[str] = None,
+        target_username: Optional[str] = None,
         before_json: Optional[Dict[str, Any]] = None,
         after_json: Optional[Dict[str, Any]] = None,
         edited_fields: Optional[List[str]] = None,
@@ -102,15 +104,23 @@ class BulkAuditCollector:
             "resource_type": entity_type.lower(),
             "resource_id": str(entity_id),
             "user_id": actor_user_id,
-            "username": actor_username,
+            "username": target_username or actor_username,
             "status": status,
             "ip_address": ip_address,
             "user_agent": user_agent,
             "changes": changes if changes else None,
-            "created_by": actor_user_id if action == "created" else None,
-            "updated_by": actor_user_id if action == "updated" else None,
-            "deleted_by": actor_user_id if action == "deleted" else None,
+            "created_by": None,
+            "updated_by": None,
+            "deleted_by": None,
         }
+
+        action_lower = action.lower()
+        if "created" in action_lower:
+            entry["created_by"] = actor_user_id
+        elif "updated" in action_lower:
+            entry["updated_by"] = actor_user_id
+        elif "deleted" in action_lower:
+            entry["deleted_by"] = actor_user_id
         
         self.entries.append(entry)
         logger.debug(f"Added audit entry: {action} on {entity_type}:{entity_id}")
@@ -154,17 +164,33 @@ class BulkAuditService:
     
     def __init__(self, repository: AuditRepository):
         self.repository = repository
+
+    def _has_active_workers(self) -> bool:
+        """Check if any Celery workers are available."""
+        try:
+            inspector = celery_app.control.inspect(timeout=0.5)
+            ping = inspector.ping() or {}
+            return bool(ping)
+        except Exception as exc:
+            logger.warning(f"Celery worker check failed: {exc}")
+            return False
     
-    def create_collector(self, async_mode: bool = True) -> BulkAuditCollector:
+    def create_collector(self, async_mode: Optional[bool] = None) -> BulkAuditCollector:
         """
         Create a new bulk audit collector.
         
         Args:
-            async_mode: If True, use Celery. If False, insert directly.
+            async_mode: If True, use Celery. If False, insert directly. If None, auto-detect.
             
         Returns:
             BulkAuditCollector instance
         """
+        if async_mode is None:
+            async_mode = self._has_active_workers()
+        elif async_mode and not self._has_active_workers():
+            logger.warning("No Celery workers detected. Falling back to synchronous bulk insert.")
+            async_mode = False
+
         collector = BulkAuditCollector(async_mode=async_mode)
         if not async_mode:
             collector.set_repository(self.repository)
