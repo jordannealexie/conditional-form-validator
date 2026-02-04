@@ -98,13 +98,11 @@ source venv/bin/activate
 # Run database migrations
 alembic upgrade head
 
-# Seed initial data
-python scripts/seed_database.py
-python scripts/seed_form_templates.py
-python scripts/seed_lookups.py
-python scripts/seed_predefined_field_types.py
+# Restore database from dump
+docker cp ../dump-fastapi_db-202602040115.sql backend_db_1:/tmp/dump.sql
+docker compose exec db psql -U postgres -d fastapi_db -f /tmp/dump.sql
 
-# Create admin user
+# Create admin user (if needed)
 python create_admin.py
 ```
 
@@ -236,8 +234,7 @@ cd backend/scripts
 # Quick fix permissions
 ./fix_permissions.sh
 
-# Seed ABAC/ReBAC data
-./run_seed_abac_rebac.sh
+# Note: ABAC/ReBAC data is included in the database dump
 ```
 
 ## 11. Environment Configuration
