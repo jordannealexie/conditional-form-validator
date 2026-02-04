@@ -10,14 +10,24 @@ class MinIOClient:
     """MinIO client wrapper for file operations"""
 
     def __init__(self):
-        self.client = Minio(
-            endpoint=settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_SECURE
-        )
-        self.bucket = settings.MINIO_BUCKET
-        self._ensure_bucket()
+        self._client = None
+        self._bucket = settings.MINIO_BUCKET
+
+    @property
+    def client(self):
+        """Lazy initialization of MinIO client"""
+        if self._client is None:
+            self._client = Minio(
+                endpoint=settings.MINIO_ENDPOINT,
+                access_key=settings.MINIO_ACCESS_KEY,
+                secret_key=settings.MINIO_SECRET_KEY,
+                secure=settings.MINIO_SECURE
+            )
+        return self._client
+
+    @property
+    def bucket(self):
+        return self._bucket
 
     def _ensure_bucket(self):
         """Ensure the bucket exists"""
@@ -29,6 +39,7 @@ class MinIOClient:
 
     def upload_file(self, object_name: str, file_data: bytes, content_type: str = "application/octet-stream") -> str:
         """Upload file data to MinIO"""
+        self._ensure_bucket()
         try:
             data_stream = io.BytesIO(file_data)
             self.client.put_object(
@@ -71,5 +82,5 @@ class MinIOClient:
             return False
 
 
-# Global instance
+# Global instance - now lazy
 minio_client = MinIOClient()
