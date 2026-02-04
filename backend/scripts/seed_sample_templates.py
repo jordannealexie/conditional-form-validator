@@ -547,7 +547,7 @@ async def seed_bpi_templates(db: AsyncSession):
         ]
     )
     
-    await create_template_for_bank(db, bank.id, "Auto Loan Application", "1.0.0", auto_loan_form)
+    await create_template_for_bank(db, bank['id'], "Auto Loan Application", "1.0.0", auto_loan_form)
 
 
 async def seed_metrobank_templates(db: AsyncSession):
@@ -691,7 +691,7 @@ async def seed_metrobank_templates(db: AsyncSession):
         ]
     )
     
-    await create_template_for_bank(db, bank.id, "Home Loan Application", "1.0.0", home_loan_form)
+    await create_template_for_bank(db, bank['id'], "Home Loan Application", "1.0.0", home_loan_form)
     
     # Business Loan
     business_loan_form = FormSchemaBuilder(
@@ -822,7 +822,7 @@ async def seed_metrobank_templates(db: AsyncSession):
         ]
     )
     
-    await create_template_for_bank(db, bank.id, "Business Loan Application", "1.0.0", business_loan_form)
+    await create_template_for_bank(db, bank['id'], "Business Loan Application", "1.0.0", business_loan_form)
 
 
 async def seed_security_bank_templates(db: AsyncSession):
@@ -925,7 +925,7 @@ async def seed_security_bank_templates(db: AsyncSession):
         ]
     )
     
-    await create_template_for_bank(db, bank.id, "Time Deposit Application", "1.0.0", time_deposit_form)
+    await create_template_for_bank(db, bank['id'], "Time Deposit Application", "1.0.0", time_deposit_form)
 
 
 async def seed_rcbc_templates(db: AsyncSession):
@@ -1087,7 +1087,7 @@ async def seed_rcbc_templates(db: AsyncSession):
         ]
     )
     
-    await create_template_for_bank(db, bank.id, "OFW Loan Application", "1.0.0", ofw_loan_form)
+    await create_template_for_bank(db, bank['id'], "OFW Loan Application", "1.0.0", ofw_loan_form)
 
 
 async def main():
