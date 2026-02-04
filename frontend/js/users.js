@@ -21,8 +21,10 @@ async function initUserManagement() {
     try {
         const dropdownLoader = getDropdownLoader();
         console.log('[users.js] initUserManagement started, DropdownLoader:', typeof dropdownLoader);
-        if (!dropdownLoader) {
-            throw new Error('DropdownLoader is not available. Ensure dropdown-loader.js is loaded.');
+        if (!dropdownLoader || typeof dropdownLoader.loadAll !== 'function') {
+            console.warn('[users.js] DropdownLoader not available; continuing without dropdown metadata.');
+            await loadUsers();
+            return;
         }
         // Load dropdown data first using shared DropdownLoader
         await dropdownLoader.loadAll();

@@ -162,6 +162,13 @@ async def create_submission(
     data_json = submission_in.submission_data if submission_in.submission_data is not None else submission_in.data_json
     if data_json is None:
         data_json = {}
+    if isinstance(data_json, str):
+        try:
+            data_json = json.loads(data_json)
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data_json payload")
+    if not isinstance(data_json, dict):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data_json payload")
     fieldman_id = submission_in.fieldman_id or current_user.username
     
     # Determine if this is a draft or final submission
@@ -202,7 +209,7 @@ async def create_submission(
         )
 
     if requested_status == "submitted":
-        async with db.begin():
+        try:
             submission = FormSubmissionModel(
                 template_id=submission_in.template_id,
                 fieldman_id=fieldman_id,
@@ -215,7 +222,11 @@ async def create_submission(
                 submitted_at=datetime.now(timezone.utc)
             )
             db.add(submission)
-            await db.flush()
+            await db.commit()
+            await db.refresh(submission)
+        except Exception:
+            await db.rollback()
+            raise
 
         submission = await FormSubmissionRepository.get_by_id(db, submission.id)
         QueueService.enqueue(send_submission_notification, submission_id=submission.id, background_tasks=background_tasks)
@@ -500,6 +511,14 @@ async def update_submission(
             t = await FormTemplateRepository.get_by_id(db, submission.template_id)
             if t:
                 data_to_validate = upd.get("data_json", submission.data_json)
+                if isinstance(data_to_validate, str):
+                    try:
+                        data_to_validate = json.loads(data_to_validate)
+                        upd["data_json"] = data_to_validate
+                    except Exception:
+                        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data_json payload")
+                if not isinstance(data_to_validate, dict):
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data_json payload")
                 res = FormValidationService.validate_submission(
                     data_to_validate, 
                     {"schema_json": t.schema_json, "fields": t.fields, "ui_schema": t.ui_schema}
