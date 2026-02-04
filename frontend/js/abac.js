@@ -203,6 +203,23 @@ function getAttributeLabel(attrKey) {
 }
 
 /**
+ * Get user-friendly label for an attribute reference
+ * @param {string} refKey - The attribute reference key (e.g., "subject.user_id")
+ * @returns {string} - Human-readable label
+ */
+function getAttributeRefLabel(refKey) {
+    // Map of common attribute references to user-friendly labels
+    const refLabels = {
+        'subject.user_id': 'Current User\'s ID',
+        'subject.bank_id': 'Current User\'s Bank ID',
+        'user.id': 'Current User\'s ID',
+        'user.bank_id': 'Current User\'s Bank ID'
+    };
+    
+    return refLabels[refKey] || refKey;
+}
+
+/**
  * Create a table row for a policy
  * @param {object} policy 
  * @returns {HTMLElement}
@@ -219,13 +236,22 @@ function createPolicyRow(policy) {
             policy.rules.rules.forEach(rule => {
                 const fieldLabel = getAttributeLabel(rule.field || '');
                 const operatorLabel = getOperatorLabel(rule.operator || '');
-                const value = escapeHtml(String(rule.value || ''));
+                
+                // Handle attribute reference values
+                let valueDisplay = '';
+                if (rule.value && typeof rule.value === 'object' && rule.value.attribute) {
+                    // Format attribute reference nicely
+                    const refLabel = getAttributeRefLabel(rule.value.attribute);
+                    valueDisplay = `<em>${escapeHtml(refLabel)}</em>`;
+                } else {
+                    valueDisplay = escapeHtml(String(rule.value || ''));
+                }
                 
                 rulesDisplay += `
                     <div class="rule-badge">
                         <span class="rule-field">${escapeHtml(fieldLabel)}</span>
                         <span class="rule-operator">${escapeHtml(operatorLabel)}</span>
-                        <span class="rule-value">${value}</span>
+                        <span class="rule-value">${valueDisplay}</span>
                     </div>
                 `;
             });
@@ -419,16 +445,71 @@ function buildOperatorOptions(attrKey) {
 /**
  * Build value input HTML based on attribute type
  * @param {string} attrKey - Attribute key
- * @param {string} [currentValue] - Current value for editing
+ * @param {string|Object} [currentValue] - Current value for editing
  * @returns {string} HTML string for value input
  */
 function buildValueInput(attrKey, currentValue = '') {
     const attr = getAttributeDefinition(attrKey);
-    const escapedValue = escapeHtml(String(currentValue));
+    
+    // Check if current value is an attribute reference
+    let isAttributeRef = false;
+    let refValue = '';
+    let staticValue = '';
+    
+    if (typeof currentValue === 'object' && currentValue !== null && currentValue.attribute) {
+        isAttributeRef = true;
+        refValue = currentValue.attribute;
+    } else {
+        staticValue = String(currentValue);
+    }
+    
+    const escapedValue = escapeHtml(staticValue);
     
     if (!attr) {
         return `<input type="text" class="condition-value" placeholder="Enter value" value="${escapedValue}">`;
     }
+    
+    // Check if this attribute allows referencing other attributes
+    if (attr.allow_attribute_reference && attr.reference_attributes && attr.reference_attributes.length > 0) {
+        // Build a compound input with toggle between static value and attribute reference
+        let refOptions = '<option value="">Select attribute</option>';
+        for (const ref of attr.reference_attributes) {
+            const selected = ref.value === refValue ? ' selected' : '';
+            refOptions += `<option value="${escapeHtml(ref.value)}"${selected}>${escapeHtml(ref.label)}</option>`;
+        }
+        
+        return `
+            <div class="value-input-wrapper">
+                <div class="value-type-toggle">
+                    <label>
+                        <input type="radio" name="value-type-${escapeHtml(attrKey)}" value="static" ${!isAttributeRef ? 'checked' : ''} onchange="toggleValueType(this)">
+                        Static Value
+                    </label>
+                    <label>
+                        <input type="radio" name="value-type-${escapeHtml(attrKey)}" value="reference" ${isAttributeRef ? 'checked' : ''} onchange="toggleValueType(this)">
+                        Compare to Attribute
+                    </label>
+                </div>
+                <div class="value-static-input" ${isAttributeRef ? 'style="display:none"' : ''}>
+                    ${buildStaticValueInput(attr, staticValue)}
+                </div>
+                <div class="value-reference-input" ${!isAttributeRef ? 'style="display:none"' : ''}>
+                    <select class="condition-value-ref">
+                        ${refOptions}
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+    
+    return buildStaticValueInput(attr, staticValue);
+}
+
+/**
+ * Build static value input based on attribute type
+ */
+function buildStaticValueInput(attr, currentValue = '') {
+    const escapedValue = escapeHtml(String(currentValue));
     
     switch (attr.value_type) {
         case 'number':
@@ -452,13 +533,13 @@ function buildValueInput(attrKey, currentValue = '') {
             
         case 'enum':
             // Use cached or static values
-            const values = cachedValueOptions[attrKey] || attr.static_values || [];
+            const values = cachedValueOptions[attr.key] || attr.static_values || [];
             
-            if (values.length === 0) {
+            if (values.length === 0 && attr.value_source) {
                 // No values available - show loading indicator and fetch
-                fetchAttributeValues(attrKey);
+                fetchAttributeValues(attr.key);
                 return `
-                    <select class="condition-value" data-attr-key="${escapeHtml(attrKey)}">
+                    <select class="condition-value" data-attr-key="${escapeHtml(attr.key)}">
                         <option value="">Loading options...</option>
                     </select>
                 `;
@@ -478,6 +559,23 @@ function buildValueInput(attrKey, currentValue = '') {
                     placeholder="${escapeHtml(attr.input_placeholder || 'Enter value')}" 
                     value="${escapedValue}">
             `;
+    }
+}
+
+/**
+ * Toggle between static value and attribute reference inputs
+ */
+function toggleValueType(radio) {
+    const wrapper = radio.closest('.value-input-wrapper');
+    const staticInput = wrapper.querySelector('.value-static-input');
+    const refInput = wrapper.querySelector('.value-reference-input');
+    
+    if (radio.value === 'static') {
+        staticInput.style.display = '';
+        refInput.style.display = 'none';
+    } else {
+        staticInput.style.display = 'none';
+        refInput.style.display = '';
     }
 }
 
@@ -631,33 +729,59 @@ function buildPolicyRules() {
     conditions.forEach(condition => {
         const field = condition.querySelector('.condition-attribute').value;
         const operator = condition.querySelector('.condition-operator').value;
-        const valueInput = condition.querySelector('.condition-value');
-        const value = valueInput ? valueInput.value : '';
+        
+        // Check if this condition uses attribute reference
+        const wrapper = condition.querySelector('.value-input-wrapper');
+        let value = '';
+        let isAttributeRef = false;
+        
+        if (wrapper) {
+            // Check which radio is selected
+            const refRadio = wrapper.querySelector('input[type="radio"][value="reference"]');
+            if (refRadio && refRadio.checked) {
+                isAttributeRef = true;
+                const refSelect = wrapper.querySelector('.condition-value-ref');
+                value = refSelect ? refSelect.value : '';
+            } else {
+                const valueInput = wrapper.querySelector('.condition-value');
+                value = valueInput ? valueInput.value : '';
+            }
+        } else {
+            const valueInput = condition.querySelector('.condition-value');
+            value = valueInput ? valueInput.value : '';
+        }
 
         if (field && operator && value !== '') {
-            // Parse value to correct type based on attribute definition
-            let parsedValue = value;
-            const attr = getAttributeDefinition(field);
+            let parsedValue;
             
-            if (attr) {
-                switch (attr.value_type) {
-                    case 'number':
-                        parsedValue = Number(value);
-                        break;
-                    case 'boolean':
-                        parsedValue = value === 'true';
-                        break;
-                    default:
-                        parsedValue = value;
-                }
+            if (isAttributeRef) {
+                // Store as attribute reference object
+                parsedValue = { attribute: value };
             } else {
-                // Fallback parsing
-                if (!isNaN(value) && value !== '') {
-                    parsedValue = Number(value);
-                } else if (value.toLowerCase() === 'true') {
-                    parsedValue = true;
-                } else if (value.toLowerCase() === 'false') {
-                    parsedValue = false;
+                // Parse value to correct type based on attribute definition
+                parsedValue = value;
+                const attr = getAttributeDefinition(field);
+                
+                if (attr) {
+                    switch (attr.value_type) {
+                        case 'number':
+                            parsedValue = Number(value);
+                            break;
+                        case 'boolean':
+                            parsedValue = value === 'true';
+                            break;
+                        default:
+                            parsedValue = value;
+                    }
+                } else {
+                    // Fallback parsing
+                    if (!isNaN(value) && value !== '') {
+                        parsedValue = Number(value);
+                    } else if (value.toLowerCase() === 'true') {
+                        parsedValue = true;
+                    } else if (value.toLowerCase() === 'false') {
+                        parsedValue = false;
+                    }
                 }
             }
 
@@ -720,9 +844,38 @@ async function editPolicy(policyId) {
                 
                 // Set value (need slight delay for dynamic inputs to render)
                 setTimeout(() => {
-                    const valueInput = lastCondition.querySelector('.condition-value');
-                    if (valueInput) {
-                        valueInput.value = rule.value !== undefined ? String(rule.value) : '';
+                    const wrapper = lastCondition.querySelector('.value-input-wrapper');
+                    
+                    // Check if value is an attribute reference
+                    if (rule.value && typeof rule.value === 'object' && rule.value.attribute) {
+                        // This is an attribute reference
+                        if (wrapper) {
+                            const refRadio = wrapper.querySelector('input[type="radio"][value="reference"]');
+                            if (refRadio) {
+                                refRadio.checked = true;
+                                // Trigger the toggle to show reference dropdown
+                                toggleValueType(refRadio, lastCondition);
+                                
+                                // Set the reference value
+                                const refSelect = wrapper.querySelector('.condition-value-ref');
+                                if (refSelect) {
+                                    refSelect.value = rule.value.attribute;
+                                }
+                            }
+                        }
+                    } else {
+                        // This is a static value
+                        if (wrapper) {
+                            const staticRadio = wrapper.querySelector('input[type="radio"][value="static"]');
+                            if (staticRadio) {
+                                staticRadio.checked = true;
+                                toggleValueType(staticRadio, lastCondition);
+                            }
+                        }
+                        const valueInput = lastCondition.querySelector('.condition-value');
+                        if (valueInput) {
+                            valueInput.value = rule.value !== undefined ? String(rule.value) : '';
+                        }
                     }
                 }, 100);
             }

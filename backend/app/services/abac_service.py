@@ -334,6 +334,16 @@ class ABACService:
                 action_value=action
             )
 
+            # Handle attribute reference values (e.g., {"attribute": "user.id"})
+            if isinstance(expected_value, dict) and "attribute" in expected_value:
+                expected_value = self._resolve_attribute_value(
+                    expected_value["attribute"],
+                    user_attrs=user_attrs,
+                    resource_attrs=resource_attrs,
+                    env_attrs=env_attrs,
+                    action_value=action
+                )
+
             if not self._compare_values(actual_value, operator, expected_value):
                 # Role-based conditions (user.roles, user.role) determine applicability
                 # If user doesn't match the role condition, policy is not applicable to them

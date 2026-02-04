@@ -495,7 +495,11 @@ async def get_available_attributes(
             description="The ID of the user who owns the resource",
             value_type="number",
             operators=NUMERIC_OPERATORS,
-            input_placeholder="Enter owner user ID"
+            input_placeholder="Enter owner user ID",
+            allow_attribute_reference=True,
+            reference_attributes=[
+                ValueOption(value="subject.user_id", label="Current User's ID"),
+            ]
         ),
         AttributeDefinition(
             key="resource.bank_id",
@@ -503,7 +507,11 @@ async def get_available_attributes(
             description="The bank associated with the resource",
             value_type="number",
             operators=NUMERIC_OPERATORS,
-            input_placeholder="Enter bank ID"
+            input_placeholder="Enter bank ID",
+            allow_attribute_reference=True,
+            reference_attributes=[
+                ValueOption(value="subject.bank_id", label="Current User's Bank ID"),
+            ]
         ),
         AttributeDefinition(
             key="resource.status",

@@ -135,6 +135,8 @@ class AttributeDefinition(BaseModel):
     static_values: Optional[List[ValueOption]] = Field(None, description="Static list of values if not from API")
     input_placeholder: Optional[str] = Field(None, description="Placeholder text for input field")
     validation_pattern: Optional[str] = Field(None, description="Regex pattern for validation")
+    allow_attribute_reference: Optional[bool] = Field(False, description="Whether this attribute can be compared to another attribute")
+    reference_attributes: Optional[List[ValueOption]] = Field(None, description="List of attributes that can be used as reference values")
 
 
 class AttributeGroup(BaseModel):

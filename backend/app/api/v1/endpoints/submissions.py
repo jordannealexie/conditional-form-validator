@@ -109,11 +109,17 @@ async def _enforce_submission_abac(
     submission: FormSubmissionModel,
     action: str
 ) -> None:
+    # Get bank_id from template if available
+    bank_id = None
+    if submission.template:
+        bank_id = submission.template.bank_id
+    
     resource_attrs = {
         "owner_id": submission.submitted_by,
         "status": (submission.status or "").lower(),
         "created_at": submission.created_at.isoformat() if submission.created_at else None,
         "type": "submission",
+        "bank_id": bank_id,
     }
     service = ABACService(db)
     allowed, _, failed = await service.evaluate_policy(

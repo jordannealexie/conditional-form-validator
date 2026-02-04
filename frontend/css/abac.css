@@ -207,3 +207,49 @@
         width: 100%;
     }
 }
+
+/* Attribute Reference Value Input Styles */
+.value-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.value-type-toggle {
+    display: flex;
+    gap: 16px;
+    font-size: 0.85em;
+}
+
+.value-type-toggle label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: #555;
+}
+
+.value-type-toggle input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.value-static-input,
+.value-reference-input {
+    width: 100%;
+}
+
+.condition-value-ref {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+    background: #fff8e1;
+}
+
+.condition-value-ref:focus {
+    outline: none;
+    border-color: #ffa000;
+    box-shadow: 0 0 0 2px rgba(255, 160, 0, 0.2);
+}
