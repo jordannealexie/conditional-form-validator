@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_URL: Optional[str] = None
     
+    # Celery Settings
+    CELERY_BROKER_URL: Optional[str] = None
+    CELERY_RESULT_BACKEND: Optional[str] = None
+    
     # Cache Settings
     CACHE_ENABLED: bool = True
     CACHE_DEFAULT_TTL: int = 3600  # 1 hour
@@ -66,5 +70,11 @@ class Settings(BaseSettings):
         # Construct REDIS_URL if not provided
         if not self.REDIS_URL:
             self.REDIS_URL = f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        
+        # Construct Celery URLs if not provided (use Redis as broker and backend)
+        if not self.CELERY_BROKER_URL:
+            self.CELERY_BROKER_URL = self.REDIS_URL
+        if not self.CELERY_RESULT_BACKEND:
+            self.CELERY_RESULT_BACKEND = self.REDIS_URL
 
 settings = Settings()

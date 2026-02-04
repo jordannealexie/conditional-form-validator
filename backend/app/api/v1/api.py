@@ -17,6 +17,7 @@ from app.api.v1.endpoints import field_types
 from app.api.v1.endpoints import lookups
 from app.api.v1.endpoints import metadata
 from app.api.v1.endpoints import audit_trail
+from app.api.v1.endpoints import batch_audit
 
 api_router = APIRouter()
 
@@ -37,5 +38,6 @@ api_router.include_router(files.router, prefix="/files", tags=["Files"])
 api_router.include_router(lookups.router, prefix="/lookups", tags=["Lookup Tables"])
 api_router.include_router(metadata.router, prefix="/metadata", tags=["Form Metadata"])
 api_router.include_router(audit_trail.router, prefix="/audit-trail", tags=["Audit Trail"])
+api_router.include_router(batch_audit.router, prefix="/batch-audit", tags=["Batch Audit Processing"])
 
 # This is the main API router that includes all endpoint routers
