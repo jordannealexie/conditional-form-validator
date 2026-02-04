@@ -174,6 +174,8 @@ function renderTable(submissions) {
         const validatedBy = sub.validated_by ? escapeHtml(sub.validated_by) : '-';
         const validatedOn = sub.validated_on ? formatDateTime(sub.validated_on) : '-';
 
+        const isDraft = (sub.status || '').toLowerCase() === 'draft';
+
         row.innerHTML = `
             <td class="sticky-col"><strong>#${sub.id}</strong></td>
             <td>${escapeHtml(submittedBy)}</td>
@@ -188,9 +190,17 @@ function renderTable(submissions) {
                     <button class="btn btn-sm btn-outline" onclick="viewSubmission(${sub.id})" data-permission="submissions" data-action="read">
                         <i class="fas fa-eye"></i> View
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteSubmission(${sub.id})" data-permission="submissions" data-action="delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    ${isDraft ? `
+                        <button class="btn btn-sm btn-primary" onclick="editDraft(${sub.id})" data-permission="submissions" data-action="update">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="submitDraft(${sub.id})" data-permission="submissions" data-action="update">
+                            <i class="fas fa-paper-plane"></i> Submit
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteSubmission(${sub.id})" data-permission="submissions" data-action="delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    ` : ''}
                 </div>
             </td>
         `;
@@ -443,6 +453,14 @@ function closeModal() {
     const modal = document.getElementById('viewModal');
     modal.classList.remove('active');
     currentSubmissionId = null;
+}
+
+function editDraft(submissionId) {
+    window.location.href = `form-fill.html?submission_id=${submissionId}`;
+}
+
+function submitDraft(submissionId) {
+    window.location.href = `form-fill.html?submission_id=${submissionId}&submit=1`;
 }
 
 function handleFilterChange() {

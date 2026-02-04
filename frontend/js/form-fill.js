@@ -4,16 +4,20 @@
 
 let renderer = null;
 let currentTemplate = null;
+let currentDraftId = null;
+let isEditingDraft = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Check Authentication
     if (typeof requireAuth === 'function') requireAuth();
 
-    // 2. Extract Template ID from URL
+    // 2. Extract Template ID or Submission ID from URL
     const urlParams = new URLSearchParams(window.location.search);
     const templateId = urlParams.get('template_id');
+    const submissionId = urlParams.get('submission_id');
+    const submitIntent = urlParams.get('submit') === '1';
 
-    if (!templateId) {
+    if (!templateId && !submissionId) {
         showToast('No template selected. Returning to dashboard.', 'error');
         setTimeout(() => {
             window.location.href = 'dashboard.html';
@@ -21,14 +25,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Store template ID globally for FormRenderer
-    window.currentTemplateId = parseInt(templateId);
-
     // 3. Load User Info
     await loadUserInfo();
 
-    // 4. Load Template and Initialize Renderer
-    await loadTemplate(templateId);
+    if (submissionId) {
+        await loadDraftSubmission(submissionId, submitIntent);
+    } else {
+        // Store template ID globally for FormRenderer
+        window.currentTemplateId = parseInt(templateId);
+        // 4. Load Template and Initialize Renderer
+        await loadTemplate(templateId);
+    }
 
     // 5. Setup Buttons
     document.getElementById('submitBtn').addEventListener('click', handleSubmit);
@@ -122,6 +129,46 @@ async function loadTemplate(templateId) {
     }
 }
 
+async function loadDraftSubmission(submissionId, submitIntent) {
+    const container = document.getElementById('renderer-container');
+    try {
+        const submission = await apiGetSubmission(submissionId);
+        if (!submission || (submission.status || '').toLowerCase() !== 'draft') {
+            showToast('Only draft submissions can be edited.', 'error');
+            setTimeout(() => {
+                window.location.href = 'submissions.html';
+            }, 1500);
+            return;
+        }
+
+        currentDraftId = submission.id;
+        isEditingDraft = true;
+
+        window.currentTemplateId = submission.template_id;
+        await loadTemplate(submission.template_id);
+
+        if (renderer && submission.data_json) {
+            renderer.setData(submission.data_json);
+        }
+
+        if (submitIntent) {
+            showToast('Review your draft and click Submit when ready.', 'info');
+        }
+    } catch (error) {
+        console.error('Failed to load draft submission:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">⚠️</div>
+                <p class="empty-state-title">Error loading draft</p>
+                <p>${error.message || 'Please try again later.'}</p>
+                <button onclick="window.location.href='submissions.html'" class="btn btn-primary" style="margin-top: var(--space-md);">
+                    Back to Submissions
+                </button>
+            </div>
+        `;
+    }
+}
+
 /**
  * Generate field definitions from JSONSchema properties
  */
@@ -190,7 +237,8 @@ async function handleSubmit() {
             status: 'submitted',
             data_json: data.form_data,
             file_tokens: data.file_tokens,
-            files: data.files
+            files: data.files,
+            submission_id: currentDraftId || undefined
         };
 
         const result = await apiSubmitForm(payload);
@@ -218,10 +266,15 @@ async function handleSaveDraft() {
             template_id: currentTemplate.id,
             status: 'draft',
             data_json: data.form_data,
-            file_tokens: []
+            file_tokens: [],
+            submission_id: currentDraftId || undefined
         };
 
-        await apiSubmitForm(payload);
+        const result = await apiSubmitForm(payload);
+        if (result && result.id) {
+            currentDraftId = result.id;
+            isEditingDraft = true;
+        }
         showToast('Draft saved successfully!', 'success');
     } catch (error) {
         console.error('Draft save error:', error);

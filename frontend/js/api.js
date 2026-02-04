@@ -768,6 +768,7 @@ async function apiSubmitForm(submissionData) {
     const dataJson = submissionData.submission_data || submissionData.data_json;
     const files = submissionData.files || {};
     const fileEntries = Object.entries(files).filter(([, file]) => file instanceof File);
+    const submissionId = submissionData.submission_id;
 
     if (status === 'submitted' && fileEntries.length > 0) {
         const formData = new FormData();
@@ -776,6 +777,9 @@ async function apiSubmitForm(submissionData) {
         formData.append('data_json_raw', JSON.stringify(dataJson || {}));
         if (submissionData.username || submissionData.fieldman_id) {
             formData.append('fieldman_id', submissionData.username || submissionData.fieldman_id);
+        }
+        if (submissionId) {
+            formData.append('submission_id', submissionId);
         }
 
         fileEntries.forEach(([fieldId, file]) => {
@@ -791,6 +795,13 @@ async function apiSubmitForm(submissionData) {
 
     if (status !== 'submitted' && fileEntries.length > 0) {
         throw new Error('File uploads are only allowed on final submission');
+    }
+
+    if (submissionId) {
+        return await apiUpdateSubmission(submissionId, {
+            data_json: dataJson,
+            status
+        });
     }
 
     const payload = {
