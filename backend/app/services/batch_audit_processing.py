@@ -1,7 +1,7 @@
 """Service for batch audit processing operations"""
 
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from celery.result import AsyncResult
 from sqlalchemy import select, func
 from app.repositories.audit import AuditRepository
@@ -264,7 +264,7 @@ class BatchAuditProcessingService:
 
     async def _get_statistics_from_db(self) -> Dict[str, Any]:
         """Compute audit statistics directly from the database."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         total_query = select(func.count()).select_from(AuditLog)
         total_result = await self.repository.db.execute(total_query)

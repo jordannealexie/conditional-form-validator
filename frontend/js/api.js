@@ -2,9 +2,9 @@
 // This file handles all API communication with the FastAPI backend
 // Currently uses mock data, but ready for real API integration
 
-// API Configuration
+// API Configuration - Use window.API_BASE_URL for environment-specific override
 const API_CONFIG = {
-    baseURL: 'http://localhost:8000/api/v1',
+    baseURL: window.API_BASE_URL || 'http://localhost:8000/api/v1',
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json'

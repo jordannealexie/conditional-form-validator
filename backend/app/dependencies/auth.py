@@ -140,21 +140,6 @@ def authorize(resource: Optional[str] = None, action: Optional[str] = None, allo
 
             return current_user
 
-            # Check alternate actions if primary action failed
-            if alternate_actions:
-                for alt_action in alternate_actions:
-                    rbac_allowed = await casbin_enforcer.check_rbac_permission_async(su.username, resource, alt_action)
-                    if not rbac_allowed:
-                        continue
-                    abac_service = ABACService(db)
-                    abac_allowed, _, failed_policies = await abac_service.evaluate_policy(
-                        current_user,
-                        resource,
-                        alt_action
-                    )
-                    if abac_allowed:
-                        return current_user
-
         # 3. Backward Compatibility: Role-based check
         if allowed_roles:
             if current_user.user_role in allowed_roles:

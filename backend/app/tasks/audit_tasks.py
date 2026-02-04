@@ -1,7 +1,7 @@
 """Celery tasks for asynchronous audit log persistence and batch processing"""
 
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from celery import Task
 from sqlalchemy import create_engine, insert, delete, select, func, and_
 from sqlalchemy.orm import sessionmaker
@@ -164,7 +164,7 @@ def batch_delete_audit_logs(
             conditions.append(AuditLog.resource_id.in_(str_ids))
         
         if older_than_days:
-            cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
             conditions.append(AuditLog.created_at < cutoff_date)
         
         if actor_user_id:
@@ -356,7 +356,7 @@ def batch_archive_audit_logs(
     """
     session = self.SessionLocal()
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
         
         # Build query for logs to archive
         query = select(AuditLog).where(AuditLog.created_at < cutoff_date)
@@ -441,7 +441,7 @@ def get_audit_statistics(self) -> Dict[str, Any]:
     """
     session = self.SessionLocal()
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Total count
         total_query = select(func.count()).select_from(AuditLog)

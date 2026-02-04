@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, Index
 from sqlalchemy.sql import func
 from app.db.base_class import Base
 
@@ -16,7 +16,7 @@ class AuditLog(Base):
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
     payload = Column(JSON, nullable=True)
-    details = Column(JSON, nullable=True) # Spec says JSONB
+    details = Column(JSON, nullable=True)  # JSONB for detailed information
     
     # Change tracking fields
     changes = Column(JSON, nullable=True, comment="Before and after values in JSON format")
@@ -24,4 +24,10 @@ class AuditLog(Base):
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="User ID who updated this record")
     deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True, comment="User ID who deleted this record")
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    # Additional indexes for common query patterns
+    __table_args__ = (
+        Index('ix_audit_logs_created_at_desc', created_at.desc()),
+        Index('ix_audit_logs_user_action', 'user_id', 'action'),
+    )

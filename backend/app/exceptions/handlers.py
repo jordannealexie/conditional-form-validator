@@ -30,7 +30,27 @@ def add_exception_handlers(app: FastAPI) -> None:
         
         # Parse common integrity errors
         if "unique constraint" in error_msg.lower():
-            detail = "A record with this value already exists"
+            # Extract constraint name for more specific error messages
+            constraint_name = ""
+            if "uq_" in error_msg.lower() or "_key" in error_msg.lower():
+                # Try to extract the constraint name
+                import re
+                match = re.search(r'(?:constraint\s+["\']?)(\w+)', error_msg.lower())
+                if match:
+                    constraint_name = match.group(1)
+            
+            # Provide more specific error messages based on constraint
+            if "storage_path" in error_msg.lower():
+                detail = "A file with this storage path already exists. Please try again."
+            elif "token" in error_msg.lower():
+                detail = "A file token conflict occurred. Please try uploading again."
+            elif "email" in error_msg.lower():
+                detail = "This email address is already registered."
+            elif "username" in error_msg.lower():
+                detail = "This username is already taken."
+            else:
+                detail = "A record with this value already exists"
+            
             status_code_val = status.HTTP_409_CONFLICT
             error_code = "DUPLICATE_ENTRY"
         elif "foreign key constraint" in error_msg.lower():

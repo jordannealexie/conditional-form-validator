@@ -184,7 +184,7 @@ function generateFieldsFromSchema(schema) {
             id: key,
             label: prop.title || key,
             required: required.includes(key),
-            type: mapJsonSchemaType(prop.type)
+            type: mapJsonSchemaType(prop.type, prop)
         };
 
         if (prop.enum) {
@@ -203,11 +203,11 @@ function generateFieldsFromSchema(schema) {
     return fields;
 }
 
-function mapJsonSchemaType(jsonType) {
+function mapJsonSchemaType(jsonType, prop = {}) {
     switch (jsonType) {
         case 'string':
-            if (schema.format === 'email') return 'email';
-            if (schema.format === 'date') return 'date';
+            if (prop.format === 'email') return 'email';
+            if (prop.format === 'date') return 'date';
             return 'text';
         case 'number':
         case 'integer':

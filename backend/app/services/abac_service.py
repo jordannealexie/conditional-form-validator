@@ -63,7 +63,7 @@ class ABACService:
         is_active: Optional[bool] = None
     ) -> Optional[ABACPolicy]:
         """Update an existing ABAC policy"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         
         policy = await self.get_policy(policy_id)
         if not policy:
@@ -78,8 +78,8 @@ class ABACService:
         if is_active is not None:
             policy.is_active = is_active
         
-        # Explicitly set updated_at
-        policy.updated_at = datetime.now()
+        # Explicitly set updated_at with timezone
+        policy.updated_at = datetime.now(timezone.utc)
         
         await self.db.commit()
         await self.db.refresh(policy)
@@ -272,7 +272,12 @@ class ABACService:
         if not matched_policies and not failed_policies:
             return True, [], []
 
-        # Deny if any applicable policy fails
+        # Allow if at least one policy matched and no policies explicitly denied
+        # This is "permit-override" semantics - any explicit allow wins
+        if matched_policies and not failed_policies:
+            return True, matched_policies, []
+        
+        # Deny if any applicable policy explicitly denies
         has_permission = len(failed_policies) == 0
         return has_permission, matched_policies, failed_policies
     
@@ -291,8 +296,28 @@ class ABACService:
         """
         # Check if permissions match
         perms = rules.get("permissions", {})
-        if perms.get("resource") != resource or perms.get("action") != action:
-            return False, False
+        
+        # Handle permissions as a list of {resource, action} objects
+        if isinstance(perms, list):
+            is_applicable = any(
+                p.get("resource") == resource and p.get("action") == action
+                for p in perms
+            )
+            if not is_applicable:
+                return False, False
+        else:
+            # Handle permissions as a single object with resource and action
+            perm_resource = perms.get("resource")
+            perm_action = perms.get("action")
+            
+            # action can be a string or a list
+            if perm_resource != resource:
+                return False, False
+            if isinstance(perm_action, list):
+                if action not in perm_action:
+                    return False, False
+            elif perm_action != action:
+                return False, False
 
         # Check conditions
         conditions = rules.get("conditions", [])
@@ -310,6 +335,11 @@ class ABACService:
             )
 
             if not self._compare_values(actual_value, operator, expected_value):
+                # Role-based conditions (user.roles, user.role) determine applicability
+                # If user doesn't match the role condition, policy is not applicable to them
+                if attr_name in ("user.roles", "user.role", "subject.roles", "subject.role"):
+                    return False, False  # Not applicable
+                # Other conditions that fail mean policy applies but denies
                 return True, False
 
         return True, True

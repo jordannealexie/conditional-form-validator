@@ -17,20 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function initProfilePage() {
     try {
-        console.log('[profile.js] initProfilePage started, DropdownLoader:', typeof DropdownLoader);
         // Load dropdown data using shared DropdownLoader
         await DropdownLoader.loadAll();
-        console.log('[profile.js] DropdownLoader.loadAll() completed');
         
         // Populate dropdowns
-        console.log('[profile.js] Populating department dropdown...');
         DropdownLoader.populateSelect('profile_department', 'departments', '', { emptyLabel: 'Select Department' });
-        console.log('[profile.js] Populating location dropdown...');
         DropdownLoader.populateSelect('profile_location', 'locations', '', { emptyLabel: 'Select Location' });
         
         // Then load user profile data
         await loadProfileData();
-        console.log('[profile.js] Profile data loaded');
     } catch (error) {
         console.error('Error initializing profile page:', error);
     }

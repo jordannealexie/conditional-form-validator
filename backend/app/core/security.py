@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -8,6 +8,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
 
+
+def utcnow() -> datetime:
+    """Get current UTC time with timezone info (replaces deprecated datetime.utcnow())"""
+    return datetime.now(timezone.utc)
+
+
 def create_access_token(
     data: dict,
     expires_delta: Optional[timedelta] = None
@@ -15,9 +21,9 @@ def create_access_token(
     """Create JWT access token (15 minute default)"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = utcnow() + timedelta(minutes=15)
     
     to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(
@@ -35,9 +41,9 @@ def create_refresh_token(
     """Create JWT refresh token (7 days default)"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(days=7)
+        expire = utcnow() + timedelta(days=7)
     
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(

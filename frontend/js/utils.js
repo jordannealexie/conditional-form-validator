@@ -2,6 +2,18 @@
 // Helper functions for common tasks
 
 /**
+ * Escape HTML to prevent XSS attacks
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string
+ */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
+/**
  * Show toast notification
  * @param {string} message 
  * @param {string} type - success, error, warning, info
@@ -12,10 +24,15 @@ function showToast(message, type = 'info', duration = 3000) {
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-        <span>${getToastIcon(type)}</span>
-        <span>${message}</span>
-    `;
+    
+    // Create elements safely to prevent XSS
+    const iconSpan = document.createElement('span');
+    iconSpan.innerHTML = getToastIcon(type); // Icons are safe static content
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = message; // Use textContent for user content
+    
+    toast.appendChild(iconSpan);
+    toast.appendChild(msgSpan);
 
     container.appendChild(toast);
 
@@ -271,7 +288,7 @@ function validatePassword(password) {
 /**
  * Create modal dialog
  * @param {string} title 
- * @param {string} content 
+ * @param {string} content - Can be HTML or plain text (HTML is allowed for form content)
  * @param {Array} buttons 
  * @returns {HTMLElement}
  */
@@ -282,29 +299,53 @@ function createModal(title, content, buttons = [], size = 'normal') {
     const modal = document.createElement('div');
     modal.className = 'modal active';
 
-    const buttonsHtml = buttons.map(btn => `
-        <button class="btn btn-${btn.type || 'secondary'}" onclick="${btn.onclick}">
-            ${btn.label}
-        </button>
-    `).join('');
-
     // Add size class to modal-content
     const sizeClass = size === 'large' ? 'modal-content-large' : '';
 
-    modal.innerHTML = `
-        <div class="modal-content ${sizeClass}">
-            <div class="modal-header">
-                <h3 class="modal-title">${title}</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                ${content}
-            </div>
-            <div class="modal-footer">
-                ${buttonsHtml}
-            </div>
-        </div>
-    `;
+    // Create modal structure safely
+    const modalContent = document.createElement('div');
+    modalContent.className = `modal-content ${sizeClass}`;
+    
+    // Header
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    const modalTitle = document.createElement('h3');
+    modalTitle.className = 'modal-title';
+    modalTitle.textContent = title; // Safe - use textContent for title
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-close';
+    closeBtn.textContent = '×';
+    closeBtn.onclick = closeModal;
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeBtn);
+    
+    // Body - content may contain form HTML which is intentional
+    const modalBody = document.createElement('div');
+    modalBody.className = 'modal-body';
+    modalBody.innerHTML = content; // Form content is controlled by code, not user input
+    
+    // Footer with buttons
+    const modalFooter = document.createElement('div');
+    modalFooter.className = 'modal-footer';
+    buttons.forEach(btn => {
+        const button = document.createElement('button');
+        button.className = `btn btn-${btn.type || 'secondary'}`;
+        button.textContent = btn.label;
+        if (btn.onclick) {
+            // Handle onclick as function reference or string
+            if (typeof btn.onclick === 'function') {
+                button.onclick = btn.onclick;
+            } else {
+                button.setAttribute('onclick', btn.onclick);
+            }
+        }
+        modalFooter.appendChild(button);
+    });
+    
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modalContent.appendChild(modalFooter);
+    modal.appendChild(modalContent);
 
     document.body.appendChild(modal);
 

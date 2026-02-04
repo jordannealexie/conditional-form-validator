@@ -15,20 +15,41 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Initialize user management - load dropdowns then userss
+ * Wait for DropdownLoader to be available with timeout
+ * @param {number} timeout - Max wait time in ms
+ * @returns {Promise<Object|null>}
+ */
+function waitForDropdownLoader(timeout = 2000) {
+    return new Promise((resolve) => {
+        const start = Date.now();
+        const check = () => {
+            const loader = getDropdownLoader();
+            if (loader && typeof loader.loadAll === 'function') {
+                resolve(loader);
+            } else if (Date.now() - start > timeout) {
+                resolve(null);
+            } else {
+                setTimeout(check, 50);
+            }
+        };
+        check();
+    });
+}
+
+/**
+ * Initialize user management - load dropdowns then users
  */
 async function initUserManagement() {
     try {
-        const dropdownLoader = getDropdownLoader();
-        console.log('[users.js] initUserManagement started, DropdownLoader:', typeof dropdownLoader);
-        if (!dropdownLoader || typeof dropdownLoader.loadAll !== 'function') {
-            console.warn('[users.js] DropdownLoader not available; continuing without dropdown metadata.');
+        // Wait for DropdownLoader with timeout
+        const dropdownLoader = await waitForDropdownLoader(2000);
+        if (!dropdownLoader) {
+            console.warn('[users.js] DropdownLoader not available after waiting; continuing without dropdown metadata.');
             await loadUsers();
             return;
         }
         // Load dropdown data first using shared DropdownLoader
         await dropdownLoader.loadAll();
-        console.log('[users.js] DropdownLoader.loadAll() completed');
         // Then load users
         await loadUsers();
     } catch (error) {
@@ -43,10 +64,8 @@ async function initUserManagement() {
  */
 function buildRoleOptions(selectedRole = '') {
     const dropdownLoader = getDropdownLoader();
-    console.log('[users.js] buildRoleOptions called, DropdownLoader:', typeof dropdownLoader);
     if (!dropdownLoader) return '<option value="">Select Role</option>';
     const options = dropdownLoader.buildOptions('roles', selectedRole, { emptyLabel: 'Select Role' });
-    console.log('[users.js] Role options built:', options.substring(0, 100));
     return options;
 }
 

@@ -495,15 +495,23 @@ async def get_submission(
     current_user: User = Depends(authorize(resource="submissions", action="viewDetails", alternate_actions=["read", "review"]))
 ) -> Any:
     """Get a single submission. Permission-based access: submissions:viewDetails, submissions:read, or submissions:review"""
-    submission = await FormSubmissionRepository.get_by_id(db, id)
-    if not submission:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
-    if (submission.status or "").lower() == "draft" and submission.fieldman_id != current_user.username:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can view this draft")
-    await _enforce_submission_abac(db, current_user, submission, action="read")
-    # Authorization is handled by authorize() dependency - no need for ownership check
-    # Users with proper permissions can view any submission (except drafts)
-    return create_response(data=FormSubmissionResponse.model_validate(submission))
+    try:
+        submission = await FormSubmissionRepository.get_by_id(db, id)
+        if not submission:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+        if (submission.status or "").lower() == "draft" and submission.fieldman_id != current_user.username:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can view this draft")
+        await _enforce_submission_abac(db, current_user, submission, action="read")
+        # Authorization is handled by authorize() dependency - no need for ownership check
+        # Users with proper permissions can view any submission (except drafts)
+        return create_response(data=FormSubmissionResponse.model_validate(submission))
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] get_submission failed: {type(e).__name__}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to get submission: {str(e)}")
 
 
 @router.put("/{id}", response_model=FormSubmissionResponse)

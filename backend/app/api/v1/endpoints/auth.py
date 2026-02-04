@@ -100,7 +100,6 @@ async def login(
         select(User).where(User.username == form_data.username)
     )
     user = result.scalar_one_or_none()
-    print(f"DEBUG: After username lookup, user: {user is not None}, id: {user.id if user else None}")
 
     # If username not found, try email
     if not user:
@@ -108,11 +107,8 @@ async def login(
             select(User).where(User.email == form_data.username)
         )
         user = result.scalar_one_or_none()
-        print(f"DEBUG: After email lookup, user: {user is not None}, id: {user.id if user else None}")
 
     if not user or not verify_password(form_data.password, user.password_hash):
-        print(f"DEBUG: Login failed for user {form_data.username}, entered password: {form_data.password}")
-        print(f"DEBUG: User found: {user is not None}, hash: {user.password_hash if user else None}")
         # Store user_id to avoid greenlet issues
         user_id = user.id if user else None
         await audit.log(
@@ -209,7 +205,7 @@ async def login(
     db_refresh_token = RefreshToken(
         user_id=user_id,
         token=refresh_token_jwt,
-        expires_at=datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     )
     db.add(db_refresh_token)
     await db.commit()
@@ -255,7 +251,7 @@ async def refresh_token(
         select(RefreshToken).where(
             RefreshToken.token == refresh_token_in,
             RefreshToken.revoked == False,
-            RefreshToken.expires_at > datetime.utcnow()
+            RefreshToken.expires_at > datetime.now(timezone.utc)
         )
     )
     db_token = result.scalar_one_or_none()

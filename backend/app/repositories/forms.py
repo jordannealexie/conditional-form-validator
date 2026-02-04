@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
 from sqlalchemy.orm import joinedload, selectinload
 from app.models.forms import Bank, FormTemplate, FormSubmission, FormFile, SubmissionStatus
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Import cache layer
 from app.core.cache import template_cache, CacheKeys
@@ -121,7 +121,7 @@ class BankRepository:
     @staticmethod
     async def update(db: AsyncSession, bank: Bank, **kwargs) -> dict:
         """Update bank and return data as dictionary to avoid greenlet issues"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         
         # Ensure we have the latest state first
         await db.refresh(bank)
@@ -132,7 +132,7 @@ class BankRepository:
                 setattr(bank, key, value)
         
         # Explicitly set updated_at to ensure it's updated
-        bank.updated_at = datetime.utcnow()
+        bank.updated_at = datetime.now(timezone.utc)
         
         # Mark the object as dirty and add to session
         db.add(bank)
@@ -171,9 +171,9 @@ class BankRepository:
     @staticmethod
     async def soft_delete(db: AsyncSession, bank: Bank) -> Bank:
         """Soft delete bank"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         
-        bank.deleted_at = datetime.utcnow()
+        bank.deleted_at = datetime.now(timezone.utc)
         bank.active = False
         await db.commit()
         await db.refresh(bank)
@@ -540,7 +540,7 @@ class FormSubmissionRepository:
     async def submit(db: AsyncSession, submission: FormSubmission) -> FormSubmission:
         """Mark submission as submitted"""
         submission.status = SubmissionStatus.SUBMITTED
-        submission.submitted_at = datetime.utcnow()
+        submission.submitted_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(submission)
         return submission

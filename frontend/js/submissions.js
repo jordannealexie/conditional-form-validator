@@ -344,26 +344,15 @@ async function viewSubmission(id) {
         // Only show for submitted or validated submissions
         const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
         
-        console.log('Button visibility check:', {
-            user: currentUser?.username,
-            status: sub.status,
-            is_admin: currentUser?.is_admin,
-            is_superuser: currentUser?.is_superuser,
-            permissions: currentUser?.permissions,
-            hasPermissionFunc: typeof hasPermission === 'function'
-        });
-        
         // Check permission using both formats for compatibility
         let hasReviewPerm = false;
         if (typeof hasPermission === 'function') {
             // Try format 1: 'submissions:review'
             hasReviewPerm = hasPermission('submissions:review');
-            console.log('hasPermission("submissions:review"):', hasReviewPerm);
             
             // Try format 2: resource, action separately
             if (!hasReviewPerm) {
                 hasReviewPerm = hasPermission('submissions', 'review');
-                console.log('hasPermission("submissions", "review"):', hasReviewPerm);
             }
         }
         
@@ -373,21 +362,16 @@ async function viewSubmission(id) {
             hasReviewPerm
         );
         
-        console.log('Can review?', canReview, 'Status check:', (sub.status === 'submitted' || sub.status === 'validated'));
-        
         if ((sub.status === 'submitted' || sub.status === 'validated') && canReview) {
-            console.log('Showing approve/reject buttons');
             approveBtn.style.display = 'inline-block';
             rejectBtn.style.display = 'inline-block';
         } else {
-            console.log('Hiding approve/reject buttons. Reason:', 
-                !canReview ? 'No review permission' : 'Status not submitted/validated');
             approveBtn.style.display = 'none';
             rejectBtn.style.display = 'none';
         }
 
     } catch (error) {
-        content.innerHTML = `<div class="alert alert-error">Failed to load details: ${error.message}</div>`;
+        content.innerHTML = `<div class="alert alert-error">Failed to load details: ${escapeHtml(error.message)}</div>`;
     }
 }
 

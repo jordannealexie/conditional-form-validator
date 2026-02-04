@@ -37,8 +37,9 @@ const DropdownLoader = (function() {
         _loading: null // Promise to prevent multiple simultaneous loads
     };
 
-    // API endpoint for form metadata
-    const METADATA_ENDPOINT = 'http://localhost:8000/api/v1/metadata/form-dropdowns';
+    // API endpoint for form metadata - Use window.API_BASE_URL for environment-specific override
+    const API_BASE = window.API_BASE_URL || 'http://localhost:8000/api/v1';
+    const METADATA_ENDPOINT = `${API_BASE}/metadata/form-dropdowns`;
 
     // ============ Private Methods ============
 
@@ -98,7 +99,6 @@ const DropdownLoader = (function() {
          * @returns {Promise<Object>} The loaded dropdown data
          */
         async loadAll() {
-            console.log('[DropdownLoader] loadAll() called');
             // Return cached data if already loaded
             if (_cache._loaded) {
                 return {
@@ -123,13 +123,6 @@ const DropdownLoader = (function() {
                     _cache.locations = Array.isArray(data.locations) ? data.locations : [];
                     _cache.levels = Array.isArray(data.levels) ? data.levels : [];
                     _cache._loaded = true;
-
-                    console.log('DropdownLoader: Loaded metadata -', {
-                        roles: _cache.roles.length,
-                        departments: _cache.departments.length,
-                        locations: _cache.locations.length,
-                        levels: _cache.levels.length
-                    });
 
                     return {
                         roles: _cache.roles,
@@ -207,7 +200,6 @@ const DropdownLoader = (function() {
             }
 
             const html = this.buildOptions(type, selectedValue, options);
-            console.log(`[DropdownLoader] Populating ${selectElement} with ${type}: ${(_cache[type] || []).length} options`);
             select.innerHTML = html;
         },
 
@@ -258,10 +250,6 @@ const DropdownLoader = (function() {
         }
     };
 })();
-
-if (typeof window !== 'undefined') {
-    window.DropdownLoader = DropdownLoader;
-}
 
 // Make available globally
 if (typeof window !== 'undefined') {

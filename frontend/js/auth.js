@@ -4,7 +4,7 @@
 // Session storage keys
 const SESSION_KEY = 'rbac_session';
 const TOKEN_KEY = 'rbac_token';
-const REFRESH_TOKEN_KEY = 'bac_refresh_token';
+const REFRESH_TOKEN_KEY = 'rbac_refresh_token';
 
 // Cookie helper functions
 function setCookie(name, value, expires) {
