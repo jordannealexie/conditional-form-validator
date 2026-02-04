@@ -64,6 +64,9 @@ log/
 .spyproject
 .ropeproject
 
+# GitHub
+.github/
+
 # FastAPI specific
 .fastapi_cache/
 
@@ -106,3 +109,4 @@ http_requests/
 
 # Ignore all files in the uploads folder
 uploads/*
+
