@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"  # "json" or "text"
     
+    # MinIO Settings
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET: str = "uploads"
+    MINIO_SECURE: bool = False
+    
     # Metrics
     METRICS_ENABLED: bool = True
     
