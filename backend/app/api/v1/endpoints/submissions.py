@@ -11,7 +11,7 @@ from app.repositories.forms import FormTemplateRepository, FormSubmissionReposit
 from app.utils.response import create_response
 from app import models, schemas
 from app.models.forms import FormSubmission as FormSubmissionModel, SubmissionStatus
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
 import json
@@ -244,6 +244,7 @@ async def create_submission_with_files(
     status_value: str = Form("submitted"),
     data_json_raw: str = Form(...),
     fieldman_id: Optional[str] = Form(None),
+    submission_id: Optional[int] = Form(None),
     file_field_ids: List[str] = Form(...),
     files: List[UploadFile] = File(...),
     background_tasks: BackgroundTasks = None,
@@ -258,6 +259,18 @@ async def create_submission_with_files(
         data_json = json.loads(data_json_raw)
     except Exception:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data_json payload")
+
+    existing_submission: Optional[FormSubmissionModel] = None
+    if submission_id is not None:
+        existing_submission = await FormSubmissionRepository.get_by_id(db, submission_id)
+        if not existing_submission:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Draft submission not found")
+        if (existing_submission.status or "").lower() != "draft":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only drafts can be submitted")
+        if existing_submission.fieldman_id != current_user.username:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can submit this draft")
+        if existing_submission.template_id != template_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Template mismatch for draft submission")
 
     template = await FormTemplateRepository.get_by_id(db, template_id)
     if not template:
@@ -275,19 +288,30 @@ async def create_submission_with_files(
     resolved_fieldman_id = fieldman_id or current_user.username
 
     try:
-        submission = FormSubmissionModel(
-            template_id=template_id,
-            fieldman_id=resolved_fieldman_id,
-            submitted_by=current_user.id,
-            data_json=data_json,
-            file_tokens=[],
-            status="submitted",
-            is_valid=validation_result.is_valid,
-            validation_errors=[e.model_dump() for e in validation_result.errors] if validation_result.errors else [],
-            submitted_at=datetime.now(timezone.utc)
-        )
-        db.add(submission)
-        await db.flush()
+        if existing_submission:
+            submission = existing_submission
+            submission.data_json = data_json
+            submission.status = "submitted"
+            submission.is_valid = validation_result.is_valid
+            submission.validation_errors = [e.model_dump() for e in validation_result.errors] if validation_result.errors else []
+            submission.submitted_at = datetime.now(timezone.utc)
+            submission.submitted_by = current_user.id
+            if fieldman_id:
+                submission.fieldman_id = resolved_fieldman_id
+        else:
+            submission = FormSubmissionModel(
+                template_id=template_id,
+                fieldman_id=resolved_fieldman_id,
+                submitted_by=current_user.id,
+                data_json=data_json,
+                file_tokens=[],
+                status="submitted",
+                is_valid=validation_result.is_valid,
+                validation_errors=[e.model_dump() for e in validation_result.errors] if validation_result.errors else [],
+                submitted_at=datetime.now(timezone.utc)
+            )
+            db.add(submission)
+            await db.flush()
 
         stored_tokens = await _store_submission_files(
             db=db,
@@ -333,6 +357,11 @@ async def list_submissions(
         query = select(models.FormSubmission).options(
             selectinload(models.FormSubmission.template).selectinload(models.FormTemplate.bank)
         ).outerjoin(models.FormTemplate, models.FormSubmission.template_id == models.FormTemplate.id)
+
+        # Draft visibility: only owner can see drafts
+        query = query.where(
+            or_(models.FormSubmission.status != "draft", models.FormSubmission.fieldman_id == current_user.username)
+        )
         
         # Filter by user role/bank
         # IMPORTANT: Submission visibility is PERMISSION-BASED, not ownership-based
@@ -368,6 +397,11 @@ async def list_submissions(
             
         # Get total count using the same filters
         count_query = select(func.count(models.FormSubmission.id)).select_from(models.FormSubmission).outerjoin(models.FormTemplate, models.FormSubmission.template_id == models.FormTemplate.id)
+
+        # Draft visibility: only owner can see drafts
+        count_query = count_query.where(
+            or_(models.FormSubmission.status != "draft", models.FormSubmission.fieldman_id == current_user.username)
+        )
         
         # Apply same filters to count query (must match main query logic)
         if getattr(current_user, 'is_superuser', False) or current_user.user_role == "admin":
@@ -426,8 +460,10 @@ async def get_submission(
     submission = await FormSubmissionRepository.get_by_id(db, id)
     if not submission:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
+    if (submission.status or "").lower() == "draft" and submission.fieldman_id != current_user.username:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can view this draft")
     # Authorization is handled by authorize() dependency - no need for ownership check
-    # Users with proper permissions can view any submission
+    # Users with proper permissions can view any submission (except drafts)
     return create_response(data=FormSubmissionResponse.model_validate(submission))
 
 
@@ -485,6 +521,7 @@ async def update_submission(
                 # Set submitted_at timestamp when submitting
                 if is_submitting:
                     upd["submitted_at"] = datetime.now(timezone.utc)
+                    upd["submitted_by"] = current_user.id
         
         updated = await FormSubmissionRepository.update(db, submission, **upd)
         return create_response(data=FormSubmissionResponse.model_validate(updated))
