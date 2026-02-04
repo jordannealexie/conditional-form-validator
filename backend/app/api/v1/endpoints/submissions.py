@@ -408,14 +408,15 @@ async def list_submissions(
         )
         
         # Filter by user role/bank
-        # IMPORTANT: Submission visibility is PERMISSION-BASED, not ownership-based
-        # Users with submissions:read/viewDetails/review can see ALL submissions
-        # The authorize() dependency already verified they have the permission
+        # IMPORTANT: Submission visibility rules:
+        # - Admin/Superuser: See all submissions
+        # - Supervisor: See all submissions in their bank
+        # - Users with review permission: See all submissions (for reviewing)
+        # - Fieldmen (even with viewDetails): Only see their own submissions (ABAC further restricts)
         from app.core.casbin_enforcer import casbin_enforcer
         
-        # Check if user has review or viewDetails permission (reviewers need to see all submissions)
+        # Check if user has review permission (reviewers need to see all submissions to do their job)
         has_review_perm = casbin_enforcer.check_rbac_permission(current_user.username, "submissions", "review")
-        has_view_details_perm = casbin_enforcer.check_rbac_permission(current_user.username, "submissions", "viewDetails")
         
         if getattr(current_user, 'is_superuser', False) or current_user.user_role == "admin":
             pass # Admin/Superuser sees all
@@ -423,12 +424,12 @@ async def list_submissions(
             # Supervisor sees all in their bank
             if current_user.bank_id:
                 query = query.where(models.FormTemplate.bank_id == current_user.bank_id)
-        elif has_review_perm or has_view_details_perm:
-            # Users with submissions:review or submissions:viewDetails can see ALL submissions
-            # This is necessary for reviewers to do their job
+        elif has_review_perm:
+            # Users with submissions:review can see ALL submissions (to review them)
             pass
         else:
-            # Regular users without special permissions only see their own submissions
+            # Regular users (including fieldmen with viewDetails) only see their own submissions
+            # ABAC policies will further control what they can DO with individual submissions
             query = query.where(models.FormSubmission.fieldman_id == current_user.username)
             
         # Additional filters
@@ -452,10 +453,11 @@ async def list_submissions(
             pass
         elif current_user.user_role == "supervisor" and current_user.bank_id:
             count_query = count_query.where(models.FormTemplate.bank_id == current_user.bank_id)
-        elif has_review_perm or has_view_details_perm:
-            # Users with review or viewDetails permission see all submissions
+        elif has_review_perm:
+            # Users with review permission see all submissions
             pass
         else:
+            # Regular users (including fieldmen) only see their own
             count_query = count_query.where(models.FormSubmission.fieldman_id == current_user.username)
         
         if status:
