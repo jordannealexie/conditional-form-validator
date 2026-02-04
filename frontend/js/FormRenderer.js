@@ -9,7 +9,7 @@ class FormRenderer {
         this.formData = {};
         this.onChanged = options.onChanged || null;
         this.onValidated = options.onValidated || null;
-        this.uploadedFiles = {}; // Store file tokens
+        this.uploadedFiles = {}; // Store File objects until submission
         this.inputValidationTimeout = null; // For debounced validation
     }
 
@@ -124,17 +124,11 @@ class FormRenderer {
             if (field.required) fileInput.setAttribute('required', 'true');
 
             // Hidden input to store the token
-            const tokenInput = document.createElement('input');
-            tokenInput.type = 'hidden';
-            tokenInput.id = `${field.id}_token`;
-            tokenInput.name = field.id;
-
             const uploadStatus = document.createElement('div');
             uploadStatus.id = `${field.id}_status`;
             uploadStatus.className = 'upload-status';
 
             input.appendChild(fileInput);
-            input.appendChild(tokenInput);
             input.appendChild(uploadStatus);
 
             // File upload handler
@@ -230,18 +224,11 @@ class FormRenderer {
         statusEl.className = 'upload-status uploading';
 
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('field_id', field.id);
-
-            const result = await apiUploadFile(formData);
-
-            // Store token
-            this.uploadedFiles[field.id] = result.token;
-            document.getElementById(`${field.id}_token`).value = result.token;
+            // Store file locally until submission
+            this.uploadedFiles[field.id] = file;
 
             statusEl.innerHTML = `
-                <span class="upload-success">✓ ${result.original_filename} uploaded</span>
+                <span class="upload-success">✓ ${file.name} ready</span>
                 <button type="button" class="btn btn-sm btn-secondary" 
                     onclick="renderer.removeFile('${field.id}')">Remove</button>
             `;
@@ -256,7 +243,6 @@ class FormRenderer {
 
     removeFile(fieldId) {
         delete this.uploadedFiles[fieldId];
-        document.getElementById(`${fieldId}_token`).value = '';
         const statusEl = document.getElementById(`${fieldId}_status`);
         statusEl.innerHTML = '';
         statusEl.className = 'upload-status';
@@ -278,7 +264,7 @@ class FormRenderer {
                 if (field.type === 'checkbox' || field.type === 'boolean') {
                     data[field.id] = input.checked;
                 } else if (field.type === 'file') {
-                    data[field.id] = this.uploadedFiles[field.id] || null;
+                    data[field.id] = this.uploadedFiles[field.id] ? this.uploadedFiles[field.id].name : null;
                 } else if (field.type === 'number' || field.type === 'integer' || field.type === 'currency' || field.type === 'percentage') {
                     // Convert to number if not empty
                     const val = input.value;
@@ -306,8 +292,6 @@ class FormRenderer {
                         } else if (field.type === 'file') {
                             // Clear file field without calling removeFile() to avoid infinite recursion
                             delete this.uploadedFiles[field.id];
-                            const tokenInput = document.getElementById(`${field.id}_token`);
-                            if (tokenInput) tokenInput.value = '';
                             const statusEl = document.getElementById(`${field.id}_status`);
                             if (statusEl) {
                                 statusEl.innerHTML = '';
@@ -407,7 +391,7 @@ class FormRenderer {
         if (field.type === 'checkbox' || field.type === 'boolean') {
             return input.checked;
         } else if (field.type === 'file') {
-            return this.uploadedFiles[field.id] || null;
+            return this.uploadedFiles[field.id] ? this.uploadedFiles[field.id].name : null;
         } else if (field.type === 'number' || field.type === 'currency' || field.type === 'percentage') {
             return input.value === '' ? null : Number(input.value);
         } else {
@@ -534,7 +518,8 @@ class FormRenderer {
         this.updateFormData();
         return {
             form_data: this.formData,
-            file_tokens: Object.values(this.uploadedFiles)
+            file_tokens: [],
+            files: this.uploadedFiles
         };
     }
 
@@ -591,7 +576,8 @@ class FormRenderer {
                     template_id: window.currentTemplateId,
                     status: 'submitted',
                     data_json: data.form_data,
-                    file_tokens: Object.values(this.uploadedFiles)
+                    file_tokens: [],
+                    files: this.uploadedFiles
                 };
 
                 const result = await apiSubmitForm(submitData);
@@ -613,16 +599,20 @@ class FormRenderer {
     async saveDraft() {
         try {
             const data = this.getData();
-            const submitData = {
+            const hasFiles = Object.values(this.uploadedFiles || {}).some(file => file instanceof File);
+            if (hasFiles) {
+                showToast('Files are not saved in drafts. They will be ignored until final submission.', 'info');
+            }
+
+            const draftData = {
                 template_id: window.currentTemplateId,
                 status: 'draft',
                 data_json: data.form_data,
-                file_tokens: Object.values(this.uploadedFiles)
+                file_tokens: []
             };
 
-            const result = await apiSubmitForm(submitData);
+            await apiSubmitForm(draftData);
             showToast('Draft saved successfully!', 'success');
-
         } catch (error) {
             showToast(error.message || 'Error saving draft', 'error');
         }

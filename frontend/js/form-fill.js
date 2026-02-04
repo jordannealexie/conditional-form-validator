@@ -189,7 +189,8 @@ async function handleSubmit() {
             template_id: currentTemplate.id,
             status: 'submitted',
             data_json: data.form_data,
-            file_tokens: data.file_tokens
+            file_tokens: data.file_tokens,
+            files: data.files
         };
 
         const result = await apiSubmitForm(payload);
@@ -206,19 +207,22 @@ async function handleSubmit() {
 
 async function handleSaveDraft() {
     if (!renderer || !currentTemplate) return;
-
     try {
         const data = renderer.getData();
+        const hasFiles = data.files && Object.values(data.files).some(file => file instanceof File);
+        if (hasFiles) {
+            showToast('Files are not saved in drafts. They will be ignored until final submission.', 'info');
+        }
+
         const payload = {
             template_id: currentTemplate.id,
             status: 'draft',
             data_json: data.form_data,
-            file_tokens: data.file_tokens
+            file_tokens: []
         };
 
         await apiSubmitForm(payload);
         showToast('Draft saved successfully!', 'success');
-
     } catch (error) {
         console.error('Draft save error:', error);
         showToast(error.message || 'Failed to save draft', 'error');

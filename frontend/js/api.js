@@ -39,10 +39,13 @@ async function apiRequest(endpoint, options = {}) {
 
     // Add body if present
     if (options.body) {
-        if (options.body instanceof URLSearchParams) {
+        if (options.body instanceof FormData) {
             config.body = options.body;
-            // Fetch will handle Content-Type for URLSearchParams automatically,
-            // but we can be explicit or let our default be overridden.
+            if (config.headers['Content-Type'] === 'application/json') {
+                delete config.headers['Content-Type'];
+            }
+        } else if (options.body instanceof URLSearchParams) {
+            config.body = options.body;
             if (config.headers['Content-Type'] === 'application/json') {
                 delete config.headers['Content-Type'];
             }
@@ -761,12 +764,39 @@ async function apiGetTemplate(templateId) {
  * @returns {Promise<object>}
  */
 async function apiSubmitForm(submissionData) {
-    // submissionData should already contain template_id, status, and data_json
-    // But for backward compatibility with frontend code that might pass old format:
+    const status = submissionData.status || 'draft';
+    const dataJson = submissionData.submission_data || submissionData.data_json;
+    const files = submissionData.files || {};
+    const fileEntries = Object.entries(files).filter(([, file]) => file instanceof File);
+
+    if (status === 'submitted' && fileEntries.length > 0) {
+        const formData = new FormData();
+        formData.append('template_id', submissionData.template_id);
+        formData.append('status_value', status);
+        formData.append('data_json_raw', JSON.stringify(dataJson || {}));
+        if (submissionData.username || submissionData.fieldman_id) {
+            formData.append('fieldman_id', submissionData.username || submissionData.fieldman_id);
+        }
+
+        fileEntries.forEach(([fieldId, file]) => {
+            formData.append('files', file);
+            formData.append('file_field_ids', fieldId);
+        });
+
+        return await apiRequest('/submissions/with-files', {
+            method: 'POST',
+            body: formData
+        });
+    }
+
+    if (status !== 'submitted' && fileEntries.length > 0) {
+        throw new Error('File uploads are only allowed on final submission');
+    }
+
     const payload = {
         template_id: submissionData.template_id,
-        status: submissionData.status || 'draft',
-        data_json: submissionData.submission_data || submissionData.data_json,
+        status,
+        data_json: dataJson,
         fieldman_id: submissionData.username || submissionData.fieldman_id
     };
 

@@ -19,9 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function initUserManagement() {
     try {
-        console.log('[users.js] initUserManagement started, DropdownLoader:', typeof DropdownLoader);
+        const dropdownLoader = getDropdownLoader();
+        console.log('[users.js] initUserManagement started, DropdownLoader:', typeof dropdownLoader);
+        if (!dropdownLoader) {
+            throw new Error('DropdownLoader is not available. Ensure dropdown-loader.js is loaded.');
+        }
         // Load dropdown data first using shared DropdownLoader
-        await DropdownLoader.loadAll();
+        await dropdownLoader.loadAll();
         console.log('[users.js] DropdownLoader.loadAll() completed');
         // Then load users
         await loadUsers();
@@ -36,8 +40,10 @@ async function initUserManagement() {
  * @returns {string} HTML options string
  */
 function buildRoleOptions(selectedRole = '') {
-    console.log('[users.js] buildRoleOptions called, DropdownLoader:', typeof DropdownLoader);
-    const options = DropdownLoader.buildOptions('roles', selectedRole, { emptyLabel: 'Select Role' });
+    const dropdownLoader = getDropdownLoader();
+    console.log('[users.js] buildRoleOptions called, DropdownLoader:', typeof dropdownLoader);
+    if (!dropdownLoader) return '<option value="">Select Role</option>';
+    const options = dropdownLoader.buildOptions('roles', selectedRole, { emptyLabel: 'Select Role' });
     console.log('[users.js] Role options built:', options.substring(0, 100));
     return options;
 }
@@ -48,7 +54,9 @@ function buildRoleOptions(selectedRole = '') {
  * @returns {string} HTML options string
  */
 function buildDepartmentOptions(selectedDept = '') {
-    return DropdownLoader.buildOptions('departments', selectedDept, { emptyLabel: 'Select Department' });
+    const dropdownLoader = getDropdownLoader();
+    if (!dropdownLoader) return '<option value="">Select Department</option>';
+    return dropdownLoader.buildOptions('departments', selectedDept, { emptyLabel: 'Select Department' });
 }
 
 /**
@@ -57,7 +65,9 @@ function buildDepartmentOptions(selectedDept = '') {
  * @returns {string} HTML options string
  */
 function buildLocationOptions(selectedLoc = '') {
-    return DropdownLoader.buildOptions('locations', selectedLoc, { emptyLabel: 'Select Location' });
+    const dropdownLoader = getDropdownLoader();
+    if (!dropdownLoader) return '<option value="">Select Location</option>';
+    return dropdownLoader.buildOptions('locations', selectedLoc, { emptyLabel: 'Select Location' });
 }
 
 /**
@@ -66,7 +76,19 @@ function buildLocationOptions(selectedLoc = '') {
  * @returns {string} HTML options string
  */
 function buildLevelOptions(selectedLevel = '') {
-    return DropdownLoader.buildOptions('levels', selectedLevel, { emptyLabel: 'Select Level' });
+    const dropdownLoader = getDropdownLoader();
+    if (!dropdownLoader) return '<option value="">Select Level</option>';
+    return dropdownLoader.buildOptions('levels', selectedLevel, { emptyLabel: 'Select Level' });
+}
+
+function getDropdownLoader() {
+    if (typeof DropdownLoader !== 'undefined') {
+        return DropdownLoader;
+    }
+    if (typeof window !== 'undefined' && window.DropdownLoader) {
+        return window.DropdownLoader;
+    }
+    return null;
 }
 
 async function loadUserInfo() {

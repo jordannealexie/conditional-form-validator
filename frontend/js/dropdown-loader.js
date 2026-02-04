@@ -259,6 +259,10 @@ const DropdownLoader = (function() {
     };
 })();
 
+if (typeof window !== 'undefined') {
+    window.DropdownLoader = DropdownLoader;
+}
+
 // Make available globally
 if (typeof window !== 'undefined') {
     window.DropdownLoader = DropdownLoader;

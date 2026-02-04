@@ -311,6 +311,23 @@ async function viewSubmission(id) {
         }
         html += '</div>';
 
+        // 3. Attached Files (fallback when tokens not embedded in data_json)
+        const fileTokens = Array.isArray(sub.file_tokens) ? sub.file_tokens : [];
+        if (fileTokens.length > 0) {
+            html += '<div class="detail-group"><h4>Attached Files</h4>';
+            html += '<div class="form-data-grid">';
+            fileTokens.forEach((token, idx) => {
+                const label = `File ${idx + 1}`;
+                html += `
+                    <div class="data-card">
+                        <span class="data-label">${label}</span>
+                        <span class="data-value"><a href="#" onclick="openSubmissionFile('${token}', '${label}'); return false;">Open attached file</a></span>
+                    </div>
+                `;
+            });
+            html += '</div></div>';
+        }
+
         content.innerHTML = html;
 
         // Show approve/reject buttons if user has submissions:review permission
