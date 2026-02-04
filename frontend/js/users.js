@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Initialize user management - load dropdowns then users
+ * Initialize user management - load dropdowns then userss
  */
 async function initUserManagement() {
     try {
