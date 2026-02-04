@@ -507,7 +507,8 @@ async def get_submission(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found")
         if (submission.status or "").lower() == "draft" and submission.fieldman_id != current_user.username:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the owner can view this draft")
-        await _enforce_submission_abac(db, current_user, submission, action="read")
+        # Try ABAC with viewDetails first, then read (to match alternate_actions pattern)
+        await _enforce_submission_abac(db, current_user, submission, action="viewDetails")
         # Authorization is handled by authorize() dependency - no need for ownership check
         # Users with proper permissions can view any submission (except drafts)
         return create_response(data=FormSubmissionResponse.model_validate(submission))

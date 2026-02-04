@@ -293,7 +293,16 @@ class ABACService:
         """Evaluate policy rules against attributes.
 
         Returns (is_applicable, is_allowed).
+        
+        Supports two formats:
+        1. Original format: {"permissions": {...}, "conditions": [...]}
+        2. Frontend format: {"condition": "all", "rules": [...]}
         """
+        # Check if this is the frontend format (has "rules" array and "condition" string)
+        if "rules" in rules and isinstance(rules.get("rules"), list):
+            return self._evaluate_frontend_format(rules, user_attrs, resource_attrs, env_attrs, resource, action)
+        
+        # Original format with permissions
         # Check if permissions match
         perms = rules.get("permissions", {})
         
@@ -353,6 +362,105 @@ class ABACService:
                 return True, False
 
         return True, True
+
+    def _evaluate_frontend_format(
+        self,
+        rules: Dict[str, Any],
+        user_attrs: Dict[str, Any],
+        resource_attrs: Dict[str, Any],
+        env_attrs: Dict[str, Any],
+        resource: str,
+        action: str
+    ) -> tuple[bool, bool]:
+        """Evaluate policy in frontend format: {"condition": "all"|"any", "rules": [...]}
+        
+        Each rule has: {"field": "...", "operator": "...", "value": ...}
+        
+        Returns (is_applicable, is_allowed).
+        """
+        condition_type = rules.get("condition", "all")  # "all" or "any"
+        rule_list = rules.get("rules", [])
+        
+        if not rule_list:
+            return False, False  # No rules = not applicable
+        
+        # Separate role conditions from other conditions
+        role_conditions = []
+        resource_conditions = []
+        action_conditions = []
+        other_conditions = []
+        
+        for rule in rule_list:
+            field = rule.get("field", "")
+            if field in ("subject.roles", "subject.role", "user.roles", "user.role"):
+                role_conditions.append(rule)
+            elif field.startswith("resource."):
+                resource_conditions.append(rule)
+            elif field == "action":
+                action_conditions.append(rule)
+            else:
+                other_conditions.append(rule)
+        
+        # First check role conditions - these determine applicability
+        # For role conditions, use "any" semantics if there are multiple
+        if role_conditions:
+            role_matched = False
+            for rule in role_conditions:
+                field = rule.get("field", "")
+                operator = rule.get("operator", "==")
+                expected = rule.get("value")
+                
+                actual = self._resolve_attribute_value(field, user_attrs, resource_attrs, env_attrs, action)
+                if self._compare_values(actual, operator, expected):
+                    role_matched = True
+                    break
+            
+            if not role_matched:
+                return False, False  # Policy doesn't apply to this user's role
+        
+        # Check action conditions - policy must match at least one action
+        if action_conditions:
+            action_matched = False
+            for rule in action_conditions:
+                expected = rule.get("value")
+                operator = rule.get("operator", "==")
+                if self._compare_values(action, operator, expected):
+                    action_matched = True
+                    break
+            
+            if not action_matched:
+                return False, False  # Policy doesn't apply to this action
+        
+        # Now evaluate resource and other conditions
+        # Handle attribute references in values
+        all_other_conditions = resource_conditions + other_conditions
+        
+        for rule in all_other_conditions:
+            field = rule.get("field", "")
+            operator = rule.get("operator", "==")
+            expected = rule.get("value")
+            
+            # Handle attribute reference
+            if isinstance(expected, dict) and "attribute" in expected:
+                expected = self._resolve_attribute_value(expected["attribute"], user_attrs, resource_attrs, env_attrs, action)
+            
+            actual = self._resolve_attribute_value(field, user_attrs, resource_attrs, env_attrs, action)
+            
+            if condition_type == "all":
+                # All conditions must pass
+                if not self._compare_values(actual, operator, expected):
+                    return True, False  # Applicable but denied
+            else:
+                # Any condition passing is enough (but we need at least one to pass)
+                if self._compare_values(actual, operator, expected):
+                    return True, True  # Applicable and allowed
+        
+        # If we get here with "all" condition, all passed
+        if condition_type == "all":
+            return True, True
+        
+        # If we get here with "any" condition, none passed
+        return True, False
 
     def _resolve_attribute_value(
         self,
