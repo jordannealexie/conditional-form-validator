@@ -1,3 +1,0 @@
-# hello
-# tests package
-# comment

@@ -224,23 +224,6 @@ alembic downgrade -1
 python recreate_db.py
 ```
 
-### Testing
-
-```bash
-# From backend directory with venv activated
-cd backend
-source venv/bin/activate
-
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_validator.py
-
-# Run with coverage
-pytest --cov=app --cov-report=html
-```
-
 ### Development Scripts
 
 ```bash

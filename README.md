@@ -252,22 +252,6 @@ Key frontend features:
 - Enhanced file storage with S3-compatible backend
 - Improved environment configuration with .env.example
 
-## Testing
-
-Run the test suite using pytest:
-
-```bash
-cd backend
-source venv/bin/activate  # Ensure virtual environment is active
-python -m pytest tests/ -v
-```
-
-For coverage report:
-
-```bash
-python -m pytest --cov=app tests/ --cov-report=html
-```
-
 ## Troubleshooting
 
 ### Common Issues

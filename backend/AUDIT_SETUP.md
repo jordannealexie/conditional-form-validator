@@ -135,19 +135,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Testing the Implementation
 
-### 1. Run Automated Tests
-
-```bash
-cd backend
-python3 test_audit_implementation.py
-```
-
-Expected output:
-```
-✅ ALL TESTS PASSED (5/5)
-```
-
-### 2. Test API Endpoints
+### 1. Test API Endpoints
 
 #### Get page-level audit logs (all users):
 ```bash
@@ -514,9 +502,8 @@ sudo systemctl status celery-audit-worker
 
 For issues or questions:
 1. Check logs: Celery worker output, FastAPI logs
-2. Run test suite: `python3 test_audit_implementation.py`
-3. Verify database: Check `audit_logs` table
-4. Review: `AUDIT_TRAIL_GUIDE.md` for implementation patterns
+2. Verify database: Check `audit_logs` table
+3. Review audit trail usage in the API documentation
 
 ---
 
