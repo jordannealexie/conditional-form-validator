@@ -131,6 +131,7 @@ class FormSubmissionResponse(BaseModel):
     fieldman_id: Optional[str] = None
     submitted_by: Optional[int] = Field(None, description="User ID of submitter")  # User ID, not username
     data_json: Dict[str, Any]
+    file_tokens: Optional[List[str]] = None
     status: str
     validation_errors: Optional[List[Dict[str, Any]]] = None
     is_valid: bool

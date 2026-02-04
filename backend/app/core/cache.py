@@ -155,6 +155,44 @@ class RedisCache:
             logger.warning(f"Cache delete pattern error for {pattern}: {e}")
             return 0
 
+    async def add_to_set(self, key: str, value: str, ttl: int = None) -> bool:
+        """Add a value to a Redis set and optionally set TTL."""
+        if not self._connected or not self._client:
+            return False
+
+        try:
+            await self._client.sadd(key, value)
+            if ttl:
+                await self._client.expire(key, ttl)
+            return True
+        except Exception as e:
+            logger.warning(f"Cache add_to_set error for key {key}: {e}")
+            return False
+
+    async def remove_from_set(self, key: str, value: str) -> bool:
+        """Remove a value from a Redis set."""
+        if not self._connected or not self._client:
+            return False
+
+        try:
+            await self._client.srem(key, value)
+            return True
+        except Exception as e:
+            logger.warning(f"Cache remove_from_set error for key {key}: {e}")
+            return False
+
+    async def get_set_members(self, key: str) -> List[str]:
+        """Get all members of a Redis set."""
+        if not self._connected or not self._client:
+            return []
+
+        try:
+            members = await self._client.smembers(key)
+            return list(members) if members else []
+        except Exception as e:
+            logger.warning(f"Cache get_set_members error for key {key}: {e}")
+            return []
+
     async def invalidate(self, template_id: int) -> None:
         """Invalidate all cache entries related to a template.
 

@@ -1,6 +1,6 @@
 from app.services.form_validation import FormValidationService
 from app.utils.queue import QueueService, send_submission_notification
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, UploadFile, File, Form
 from app.models.user import User
 from typing import Any, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +14,82 @@ from app.models.forms import FormSubmission as FormSubmissionModel, SubmissionSt
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
+import json
+from app.utils.minio import minio_client
+from sqlalchemy.orm.attributes import flag_modified
+import uuid as _uuid
 
 router = APIRouter()
+
+
+def _safe_filename(name: str) -> str:
+    import os
+    import re
+    name = os.path.basename(name)
+    return re.sub(r"[^\w\-_.]", "_", name)[:200]
+
+
+async def _store_submission_files(
+    db: AsyncSession,
+    submission_id: int,
+    data_json: dict,
+    file_field_ids: List[str],
+    files: List[UploadFile],
+    current_user: User
+) -> List[str]:
+    """Store files only after submission and create DB records."""
+    if not files:
+        return []
+
+    if len(files) != len(file_field_ids):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File field IDs do not match files")
+
+    stored_objects: List[str] = []
+    stored_tokens: List[str] = []
+
+    try:
+        for idx, upload in enumerate(files):
+            field_id = file_field_ids[idx]
+            if not upload.filename:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing filename")
+
+            content = await upload.read()
+            size = len(content)
+
+            fname = _safe_filename(upload.filename)
+            ts = int(datetime.now(timezone.utc).timestamp() * 1000)
+            uid = str(_uuid.uuid4())[:8]
+            object_name = f"file_{uid}_{ts}_{fname}"
+
+            minio_client.upload_file(object_name, content, upload.content_type or "application/octet-stream")
+            stored_objects.append(object_name)
+
+            token_uuid = _uuid.uuid4()
+            token_str = str(token_uuid)
+
+            rec = models.forms.FormFile(
+                token=token_uuid,
+                original_filename=upload.filename,
+                storage_path=object_name,
+                mime_type=upload.content_type or "application/octet-stream",
+                file_size=size,
+                submission_id=submission_id,
+                field_id=field_id,
+                uploaded_by=current_user.username,
+            )
+            db.add(rec)
+
+            data_json[field_id] = token_str
+            stored_tokens.append(token_str)
+
+        return stored_tokens
+    except Exception as exc:
+        for object_name in stored_objects:
+            try:
+                minio_client.delete_file(object_name)
+            except Exception:
+                pass
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to store files: {exc}")
 
 
 def _can_access_submission(submission, user: User) -> bool:
@@ -109,34 +183,134 @@ async def create_submission(
         visible_fields=submission_in.visible_fields
     )
     
-    # CRITICAL: For non-draft submissions, validation MUST pass
+    # CRITICAL: For submitted submissions, validation MUST pass
     # Backend MUST reject submissions with empty required fields
-    if requested_status != "draft":
-        if not validation_result.is_valid:
-            error_details = [{"field": e.field, "message": e.message} for e in validation_result.errors]
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={
-                    "message": "Submission validation failed. Required fields are missing or have invalid values.",
-                    "errors": error_details
-                }
-            )
+    if requested_status == "submitted" and not validation_result.is_valid:
+        error_details = [{"field": e.field, "message": e.message} for e in validation_result.errors]
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "Submission validation failed. Required fields are missing or have invalid values.",
+                "errors": error_details
+            }
+        )
     
+    if submission_in.file_tokens:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File tokens are not supported. Submit files with the form submission."
+        )
+
+    if requested_status == "submitted":
+        async with db.begin():
+            submission = FormSubmissionModel(
+                template_id=submission_in.template_id,
+                fieldman_id=fieldman_id,
+                submitted_by=current_user.id,
+                data_json=data_json,
+                file_tokens=[],
+                status=requested_status,
+                is_valid=validation_result.is_valid,
+                validation_errors=[e.model_dump() for e in validation_result.errors] if validation_result.errors else [],
+                submitted_at=datetime.now(timezone.utc)
+            )
+            db.add(submission)
+            await db.flush()
+
+        submission = await FormSubmissionRepository.get_by_id(db, submission.id)
+        QueueService.enqueue(send_submission_notification, submission_id=submission.id, background_tasks=background_tasks)
+        return create_response(data=FormSubmissionResponse.model_validate(submission))
+
     data = {
         "template_id": submission_in.template_id,
         "fieldman_id": fieldman_id,
-        "submitted_by": current_user.id,  # New audit field - User ID
+        "submitted_by": current_user.id,
         "data_json": data_json,
-        "file_tokens": submission_in.file_tokens,
+        "file_tokens": [],
         "status": requested_status,
         "is_valid": validation_result.is_valid,
         "validation_errors": [e.model_dump() for e in validation_result.errors] if validation_result.errors else [],
-        "submitted_at": datetime.now(timezone.utc) if requested_status == "submitted" else None
+        "submitted_at": None
     }
     submission = await FormSubmissionRepository.create(db, **data)
-    # Reload with relationships for the response
     submission = await FormSubmissionRepository.get_by_id(db, submission.id)
     QueueService.enqueue(send_submission_notification, submission_id=submission.id, background_tasks=background_tasks)
+    return create_response(data=FormSubmissionResponse.model_validate(submission))
+
+
+@router.post("/with-files", response_model=FormSubmissionResponse)
+async def create_submission_with_files(
+    template_id: int = Form(...),
+    status_value: str = Form("submitted"),
+    data_json_raw: str = Form(...),
+    fieldman_id: Optional[str] = Form(None),
+    file_field_ids: List[str] = Form(...),
+    files: List[UploadFile] = File(...),
+    background_tasks: BackgroundTasks = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(authorize(resource="submissions", action="create"))
+) -> Any:
+    """Create a submission with files. Files are stored only on submission."""
+    if status_value.lower() != "submitted":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File uploads are only allowed on final submission")
+
+    try:
+        data_json = json.loads(data_json_raw)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid data_json payload")
+
+    template = await FormTemplateRepository.get_by_id(db, template_id)
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form template not found")
+
+    template_data = {"schema_json": template.schema_json, "fields": template.fields, "ui_schema": template.ui_schema}
+    validation_result = FormValidationService.validate_submission(data_json, template_data)
+    if not validation_result.is_valid:
+        error_details = [{"field": e.field, "message": e.message} for e in validation_result.errors]
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"message": "Submission validation failed.", "errors": error_details}
+        )
+
+    resolved_fieldman_id = fieldman_id or current_user.username
+
+    try:
+        submission = FormSubmissionModel(
+            template_id=template_id,
+            fieldman_id=resolved_fieldman_id,
+            submitted_by=current_user.id,
+            data_json=data_json,
+            file_tokens=[],
+            status="submitted",
+            is_valid=validation_result.is_valid,
+            validation_errors=[e.model_dump() for e in validation_result.errors] if validation_result.errors else [],
+            submitted_at=datetime.now(timezone.utc)
+        )
+        db.add(submission)
+        await db.flush()
+
+        stored_tokens = await _store_submission_files(
+            db=db,
+            submission_id=submission.id,
+            data_json=data_json,
+            file_field_ids=file_field_ids,
+            files=files,
+            current_user=current_user
+        )
+        submission.file_tokens = stored_tokens
+        submission.data_json = dict(data_json)
+        flag_modified(submission, "data_json")
+
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise
+
+    submission = await FormSubmissionRepository.get_by_id(db, submission.id)
+    if background_tasks:
+        QueueService.enqueue(send_submission_notification, submission_id=submission.id, background_tasks=background_tasks)
     return create_response(data=FormSubmissionResponse.model_validate(submission))
 
 @router.get("/", response_model=schemas.FormSubmissionListResponse)

@@ -73,6 +73,16 @@ class MinIOClient:
         except S3Error as e:
             raise Exception(f"Failed to delete file from MinIO: {e}")
 
+    def copy_file(self, source_object: str, destination_object: str) -> str:
+        """Copy a file within the MinIO bucket."""
+        try:
+            from minio.commonconfig import CopySource
+            copy_source = CopySource(self.bucket, source_object)
+            self.client.copy_object(self.bucket, destination_object, copy_source)
+            return destination_object
+        except S3Error as e:
+            raise Exception(f"Failed to copy file in MinIO: {e}")
+
     def file_exists(self, object_name: str) -> bool:
         """Check if file exists in MinIO"""
         try:
