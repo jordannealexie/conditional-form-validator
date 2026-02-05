@@ -93,7 +93,19 @@ async def update_user_me(
         username=current_user.username,
         resource_type="user",
         resource_id=str(current_user.id),
-        details="User updated their profile"
+        changes={
+            "action": "profile_updated",
+            "edited_fields": list(upd.keys())
+        },
+        details={
+            "performed_by": {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "role": current_user.user_role or "user"
+            },
+            "description": "User updated their profile"
+        },
+        updated_by=current_user.id
     )
     await user_service.db.commit()
     await user_service.db.refresh(updated_user)
@@ -119,7 +131,17 @@ async def change_password_me(
             resource_type="auth",
             resource_id=str(current_user.id),
             status="failure",
-            details="Missing password hash on user"
+            changes={
+                "action": "password_change_failed"
+            },
+            details={
+                "performed_by": {
+                    "user_id": current_user.id,
+                    "username": current_user.username,
+                    "role": current_user.user_role or "user"
+                },
+                "reason": "Missing password hash on user"
+            }
         )
         raise HTTPException(status_code=500, detail="Password data unavailable")
 
@@ -131,7 +153,17 @@ async def change_password_me(
             resource_type="auth",
             resource_id=str(current_user.id),
             status="failure",
-            details="Incorrect current password"
+            changes={
+                "action": "password_change_failed"
+            },
+            details={
+                "performed_by": {
+                    "user_id": current_user.id,
+                    "username": current_user.username,
+                    "role": current_user.user_role or "user"
+                },
+                "reason": "Incorrect current password"
+            }
         )
         raise HTTPException(status_code=400, detail="Incorrect current password")
     
@@ -142,7 +174,18 @@ async def change_password_me(
         username=current_user.username,
         resource_type="auth",
         resource_id=str(current_user.id),
-        details="User changed their password"
+        changes={
+            "action": "password_changed"
+        },
+        details={
+            "performed_by": {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "role": current_user.user_role or "user"
+            },
+            "description": "User changed their password"
+        },
+        updated_by=current_user.id
     )
     return create_response(message="Password updated successfully")
 
@@ -244,7 +287,8 @@ async def create_user(
                     target_username=user_data["username"],
                     after_json=user_data,
                     status="success",
-                    request=request
+                    request=request,
+                    actor_role=current_user.user_role or "admin"
                 )
         except Exception as audit_err:
             print(f"Audit logging failed for user create {user_data['id']}: {audit_err}")
@@ -380,7 +424,8 @@ async def update_user(
                     after_json=after_data,
                     edited_fields=edited_fields,
                     status="success",
-                    request=request
+                    request=request,
+                    actor_role=current_user.user_role or "admin"
                 )
         except Exception as audit_err:
             print(f"Audit logging failed for user update {id}: {audit_err}")
@@ -549,7 +594,8 @@ async def delete_user(
                     target_username=username_for_audit,
                     before_json=user_data,
                     status="success",
-                    request=request
+                    request=request,
+                    actor_role=current_user.user_role or "admin"
                 )
         except Exception as audit_err:
             print(f"Audit logging failed for user soft delete {id}: {audit_err}")
@@ -586,7 +632,8 @@ async def delete_user(
                     target_username=username_for_audit,
                     before_json=user_data,
                     status="success",
-                    request=request
+                    request=request,
+                    actor_role=current_user.user_role or "admin"
                 )
         except Exception as audit_err:
             print(f"Audit logging failed for user hard delete {id}: {audit_err}")

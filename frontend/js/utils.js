@@ -175,6 +175,7 @@ function formatDate(dateString) {
 }
 /**
  * Format date string with timezone
+ * Example output: "Feb 5, 2026, 10:50 AM GMT+8"
  * @param {string} dateString 
  * @returns {string}
  */
@@ -182,14 +183,24 @@ function formatDateTime(dateString) {
     if (!dateString) return '-';
 
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    
+    // Get timezone offset in hours
+    const offsetMinutes = -date.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+    const tzString = `GMT${offsetSign}${offsetHours}`;
+    
+    // Format date: "Feb 5, 2026, 10:50 AM"
+    const formatted = date.toLocaleString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-        hour: '2-digit',
+        hour: 'numeric',
         minute: '2-digit',
-        timeZoneName: 'short'
+        hour12: true
     });
+    
+    return `${formatted} ${tzString}`;
 }
 /**
  * Format relative time (e.g., "2 hours ago")

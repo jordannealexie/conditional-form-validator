@@ -66,6 +66,8 @@ class BulkAuditCollector:
         request: Optional[Request] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
+        actor_role: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
     ):
         """
         Add an audit entry to the collection.
@@ -83,6 +85,8 @@ class BulkAuditCollector:
             request: FastAPI Request object for extracting IP and user agent
             ip_address: Override IP address
             user_agent: Override user agent
+            actor_role: Role of the user performing the action (e.g., "admin", "user")
+            details: Additional details object containing performed_by info and other metadata
         """
         # Extract request details if provided
         if request and not ip_address:
@@ -90,14 +94,27 @@ class BulkAuditCollector:
         if request and not user_agent:
             user_agent = request.headers.get("user-agent")
         
-        # Build changes dict
-        changes = {}
+        # Build changes dict with ABAC-compatible structure
+        changes: Dict[str, Any] = {}
+        
+        # Include action in changes for consistency with ABAC pattern
+        changes["action"] = action
+        
         if before_json is not None:
             changes["before"] = _to_jsonable(before_json)
         if after_json is not None:
             changes["after"] = _to_jsonable(after_json)
         if edited_fields:
             changes["edited_fields"] = edited_fields
+        
+        # Build details object with performed_by info (ABAC pattern)
+        entry_details: Dict[str, Any] = details.copy() if details else {}
+        if "performed_by" not in entry_details:
+            entry_details["performed_by"] = {
+                "user_id": actor_user_id,
+                "username": actor_username,
+                "role": actor_role or "unknown"
+            }
         
         entry = {
             "action": action,
@@ -109,6 +126,7 @@ class BulkAuditCollector:
             "ip_address": ip_address,
             "user_agent": user_agent,
             "changes": changes if changes else None,
+            "details": entry_details,
             "created_by": None,
             "updated_by": None,
             "deleted_by": None,

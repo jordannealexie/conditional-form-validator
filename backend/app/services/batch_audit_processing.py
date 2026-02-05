@@ -363,6 +363,23 @@ class BatchAuditProcessingService:
             logger.error(f"Error revoking task {task_id}: {str(e)}")
             return False
 
+    async def submit_statistics_request(
+        self,
+        entity_type: Optional[str] = None
+    ) -> str:
+        """
+        Submit a statistics calculation request via Celery.
+        
+        Args:
+            entity_type: Optionally filter statistics by entity type (e.g., "abac_policy")
+            
+        Returns:
+            Task ID
+        """
+        task = self._dispatch_task(get_audit_statistics, entity_type=entity_type)
+        logger.info(f"Submitted statistics task {task.id} for entity_type={entity_type}")
+        return task.id
+
     async def get_task_result(self, task_id: str, timeout: int = 60) -> Dict[str, Any]:
         """
         Get the result of a completed task, waiting if necessary.

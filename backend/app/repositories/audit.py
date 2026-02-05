@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, insert
+from sqlalchemy import select, func, insert, and_, or_
 from app.models.audit import AuditLog
 from typing import List, Optional, Tuple, Dict, Any
+from datetime import datetime
 
 class AuditRepository:
     def __init__(self, db: AsyncSession):
@@ -148,6 +149,75 @@ class AuditRepository:
         
         # Add pagination
         query = query.offset(skip).limit(limit)
+        
+        # Execute query
+        result = await self.db.execute(query)
+        logs = result.scalars().all()
+        
+        return logs, total
+
+    async def get_abac_audit_logs(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        policy_id: Optional[int] = None,
+        action_type: Optional[str] = None,
+        user_id: Optional[int] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ) -> Tuple[List[AuditLog], int]:
+        """
+        Get audit logs for ABAC policies with filtering options.
+        
+        Args:
+            skip: Pagination offset
+            limit: Maximum number of records
+            policy_id: Filter by specific policy ID (resource_id)
+            action_type: Filter by action (created, updated, deleted)
+            user_id: Filter by user who performed the action
+            start_date: Filter by start date
+            end_date: Filter by end date
+            
+        Returns:
+            Tuple of (logs, total_count)
+        """
+        # ABAC resource types to include
+        abac_resource_types = ["abac_policy", "user_attribute", "resource_attribute"]
+        
+        # Build base query for ABAC-related logs
+        conditions = [
+            or_(*[func.lower(AuditLog.resource_type) == rt for rt in abac_resource_types])
+        ]
+        
+        # Add policy_id filter if provided
+        if policy_id is not None:
+            conditions.append(AuditLog.resource_id == str(policy_id))
+        
+        # Add action_type filter if provided (e.g., "created", "updated", "deleted")
+        if action_type is not None:
+            # Match actions like "abac_policy_created", "user_attribute_updated", etc.
+            conditions.append(func.lower(AuditLog.action).like(f"%{action_type.lower()}"))
+        
+        # Add user_id filter if provided
+        if user_id is not None:
+            conditions.append(AuditLog.user_id == user_id)
+        
+        # Add date range filters
+        if start_date is not None:
+            conditions.append(AuditLog.created_at >= start_date)
+        if end_date is not None:
+            conditions.append(AuditLog.created_at <= end_date)
+        
+        # Build query
+        query = select(AuditLog).where(and_(*conditions))
+        
+        # Count query
+        count_query = select(func.count()).select_from(AuditLog).where(and_(*conditions))
+        count_result = await self.db.execute(count_query)
+        total = count_result.scalar() or 0
+        
+        # Order by created_at DESC and add pagination
+        query = query.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit)
         
         # Execute query
         result = await self.db.execute(query)

@@ -777,6 +777,117 @@ tbody tr:hover {
     margin-bottom: var(--space-md);
 }
 
+/* ABAC-style modal header with green background (for audit trail modals) */
+#auditTrailModalGeneric .modal-header,
+#auditTrailModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e0e0e0;
+    background: var(--primary);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+#auditTrailModalGeneric .modal-header h2,
+#auditTrailModal .modal-header h2 {
+    margin: 0;
+    font-size: 1.25em;
+    color: white;
+}
+
+#auditTrailModalGeneric .modal-close,
+#auditTrailModal .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: white;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+#auditTrailModalGeneric .modal-close:hover,
+#auditTrailModal .modal-close:hover {
+    opacity: 1;
+}
+
+#auditTrailModalGeneric .modal-body,
+#auditTrailModal .modal-body {
+    padding: 24px;
+}
+
+#auditTrailModalGeneric .modal-content,
+#auditTrailModal .modal-content {
+    padding: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Audit filters styling */
+.audit-filters .form-group {
+    margin-bottom: 0;
+}
+
+.audit-filters label {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.audit-filters select,
+.audit-filters input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+    width: 100%;
+}
+
+/* Data table styling (ABAC-style) */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.data-table thead {
+    background: #1a1a2e;
+    color: white;
+}
+
+.data-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+}
+
+.data-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+}
+
+.data-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.data-table tbody tr:nth-child(even):hover {
+    background: #f0f0f0;
+}
+
 .modal-title {
     margin: 0;
 }

@@ -75,8 +75,15 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="content-header">
-                <h1>ABAC Policies</h1>
-                <p class="page-subtitle">Define attribute-based access control policies</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div>
+                        <h1>ABAC Policies</h1>
+                        <p class="page-subtitle">Define attribute-based access control policies</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="showAbacAuditTrail()" id="auditTrailBtn" data-permission="policies" data-action="read">
+                        📋 Audit Trail
+                    </button>
+                </div>
             </header>
 
             <!-- Add Policy Form -->
@@ -168,6 +175,78 @@
 
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Audit Trail Modal -->
+    <div id="auditTrailModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px; max-height: 80vh;">
+            <div class="modal-header">
+                <h2>ABAC Audit Trail</h2>
+                <button class="modal-close" onclick="closeAuditTrailModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <!-- Filters -->
+                <div class="audit-filters" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label for="auditActionFilter">Action Type</label>
+                        <select id="auditActionFilter" onchange="loadAbacAuditTrail()">
+                            <option value="">All Actions</option>
+                            <option value="created">Created</option>
+                            <option value="updated">Updated</option>
+                            <option value="deleted">Deleted</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label for="auditDateFrom">From Date</label>
+                        <input type="date" id="auditDateFrom" onchange="loadAbacAuditTrail()">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 150px;">
+                        <label for="auditDateTo">To Date</label>
+                        <input type="date" id="auditDateTo" onchange="loadAbacAuditTrail()">
+                    </div>
+                    <div class="form-group" style="flex: 0; min-width: 100px; display: flex; align-items: flex-end;">
+                        <button class="btn btn-secondary btn-sm" onclick="clearAuditFilters()">Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Batch Operations -->
+                <div class="audit-batch-actions" style="display: flex; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 6px;">
+                    <span style="line-height: 32px; font-weight: 500; color: #666;">Batch Operations:</span>
+                    <button class="btn btn-sm btn-primary" onclick="exportAbacAuditLogs()" title="Export audit logs as JSON or CSV">
+                        📤 Export
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="showAbacAuditStatistics()" title="View audit statistics">
+                        📊 Statistics
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="archiveAbacAuditLogs()" title="Archive old audit logs">
+                        📦 Archive Old
+                    </button>
+                </div>
+                
+                <!-- Audit Log Table -->
+                <div class="table-container">
+                    <table class="data-table" id="auditTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%;">Timestamp</th>
+                                <th style="width: 12%;">Action</th>
+                                <th style="width: 15%;">Resource</th>
+                                <th style="width: 15%;">Performed By</th>
+                                <th style="width: 43%;">Changes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditTableBody">
+                            <!-- Audit logs will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="pagination" id="auditPagination" style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;">
+                    <!-- Pagination will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="js/utils.js?v=10"></script>
     <script src="js/api.js?v=10"></script>

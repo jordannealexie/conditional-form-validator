@@ -432,9 +432,12 @@ def batch_archive_audit_logs(
     max_retries=2,
     default_retry_delay=5,
 )
-def get_audit_statistics(self) -> Dict[str, Any]:
+def get_audit_statistics(self, entity_type: Optional[str] = None) -> Dict[str, Any]:
     """
     Get statistics about audit logs for monitoring and reporting.
+    
+    Args:
+        entity_type: Optionally filter statistics by entity type (e.g., "abac_policy", "user")
     
     Returns:
         Dict containing various audit log statistics
@@ -443,8 +446,15 @@ def get_audit_statistics(self) -> Dict[str, Any]:
     try:
         now = datetime.now(timezone.utc)
         
+        # Build base filter condition
+        base_filter = []
+        if entity_type:
+            base_filter.append(func.lower(AuditLog.resource_type) == entity_type.lower())
+        
         # Total count
         total_query = select(func.count()).select_from(AuditLog)
+        if base_filter:
+            total_query = total_query.where(and_(*base_filter))
         total = session.execute(total_query).scalar() or 0
         
         # Count by entity type
@@ -452,6 +462,8 @@ def get_audit_statistics(self) -> Dict[str, Any]:
             AuditLog.resource_type,
             func.count().label('count')
         ).group_by(AuditLog.resource_type)
+        if base_filter:
+            entity_query = entity_query.where(and_(*base_filter))
         entity_result = session.execute(entity_query)
         logs_by_entity = {row.resource_type or 'unknown': row.count for row in entity_result}
         
@@ -460,31 +472,30 @@ def get_audit_statistics(self) -> Dict[str, Any]:
             AuditLog.action,
             func.count().label('count')
         ).group_by(AuditLog.action)
+        if base_filter:
+            action_query = action_query.where(and_(*base_filter))
         action_result = session.execute(action_query)
         logs_by_action = {row.action or 'unknown': row.count for row in action_result}
         
         # Logs in last 24 hours
         last_24h = now - timedelta(hours=24)
-        count_24h_query = select(func.count()).select_from(AuditLog).where(
-            AuditLog.created_at >= last_24h
-        )
+        count_24h_filters = [AuditLog.created_at >= last_24h] + base_filter
+        count_24h_query = select(func.count()).select_from(AuditLog).where(and_(*count_24h_filters))
         logs_last_24h = session.execute(count_24h_query).scalar() or 0
         
         # Logs in last 7 days
         last_7d = now - timedelta(days=7)
-        count_7d_query = select(func.count()).select_from(AuditLog).where(
-            AuditLog.created_at >= last_7d
-        )
+        count_7d_filters = [AuditLog.created_at >= last_7d] + base_filter
+        count_7d_query = select(func.count()).select_from(AuditLog).where(and_(*count_7d_filters))
         logs_last_7d = session.execute(count_7d_query).scalar() or 0
         
         # Logs in last 30 days
         last_30d = now - timedelta(days=30)
-        count_30d_query = select(func.count()).select_from(AuditLog).where(
-            AuditLog.created_at >= last_30d
-        )
+        count_30d_filters = [AuditLog.created_at >= last_30d] + base_filter
+        count_30d_query = select(func.count()).select_from(AuditLog).where(and_(*count_30d_filters))
         logs_last_30d = session.execute(count_30d_query).scalar() or 0
         
-        return {
+        result = {
             "success": True,
             "total_logs": total,
             "logs_by_entity_type": logs_by_entity,
@@ -494,6 +505,11 @@ def get_audit_statistics(self) -> Dict[str, Any]:
             "logs_last_30d": logs_last_30d,
             "generated_at": now.isoformat()
         }
+        
+        if entity_type:
+            result["filtered_by_entity_type"] = entity_type
+        
+        return result
         
     except Exception as e:
         logger.error(f"Error in get_audit_statistics: {str(e)}", exc_info=True)

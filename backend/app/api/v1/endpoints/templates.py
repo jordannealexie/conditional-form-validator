@@ -155,6 +155,14 @@ async def create_template(
                         "description": template.description,
                     },
                 },
+                details={
+                    "performed_by": {
+                        "user_id": current_user.id,
+                        "username": current_user.username,
+                        "role": current_user.user_role or "admin"
+                    },
+                    "template_name": template.name
+                },
                 created_by=current_user.id,
             )
         except Exception as audit_err:
@@ -228,6 +236,14 @@ async def update_template(
                         "before": before_data,
                         "after": after_data,
                     },
+                    details={
+                        "performed_by": {
+                            "user_id": current_user.id,
+                            "username": current_user.username,
+                            "role": current_user.user_role or "admin"
+                        },
+                        "template_name": updated.name
+                    },
                     updated_by=current_user.id,
                 )
                 await db.commit()
@@ -286,6 +302,14 @@ async def delete_template(
                 changes={
                     "action": "deleted",
                     "before": before_data,
+                },
+                details={
+                    "performed_by": {
+                        "user_id": current_user.id,
+                        "username": current_user.username,
+                        "role": current_user.user_role or "admin"
+                    },
+                    "template_name": template.name
                 },
                 deleted_by=current_user.id,
             )

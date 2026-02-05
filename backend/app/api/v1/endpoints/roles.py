@@ -104,6 +104,14 @@ async def create_role(
                         "updated_by": role.updated_by,
                     },
                 },
+                details={
+                    "performed_by": {
+                        "user_id": current_user.id,
+                        "username": current_user.username,
+                        "role": current_user.user_role or "admin"
+                    },
+                    "role_name": role.name
+                },
                 created_by=current_user.id,
             )
             # Commit audit log entry
@@ -186,6 +194,14 @@ async def delete_role(
                 changes={
                     "action": "deleted",
                     "before": role_data,
+                },
+                details={
+                    "performed_by": {
+                        "user_id": current_user.id,
+                        "username": current_user.username,
+                        "role": current_user.user_role or "admin"
+                    },
+                    "role_name": role_name
                 },
                 deleted_by=current_user.id,
             )
@@ -316,6 +332,14 @@ async def update_role(
                     "action": "updated",
                     "before": before_data,
                     "after": after_data,
+                },
+                details={
+                    "performed_by": {
+                        "user_id": current_user.id,
+                        "username": current_user.username,
+                        "role": current_user.user_role or "admin"
+                    },
+                    "role_name": role.name
                 },
                 updated_by=current_user.id,
             )

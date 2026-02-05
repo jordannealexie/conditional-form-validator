@@ -20,7 +20,8 @@ class ABACService:
         name: str,
         description: Optional[str],
         rules: Dict[str, Any],
-        is_active: bool = True
+        is_active: bool = True,
+        commit: bool = True
     ) -> ABACPolicy:
         """Create a new ABAC policy"""
         policy = ABACPolicy(
@@ -30,12 +31,16 @@ class ABACService:
             is_active=is_active
         )
         self.db.add(policy)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(policy)
         
         # Sync to Casbin if active
         if is_active:
             await self.sync_policy_to_casbin(policy)
+        
+        # Only commit if requested (allows caller to add audit log first)
+        if commit:
+            await self.db.commit()
         
         return policy
     
@@ -60,7 +65,8 @@ class ABACService:
         name: Optional[str] = None,
         description: Optional[str] = None,
         rules: Optional[Dict[str, Any]] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
+        commit: bool = True
     ) -> Optional[ABACPolicy]:
         """Update an existing ABAC policy"""
         from datetime import datetime, timezone
@@ -81,23 +87,30 @@ class ABACService:
         # Explicitly set updated_at with timezone
         policy.updated_at = datetime.now(timezone.utc)
         
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(policy)
         
         # Sync to Casbin if active
         if policy.is_active:
             await self.sync_policy_to_casbin(policy)
         
+        # Only commit if requested (allows caller to add audit log first)
+        if commit:
+            await self.db.commit()
+        
         return policy
     
-    async def delete_policy(self, policy_id: int) -> bool:
+    async def delete_policy(self, policy_id: int, commit: bool = True) -> bool:
         """Delete an ABAC policy"""
         policy = await self.get_policy(policy_id)
         if not policy:
             return False
         
         await self.db.delete(policy)
-        await self.db.commit()
+        
+        # Only commit if requested (allows caller to add audit log first)
+        if commit:
+            await self.db.commit()
         return True
     
     # User Attribute Management

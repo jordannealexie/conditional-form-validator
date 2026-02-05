@@ -373,7 +373,7 @@ async function confirmDeleteUser(userId) {
 }
 
 /**
- * Show audit trail modal.
+ * Show audit trail modal - styled to match ABAC Audit Trail exactly.
  * Can be filtered by resourceType (e.g., 'user', 'role', 'template') and customized per page.
  */
 async function showAuditTrail(options) {
@@ -385,53 +385,376 @@ async function showAuditTrail(options) {
         }
         return;
     }
+    
+    // Store current resource type for filters
+    window.__currentAuditResourceType = resourceType;
+    window.__auditCurrentPage = 1;
+    window.__auditPageSize = 20;
+    
     const subjectLabel = opts.subjectLabel || (resourceType === 'role' ? 'Role' : resourceType === 'template' ? 'Template' : 'User');
     const title = opts.title || (resourceType === 'role'
         ? 'Roles & Permissions Audit Trail'
         : resourceType === 'template'
             ? 'Form Templates Audit Trail'
             : 'User Management Audit Trail');
-    const subtitle = opts.subtitle || (resourceType === 'role'
-        ? 'Roles & Permissions Audit Trail - All Activities'
-        : resourceType === 'template'
-            ? 'Form Templates Audit Trail - All Activities'
-            : 'User Management Audit Trail - All Activities');
+    
+    // Store subject label for row rendering
+    window.__currentAuditSubjectLabel = subjectLabel;
 
-    const content = `
-        <div class="audit-trail-container">
-            <p class="audit-trail-subtitle">${escapeHtml(subtitle)}</p>
-            <div id="auditTrailLoading" style="text-align: center; padding: 20px;">
-                <p>Loading audit logs...</p>
-            </div>
-            <div id="auditTrailContent" style="display: none;">
-                <div class="audit-table-wrapper">
-                    <table class="table table-striped table-sm audit-table mb-0">
-                        <thead>
-                            <tr>
-                                <th>${escapeHtml(subjectLabel)}</th>
-                                <th>Action</th>
-                                <th>Date/Time</th>
-                                <th>Performed By</th>
-                                <th>Changes</th>
-                            </tr>
-                        </thead>
-                        <tbody id="auditTrailTableBody">
-                        </tbody>
-                    </table>
+    // Remove existing modal if any
+    const existingModal = document.getElementById('auditTrailModalGeneric');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Create ABAC-style modal structure
+    const modalHtml = `
+        <div id="auditTrailModalGeneric" class="modal" style="display: flex;">
+            <div class="modal-content" style="max-width: 900px; max-height: 80vh;">
+                <div class="modal-header">
+                    <h2>${escapeHtml(title)}</h2>
+                    <button class="modal-close" onclick="closeAuditTrailModalGeneric()">&times;</button>
                 </div>
-            </div>
-            <div id="auditTrailError" style="display: none; text-align: center; padding: 20px; color: var(--danger);">
-                <p>Failed to load audit trail</p>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    <!-- Filters -->
+                    <div class="audit-filters" style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label for="auditActionFilterGeneric">Action Type</label>
+                            <select id="auditActionFilterGeneric" onchange="loadAuditTrail({resourceType: '${resourceType}'})">
+                                <option value="">All Actions</option>
+                                <option value="created">Created</option>
+                                <option value="updated">Updated</option>
+                                <option value="deleted">Deleted</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label for="auditDateFromGeneric">From Date</label>
+                            <input type="date" id="auditDateFromGeneric" onchange="loadAuditTrail({resourceType: '${resourceType}'})">
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px;">
+                            <label for="auditDateToGeneric">To Date</label>
+                            <input type="date" id="auditDateToGeneric" onchange="loadAuditTrail({resourceType: '${resourceType}'})">
+                        </div>
+                        <div class="form-group" style="flex: 0; min-width: 100px; display: flex; align-items: flex-end;">
+                            <button class="btn btn-secondary btn-sm" onclick="clearAuditFiltersGeneric('${resourceType}')">Clear</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Batch Operations -->
+                    <div class="audit-batch-actions" style="display: flex; gap: 8px; margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 6px;">
+                        <span style="line-height: 32px; font-weight: 500; color: #666;">Batch Operations:</span>
+                        <button class="btn btn-sm btn-primary" onclick="exportAuditLogsGeneric('${resourceType}')" title="Export audit logs as JSON or CSV">
+                            📤 Export
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="showAuditStatisticsGeneric('${resourceType}')" title="View audit statistics">
+                            📊 Statistics
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="archiveAuditLogsGeneric('${resourceType}')" title="Archive old audit logs">
+                            📦 Archive Old
+                        </button>
+                    </div>
+                    
+                    <!-- Audit Log Table -->
+                    <div class="table-container">
+                        <table class="data-table" id="auditTableGeneric">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Timestamp</th>
+                                    <th style="width: 12%;">Action</th>
+                                    <th style="width: 15%;">${escapeHtml(subjectLabel)}</th>
+                                    <th style="width: 15%;">Performed By</th>
+                                    <th style="width: 43%;">Changes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTrailTableBody">
+                                <tr><td colspan="5" style="text-align: center; padding: 24px;">Loading audit logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="pagination" id="auditPaginationGeneric" style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;">
+                        <!-- Pagination will be loaded here -->
+                    </div>
+                </div>
             </div>
         </div>
     `;
     
-    createModal(title, content, [
-        { label: 'Close', type: 'secondary', onclick: 'closeModal()' }
-    ], 'large');
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
     
     // Load audit trail data
     await loadAuditTrail({ resourceType });
+}
+
+/**
+ * Close the generic audit trail modal
+ */
+function closeAuditTrailModalGeneric() {
+    const modal = document.getElementById('auditTrailModalGeneric');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+/**
+ * Clear audit filters and reload
+ */
+function clearAuditFiltersGeneric(resourceType) {
+    document.getElementById('auditActionFilterGeneric').value = '';
+    document.getElementById('auditDateFromGeneric').value = '';
+    document.getElementById('auditDateToGeneric').value = '';
+    window.__auditCurrentPage = 1;
+    loadAuditTrail({ resourceType });
+}
+
+/**
+ * Export audit logs as JSON or CSV
+ */
+function exportAuditLogsGeneric(resourceType) {
+    // Remove existing export modal if any
+    const existingModal = document.getElementById('exportFormatModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div id="exportFormatModal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+        ">
+            <div style="
+                background: white;
+                border-radius: 8px;
+                padding: 24px;
+                min-width: 300px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            ">
+                <h3 style="margin: 0 0 16px 0; font-size: 1.1em;">Export Format</h3>
+                <p style="color: #666; margin-bottom: 20px;">Choose export format:</p>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('exportFormatModal').remove()">Cancel</button>
+                    <button class="btn btn-primary" onclick="doExportAuditLogs('${resourceType}', 'json')">JSON</button>
+                    <button class="btn btn-success" onclick="doExportAuditLogs('${resourceType}', 'csv')">CSV</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+/**
+ * Perform the actual export
+ */
+async function doExportAuditLogs(resourceType, format) {
+    document.getElementById('exportFormatModal').remove();
+    
+    try {
+        const response = resourceType === 'user'
+            ? await apiGetUsersAuditTrail(0, 1000)
+            : await apiGetAllAuditLogs(0, 1000, resourceType);
+        
+        const logs = Array.isArray(response) ? response : [];
+        
+        if (format === 'json') {
+            const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit_${resourceType}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } else {
+            // CSV export
+            const headers = ['Timestamp', 'Action', 'Resource ID', 'Performed By', 'Changes'];
+            const rows = logs.map(log => [
+                log.created_at || '',
+                log.action || '',
+                log.resource_id || '',
+                log.created_by || log.user_id || '',
+                JSON.stringify(log.changes || {})
+            ]);
+            const csv = [headers.join(','), ...rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(','))].join('\\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `audit_${resourceType}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        showToast('Audit logs exported successfully', 'success');
+    } catch (e) {
+        console.error('Export error:', e);
+        showToast('Failed to export audit logs', 'error');
+    }
+}
+
+/**
+ * Show audit statistics modal
+ */
+async function showAuditStatisticsGeneric(resourceType) {
+    try {
+        const response = resourceType === 'user'
+            ? await apiGetUsersAuditTrail(0, 1000)
+            : await apiGetAllAuditLogs(0, 1000, resourceType);
+        
+        const logs = Array.isArray(response) ? response : [];
+        
+        // Calculate statistics
+        const now = new Date();
+        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        const totalLogs = logs.length;
+        const last24h = logs.filter(l => new Date(l.created_at) >= oneDayAgo).length;
+        const last7d = logs.filter(l => new Date(l.created_at) >= oneWeekAgo).length;
+        const last30d = logs.filter(l => new Date(l.created_at) >= oneMonthAgo).length;
+        
+        // Count by action
+        const actionCounts = {};
+        logs.forEach(l => {
+            const action = l.action || 'unknown';
+            actionCounts[action] = (actionCounts[action] || 0) + 1;
+        });
+        
+        const resourceTitle = resourceType === 'user' ? 'User Management' : resourceType === 'role' ? 'Roles & Permissions' : 'Form Templates';
+        
+        // Remove existing modal
+        const existingModal = document.getElementById('auditStatsModal');
+        if (existingModal) existingModal.remove();
+        
+        const modalHtml = `
+            <div id="auditStatsModal" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.6);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10002;
+            ">
+                <div style="
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    min-width: 400px;
+                    max-width: 500px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 1.1em;">${resourceTitle} Audit Statistics</h3>
+                        <button onclick="document.getElementById('auditStatsModal').remove()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666;">&times;</button>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                        <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid #c8e6c9;">
+                            <div style="font-size: 1.8em; font-weight: bold; color: #2e7d32;">${totalLogs}</div>
+                            <div style="color: #666; font-size: 0.9em;">Total Logs</div>
+                        </div>
+                        <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid #c8e6c9;">
+                            <div style="font-size: 1.8em; font-weight: bold; color: #d32f2f;">${last24h}</div>
+                            <div style="color: #666; font-size: 0.9em;">Last 24 Hours</div>
+                        </div>
+                        <div style="background: #fff3e0; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid #ffe0b2;">
+                            <div style="font-size: 1.8em; font-weight: bold; color: #ef6c00;">${last7d}</div>
+                            <div style="color: #666; font-size: 0.9em;">Last 7 Days</div>
+                        </div>
+                        <div style="background: #fce4ec; padding: 16px; border-radius: 8px; text-align: center; border: 1px solid #f8bbd9;">
+                            <div style="font-size: 1.8em; font-weight: bold; color: #c2185b;">${last30d}</div>
+                            <div style="color: #666; font-size: 0.9em;">Last 30 Days</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <strong style="display: block; margin-bottom: 8px;">Logs by Action</strong>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            ${Object.entries(actionCounts).map(([action, count]) => 
+                                `<span class="badge badge-secondary" style="padding: 6px 12px;">${escapeHtml(action)}: ${count}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button class="btn btn-secondary" onclick="document.getElementById('auditStatsModal').remove()">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+    } catch (e) {
+        console.error('Statistics error:', e);
+        showToast('Failed to load audit statistics', 'error');
+    }
+}
+
+/**
+ * Archive old audit logs modal
+ */
+function archiveAuditLogsGeneric(resourceType) {
+    // Remove existing modal
+    const existingModal = document.getElementById('archiveAuditModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div id="archiveAuditModal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+        ">
+            <div style="
+                background: white;
+                border-radius: 8px;
+                padding: 24px;
+                min-width: 350px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            ">
+                <h3 style="margin: 0 0 8px 0; font-size: 1.1em;">📦 Archive Old Logs</h3>
+                <p style="color: #666; margin-bottom: 16px;">Archive audit logs older than a specified number of days.</p>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="archiveDaysInput">Days old:</label>
+                    <input type="number" id="archiveDaysInput" value="90" min="1" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('archiveAuditModal').remove()">Cancel</button>
+                    <button class="btn btn-warning" onclick="doArchiveAuditLogs('${resourceType}')">Archive</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+/**
+ * Perform the archive operation (placeholder - would need backend support)
+ */
+function doArchiveAuditLogs(resourceType) {
+    const days = document.getElementById('archiveDaysInput').value;
+    document.getElementById('archiveAuditModal').remove();
+    
+    // This would typically call a backend API to archive old logs
+    showToast(`Archive functionality for logs older than ${days} days is not yet implemented on the backend.`, 'info');
 }
 
 /**
@@ -439,36 +762,58 @@ async function showAuditTrail(options) {
  */
 async function loadAuditTrail(options) {
     const opts = options || {};
-    const resourceType = opts.resourceType || null;
-    const loading = document.getElementById('auditTrailLoading');
-    const content = document.getElementById('auditTrailContent');
-    const error = document.getElementById('auditTrailError');
+    const resourceType = opts.resourceType || window.__currentAuditResourceType || null;
     const tbody = document.getElementById('auditTrailTableBody');
+    const pagination = document.getElementById('auditPaginationGeneric');
+    
+    if (!tbody) return;
+    
+    // Clear the changes store when loading new data
+    window.__auditChangesStore = [];
+    window.__auditLogStore = [];
+    
+    // Show loading state
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px;">Loading audit logs...</td></tr>';
+    
+    // Get filter values
+    const actionType = document.getElementById('auditActionFilterGeneric')?.value || '';
+    const dateFrom = document.getElementById('auditDateFromGeneric')?.value || '';
+    const dateTo = document.getElementById('auditDateToGeneric')?.value || '';
     
     try {
         if (!resourceType) {
             throw new Error('Missing resource type for audit trail');
         }
 
+        // Fetch audit logs
         const response = resourceType === 'user'
             ? await apiGetUsersAuditTrail(0, 100)
             : await apiGetAllAuditLogs(0, 100, resourceType);
         
-        if (loading) loading.style.display = 'none';
-        
         // Handle null or empty response
-        const logs = Array.isArray(response) ? response : [];
+        let logs = Array.isArray(response) ? response : [];
+        
+        // Apply client-side filters (if API doesn't support them)
+        if (actionType) {
+            logs = logs.filter(l => {
+                const action = (l.action || '').toLowerCase();
+                return action.includes(actionType.toLowerCase());
+            });
+        }
+        if (dateFrom) {
+            const fromDate = new Date(dateFrom + 'T00:00:00');
+            logs = logs.filter(l => new Date(l.created_at) >= fromDate);
+        }
+        if (dateTo) {
+            const toDate = new Date(dateTo + 'T23:59:59');
+            logs = logs.filter(l => new Date(l.created_at) <= toDate);
+        }
 
         if (logs.length === 0) {
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No audit logs found</td></tr>';
-            }
-            if (content) content.style.display = 'block';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #666;">No audit logs found</td></tr>';
+            if (pagination) pagination.innerHTML = '';
             return;
         }
-        
-        // Reset in-memory changes store
-        window.__auditChangesStore = [];
 
         // Build a map of user_id -> username for "Performed By" column
         let userMap = {};
@@ -484,82 +829,105 @@ async function loadAuditTrail(options) {
             console.warn('Failed to load users for audit trail performer mapping:', e);
         }
 
-        // Populate audit trail table
-        tbody.innerHTML = '';
-        logs.forEach(log => {
-            const tr = document.createElement('tr');
-            
-            // Format subject (user/role/template/etc.)
-            let targetSubject = '-';
-            if (log.username) {
-                targetSubject = escapeHtml(log.username);
-            } else if (log.resource_id) {
-                let prefix = 'User ID';
-                if (log.resource_type === 'role') prefix = 'Role ID';
-                else if (log.resource_type === 'template') prefix = 'Template ID';
-                targetSubject = `${prefix}: ${log.resource_id}`;
-            }
-            
-            // Format action (support both top-level action and changes.action)
-            let rawAction = (log && (log.action || (log.changes && log.changes.action))) || 'Unknown';
-            const actionLower = String(rawAction).toLowerCase();
-            let actionLabel = rawAction;
-            let actionBadge = 'badge-secondary';
-
-            if (actionLower.includes('created')) {
-                actionLabel = 'Created';
-                actionBadge = 'badge-success';
-            } else if (actionLower.includes('updated')) {
-                actionLabel = 'Updated';
-                actionBadge = 'badge-primary';
-            } else if (actionLower.includes('deleted')) {
-                actionLabel = 'Deleted';
-                actionBadge = 'badge-danger';
-            }
-            
-            // Format date/time
-            const dateTime = log.created_at ? formatDateTime(log.created_at) : '-';
-            
-            // Format performed by (who made the change)
-            let performedBy = '-';
-            const actorId = log.created_by || log.updated_by || log.deleted_by || log.user_id;
-            if (actorId) {
-                const actorName = userMap[actorId];
-                if (actorName) {
-                    performedBy = escapeHtml(actorName) + ` (ID: ${actorId})`;
-                } else {
-                    performedBy = `User ID: ${actorId}`;
-                }
-            }
-            
-            // Format changes (JSON)
-            let changesHtml = '-';
-            if (log.changes && typeof log.changes === 'object') {
-                const idx = window.__auditChangesStore.push(log.changes) - 1;
-                changesHtml = `<button class="btn btn-sm btn-info" onclick="showChangesDetailFromIndex(${idx})">View Changes</button>`;
-            }
-            
-            tr.innerHTML = `
-                <td>${targetSubject}</td>
-                <td><span class="badge ${actionBadge}">${actionLabel}</span></td>
-                <td>${dateTime}</td>
-                <td>${performedBy}</td>
-                <td>${changesHtml}</td>
-            `;
-            
-            tbody.appendChild(tr);
-        });
+        // Render audit logs - using ABAC-style row rendering
+        tbody.innerHTML = logs.map(log => renderAuditLogRow(log, userMap)).join('');
         
-        if (content) content.style.display = 'block';
+        // Render pagination (simple version showing record count)
+        const totalLogs = logs.length;
+        if (pagination) {
+            pagination.innerHTML = `<span style="color: #666;">${totalLogs} record(s)</span>`;
+        }
         
     } catch (e) {
         console.error('Error loading audit trail:', e);
-        if (loading) loading.style.display = 'none';
-        if (error) error.style.display = 'block';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #dc3545;">Error loading audit logs: ' + escapeHtml(e.message || 'Unknown error') + '</td></tr>';
         if (typeof showToast === 'function') {
             showToast('Failed to load audit trail', 'error');
         }
     }
+}
+
+/**
+ * Render a single audit log row (ABAC-style)
+ */
+function renderAuditLogRow(log, userMap = {}) {
+    // Use common formatDateTime from utils.js for consistent date format
+    const timestamp = log.created_at 
+        ? formatDateTime(log.created_at)
+        : 'N/A';
+    
+    // Format action badge
+    let actionBadge = '';
+    const action = (log.action || '').toLowerCase();
+    if (action.includes('created')) {
+        actionBadge = '<span class="badge badge-success">Created</span>';
+    } else if (action.includes('updated')) {
+        actionBadge = '<span class="badge badge-warning">Updated</span>';
+    } else if (action.includes('deleted')) {
+        actionBadge = '<span class="badge badge-danger">Deleted</span>';
+    } else {
+        actionBadge = `<span class="badge badge-secondary">${escapeHtml(log.action || 'Unknown')}</span>`;
+    }
+    
+    // Format resource info (subject)
+    const resourceType = log.resource_type || 'unknown';
+    const resourceId = log.resource_id || 'N/A';
+    let resourceName = '';
+    
+    // Try to get resource name from various fields
+    if (log.username) {
+        resourceName = log.username;
+    } else if (log.details && log.details.name) {
+        resourceName = log.details.name;
+    } else if (log.changes && log.changes.after && log.changes.after.name) {
+        resourceName = log.changes.after.name;
+    } else if (log.changes && log.changes.before && log.changes.before.name) {
+        resourceName = log.changes.before.name;
+    }
+    
+    const resourceInfo = resourceName 
+        ? `<strong>${escapeHtml(resourceName)}</strong><br><small style="color: #666;">${resourceType} #${resourceId}</small>`
+        : `${resourceType} #${resourceId}`;
+    
+    // Format performed by info (ABAC-style)
+    let userInfo = 'Unknown';
+    if (log.details && log.details.performed_by) {
+        const performer = log.details.performed_by;
+        const username = performer.username || 'Unknown';
+        const role = performer.role || '';
+        userInfo = role 
+            ? `<strong>${escapeHtml(username)}</strong><br><small style="color: #666;">${escapeHtml(role)}</small>`
+            : escapeHtml(username);
+    } else {
+        // Fallback to legacy method using actor_id fields
+        const actorId = log.created_by || log.updated_by || log.deleted_by || log.user_id;
+        if (actorId) {
+            const actorName = userMap[actorId];
+            if (actorName) {
+                userInfo = `<strong>${escapeHtml(actorName)}</strong><br><small style="color: #666;">ID: ${actorId}</small>`;
+            } else {
+                userInfo = `User ID: ${actorId}`;
+            }
+        }
+    }
+    
+    // Format changes - add View Changes button
+    let changesHtml = '-';
+    if (log.changes && typeof log.changes === 'object') {
+        const idx = window.__auditChangesStore.push(log.changes) - 1;
+        window.__auditLogStore.push(log);
+        changesHtml = `<button class="btn btn-sm btn-secondary" onclick="showChangesDetailFromIndex(${idx})" style="border: 1px solid #ccc;">View Changes</button>`;
+    }
+    
+    return `
+        <tr>
+            <td style="font-size: 0.85em;">${timestamp}</td>
+            <td>${actionBadge}</td>
+            <td>${resourceInfo}</td>
+            <td>${userInfo}</td>
+            <td style="font-size: 0.85em;">${changesHtml}</td>
+        </tr>
+    `;
 }
 
 /**
@@ -574,14 +942,16 @@ function showChangesDetailFromIndex(index) {
         }
         return;
     }
-    showChangesDetail(window.__auditChangesStore[index]);
+    const auditLog = window.__auditLogStore ? window.__auditLogStore[index] : {};
+    showChangesDetail(window.__auditChangesStore[index], auditLog);
 }
 
 /**
  * Show detailed changes in a modal
  * @param {object} changes - Changes object
+ * @param {object} auditLog - Full audit log entry (optional) for accessing details.performed_by
  */
-function showChangesDetail(changes) {
+function showChangesDetail(changes, auditLog = {}) {
     const before = changes.before || {};
     const after = changes.after || {};
     const allKeys = Array.from(new Set([
@@ -600,8 +970,28 @@ function showChangesDetail(changes) {
     };
 
     let content = '<div class="changes-detail">';
+    
+    // Show action badge (using ABAC color scheme)
     if (changes.action) {
-        content += `<div class="changes-meta"><span class="badge badge-info">${escapeHtml(changes.action)}</span></div>`;
+        let actionBadgeClass = 'badge-secondary';
+        const actionLower = (changes.action || '').toLowerCase();
+        if (actionLower.includes('created') || actionLower === 'created') actionBadgeClass = 'badge-success';
+        else if (actionLower.includes('updated') || actionLower === 'updated') actionBadgeClass = 'badge-warning';
+        else if (actionLower.includes('deleted') || actionLower === 'deleted') actionBadgeClass = 'badge-danger';
+        
+        content += `<div class="changes-meta" style="margin-bottom: 15px;"><span class="badge ${actionBadgeClass}">${escapeHtml(changes.action)}</span></div>`;
+    }
+    
+    // Show performed_by info from details (ABAC pattern)
+    if (auditLog.details && auditLog.details.performed_by) {
+        const performer = auditLog.details.performed_by;
+        content += `
+            <div class="changes-performer" style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                <strong>Performed By:</strong> ${escapeHtml(performer.username || 'Unknown')}
+                <span class="badge badge-secondary" style="margin-left: 5px;">${escapeHtml(performer.role || 'unknown')}</span>
+                <span class="text-muted" style="margin-left: 10px;">(ID: ${performer.user_id || '-'})</span>
+            </div>
+        `;
     }
 
     if (allKeys.length === 0) {
@@ -630,9 +1020,84 @@ function showChangesDetail(changes) {
 
     content += '</div>';
     
-    createModal('Change Details', content, [
-        { label: 'Close', type: 'secondary', onclick: 'closeModal()' }
-    ], 'large');
+    // Use ABAC-style modal for consistency
+    showChangesDetailModal('Change Details', content);
+}
+
+/**
+ * Create and show the changes detail modal (ABAC-style)
+ * @param {string} title - Modal title
+ * @param {string} content - Modal body content
+ */
+function showChangesDetailModal(title, content) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('changesDetailModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modalHtml = `
+        <div id="changesDetailModal" class="modal-overlay" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+        ">
+            <div class="modal-content" style="
+                background: white;
+                border-radius: 8px;
+                width: 90%;
+                max-width: 800px;
+                max-height: 90vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            ">
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 20px;
+                    border-bottom: 1px solid #e0e0e0;
+                    background: white;
+                ">
+                    <h3 style="margin: 0; font-size: 1.1em; background: #ffc107; color: #000; padding: 4px 12px; border-radius: 4px;">${escapeHtml(title)}</h3>
+                    <button onclick="document.getElementById('changesDetailModal').remove()" style="
+                        background: none;
+                        border: none;
+                        font-size: 1.5em;
+                        cursor: pointer;
+                        color: #666;
+                        padding: 0 8px;
+                        line-height: 1;
+                    ">&times;</button>
+                </div>
+                <div style="
+                    padding: 20px;
+                    overflow-y: auto;
+                    flex: 1;
+                ">
+                    ${content}
+                </div>
+                <div style="
+                    padding: 12px 20px;
+                    border-top: 1px solid #e0e0e0;
+                    text-align: right;
+                ">
+                    <button class="btn btn-secondary" onclick="document.getElementById('changesDetailModal').remove()">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
 

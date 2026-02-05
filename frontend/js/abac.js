@@ -929,3 +929,745 @@ async function refreshAbacMetadata() {
     await loadAbacMetadata();
     showToast('Policy builder refreshed', 'success');
 }
+
+// ============ ABAC Audit Trail Functions ============
+
+let abacAuditCurrentPage = 1;
+const abacAuditPageSize = 20;
+
+/**
+ * Show the ABAC audit trail modal
+ */
+function showAbacAuditTrail() {
+    const modal = document.getElementById('auditTrailModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        abacAuditCurrentPage = 1;
+        loadAbacAuditTrail();
+    }
+}
+
+/**
+ * Close the audit trail modal
+ */
+function closeAuditTrailModal() {
+    const modal = document.getElementById('auditTrailModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Clear audit filters
+ */
+function clearAuditFilters() {
+    document.getElementById('auditActionFilter').value = '';
+    document.getElementById('auditDateFrom').value = '';
+    document.getElementById('auditDateTo').value = '';
+    abacAuditCurrentPage = 1;
+    loadAbacAuditTrail();
+}
+
+/**
+ * Load ABAC audit trail data
+ */
+async function loadAbacAuditTrail(page = abacAuditCurrentPage) {
+    const tableBody = document.getElementById('auditTableBody');
+    const pagination = document.getElementById('auditPagination');
+    
+    if (!tableBody) return;
+    
+    // Clear the changes store when loading new data
+    window.__abacAuditChangesStore = [];
+    
+    // Show loading state
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px;">Loading audit logs...</td></tr>';
+    
+    // Get filter values
+    const actionType = document.getElementById('auditActionFilter')?.value || '';
+    const dateFrom = document.getElementById('auditDateFrom')?.value || '';
+    const dateTo = document.getElementById('auditDateTo')?.value || '';
+    
+    try {
+        // Build query params
+        let url = `/abac/audit-trail?page=${page}&page_size=${abacAuditPageSize}`;
+        if (actionType) url += `&action_type=${encodeURIComponent(actionType)}`;
+        if (dateFrom) url += `&start_date=${encodeURIComponent(dateFrom + 'T00:00:00')}`;
+        if (dateTo) url += `&end_date=${encodeURIComponent(dateTo + 'T23:59:59')}`;
+        
+        const response = await apiRequest(url);
+        const data = response;
+        
+        if (!data || !data.items || data.items.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #666;">No audit logs found</td></tr>';
+            pagination.innerHTML = '';
+            return;
+        }
+        
+        // Render audit logs
+        tableBody.innerHTML = data.items.map(log => renderAbacAuditLogRow(log)).join('');
+        
+        // Render pagination
+        renderAbacAuditPagination(data.page, data.total_pages, data.total);
+        abacAuditCurrentPage = page;
+        
+    } catch (error) {
+        console.error('Error loading audit trail:', error);
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #dc3545;">Error loading audit logs: ' + escapeHtml(error.message || 'Unknown error') + '</td></tr>';
+    }
+}
+
+// Store for ABAC audit changes (to pass data to modal)
+window.__abacAuditChangesStore = window.__abacAuditChangesStore || [];
+
+/**
+ * Render a single audit log row
+ */
+function renderAbacAuditLogRow(log) {
+    // Use common formatDateTime from utils.js for consistent date format
+    const timestamp = log.timestamp 
+        ? formatDateTime(log.timestamp)
+        : (log.created_at ? formatDateTime(log.created_at) : 'N/A');
+    
+    // Format action badge
+    let actionBadge = '';
+    const action = (log.action || '').toLowerCase();
+    if (action.includes('created')) {
+        actionBadge = '<span class="badge badge-success">Created</span>';
+    } else if (action.includes('updated')) {
+        actionBadge = '<span class="badge badge-warning">Updated</span>';
+    } else if (action.includes('deleted')) {
+        actionBadge = '<span class="badge badge-danger">Deleted</span>';
+    } else {
+        actionBadge = `<span class="badge badge-secondary">${escapeHtml(log.action)}</span>`;
+    }
+    
+    // Format resource info
+    const resourceType = log.resource_type || 'unknown';
+    const resourceId = log.resource_id || 'N/A';
+    let resourceName = '';
+    if (log.details && log.details.policy_name) {
+        resourceName = log.details.policy_name;
+    } else if (log.details && log.details.attribute_key) {
+        resourceName = log.details.attribute_key;
+    }
+    
+    const resourceInfo = resourceName 
+        ? `<strong>${escapeHtml(resourceName)}</strong><br><small style="color: #666;">${resourceType} #${resourceId}</small>`
+        : `${resourceType} #${resourceId}`;
+    
+    // Format performed by info
+    const performedBy = log.performed_by || {};
+    const username = performedBy.username || log.username || 'Unknown';
+    const role = log.details?.performed_by?.role || '';
+    const userInfo = role 
+        ? `<strong>${escapeHtml(username)}</strong><br><small style="color: #666;">${escapeHtml(role)}</small>`
+        : escapeHtml(username);
+    
+    // Format changes - add View Changes button
+    let changesHtml = '-';
+    if (log.changes && (log.changes.before || log.changes.after)) {
+        const idx = window.__abacAuditChangesStore.push(log.changes) - 1;
+        changesHtml = `<button class="btn btn-sm btn-info" onclick="showAbacChangesDetail(${idx})">View Changes</button>`;
+    }
+    
+    return `
+        <tr>
+            <td style="font-size: 0.85em;">${timestamp}</td>
+            <td>${actionBadge}</td>
+            <td>${resourceInfo}</td>
+            <td>${userInfo}</td>
+            <td style="font-size: 0.85em;">${changesHtml}</td>
+        </tr>
+    `;
+}
+
+/**
+ * Show ABAC change details from the index
+ * @param {number} index - Index in the changes store
+ */
+function showAbacChangesDetail(index) {
+    if (!window.__abacAuditChangesStore || !window.__abacAuditChangesStore[index]) {
+        console.error('No changes data found for index', index);
+        if (typeof showToast === 'function') {
+            showToast('No change details available for this entry', 'error');
+        }
+        return;
+    }
+    showAbacChangesModal(window.__abacAuditChangesStore[index]);
+}
+
+/**
+ * Show detailed ABAC changes in a modal
+ * @param {object} changes - Changes object with before/after
+ */
+function showAbacChangesModal(changes) {
+    const before = changes.before || {};
+    const after = changes.after || {};
+    
+    // Get all keys from both before and after, sorted
+    const allKeys = Array.from(new Set([
+        ...Object.keys(before),
+        ...Object.keys(after)
+    ])).sort();
+
+    // Format a single value for display
+    const formatValue = (value) => {
+        if (value === null || value === undefined || value === '') {
+            return '<span class="text-muted">—</span>';
+        }
+        if (typeof value === 'object') {
+            return `<pre class="json-block">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+        }
+        return escapeHtml(String(value));
+    };
+
+    let content = '<div class="changes-detail">';
+    
+    // Show action type if available
+    if (changes.action) {
+        let actionBadgeClass = 'badge-secondary';
+        if (changes.action === 'created') actionBadgeClass = 'badge-success';
+        else if (changes.action === 'updated') actionBadgeClass = 'badge-warning';
+        else if (changes.action === 'deleted') actionBadgeClass = 'badge-danger';
+        
+        content += `<div class="changes-meta"><span class="badge ${actionBadgeClass}">${escapeHtml(changes.action)}</span></div>`;
+    }
+
+    if (allKeys.length === 0) {
+        content += '<p class="text-muted">No field-level changes recorded.</p>';
+    } else {
+        content += `
+            <div class="changes-grid">
+                <div class="changes-header">Field</div>
+                <div class="changes-header">Before</div>
+                <div class="changes-header">After</div>
+        `;
+
+        allKeys.forEach((key) => {
+            const beforeVal = before[key];
+            const afterVal = after[key];
+            const changed = JSON.stringify(beforeVal) !== JSON.stringify(afterVal);
+            content += `
+                <div class="change-key ${changed ? 'change-key--changed' : ''}">${escapeHtml(key)}</div>
+                <div class="change-before ${changed ? 'change-cell--changed' : ''}">${formatValue(beforeVal)}</div>
+                <div class="change-after ${changed ? 'change-cell--changed' : ''}">${formatValue(afterVal)}</div>
+            `;
+        });
+
+        content += '</div>';
+    }
+
+    content += '</div>';
+    
+    // Create and show modal
+    showAbacChangesDetailModal('Change Details', content);
+}
+
+/**
+ * Create and show the changes detail modal
+ * @param {string} title - Modal title
+ * @param {string} content - Modal body content
+ */
+function showAbacChangesDetailModal(title, content) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('abacChangesDetailModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modalHtml = `
+        <div id="abacChangesDetailModal" class="modal-overlay" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+        ">
+            <div class="modal-content" style="
+                background: white;
+                border-radius: 8px;
+                width: 90%;
+                max-width: 800px;
+                max-height: 90vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            ">
+                <div class="modal-header" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px 20px;
+                    border-bottom: 1px solid #e0e0e0;
+                    background: #f8f9fa;
+                ">
+                    <h3 style="margin: 0; font-size: 1.25rem;">${escapeHtml(title)}</h3>
+                    <button onclick="closeAbacChangesDetailModal()" style="
+                        background: none;
+                        border: none;
+                        font-size: 24px;
+                        cursor: pointer;
+                        color: #666;
+                        padding: 0 8px;
+                    ">&times;</button>
+                </div>
+                <div class="modal-body" style="
+                    padding: 20px;
+                    overflow-y: auto;
+                    flex: 1;
+                ">
+                    ${content}
+                </div>
+                <div class="modal-footer" style="
+                    padding: 12px 20px;
+                    border-top: 1px solid #e0e0e0;
+                    text-align: right;
+                    background: #f8f9fa;
+                ">
+                    <button onclick="closeAbacChangesDetailModal()" class="btn btn-secondary">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal styles if not already present
+    if (!document.getElementById('abacChangesModalStyles')) {
+        const styles = document.createElement('style');
+        styles.id = 'abacChangesModalStyles';
+        styles.textContent = `
+            .changes-detail {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+            .changes-meta {
+                margin-bottom: 16px;
+            }
+            .changes-grid {
+                display: grid;
+                grid-template-columns: 150px 1fr 1fr;
+                gap: 1px;
+                background: #e0e0e0;
+                border: 1px solid #e0e0e0;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            .changes-header {
+                background: #f0f0f0;
+                font-weight: 600;
+                padding: 10px 12px;
+                font-size: 0.85em;
+            }
+            .change-key {
+                background: #fafafa;
+                padding: 8px 12px;
+                font-weight: 500;
+                font-size: 0.9em;
+                word-break: break-word;
+            }
+            .change-key--changed {
+                background: #fff3cd;
+                font-weight: 600;
+            }
+            .change-before,
+            .change-after {
+                background: white;
+                padding: 8px 12px;
+                word-break: break-word;
+                font-size: 0.9em;
+            }
+            .change-cell--changed {
+                background: #fffbdd;
+            }
+            .text-muted {
+                color: #999;
+                font-style: italic;
+            }
+            .json-block {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: 0.8em;
+                overflow-x: auto;
+                margin: 0;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Add click outside to close
+    const modal = document.getElementById('abacChangesDetailModal');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeAbacChangesDetailModal();
+        }
+    });
+}
+
+/**
+ * Close the changes detail modal
+ */
+function closeAbacChangesDetailModal() {
+    const modal = document.getElementById('abacChangesDetailModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+/**
+ * Format changes between before and after states
+ */
+function formatAbacChanges(before, after) {
+    const changes = [];
+    
+    // Check for name change
+    if (before.name !== after.name) {
+        changes.push(`Name: "${escapeHtml(before.name)}" → "${escapeHtml(after.name)}"`);
+    }
+    
+    // Check for description change
+    if (before.description !== after.description) {
+        changes.push(`Description changed`);
+    }
+    
+    // Check for active status change
+    if (before.is_active !== after.is_active) {
+        changes.push(`Status: ${before.is_active ? 'Active' : 'Inactive'} → ${after.is_active ? 'Active' : 'Inactive'}`);
+    }
+    
+    // Check for rules change
+    if (JSON.stringify(before.rules) !== JSON.stringify(after.rules)) {
+        const beforeCount = before.rules?.rules?.length || 0;
+        const afterCount = after.rules?.rules?.length || 0;
+        changes.push(`Conditions: ${beforeCount} → ${afterCount}`);
+    }
+    
+    return changes.length > 0 
+        ? changes.map(c => `<div>${c}</div>`).join('')
+        : '<small style="color: #666;">Minor changes</small>';
+}
+
+/**
+ * Render audit pagination
+ */
+function renderAbacAuditPagination(currentPage, totalPages, totalItems) {
+    const pagination = document.getElementById('auditPagination');
+    if (!pagination) return;
+    
+    if (totalPages <= 1) {
+        pagination.innerHTML = `<small style="color: #666;">${totalItems} record(s)</small>`;
+        return;
+    }
+    
+    let html = '';
+    
+    // Previous button
+    html += `<button class="btn btn-sm ${currentPage === 1 ? 'btn-secondary disabled' : 'btn-secondary'}" 
+        onclick="loadAbacAuditTrail(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+    
+    // Page info
+    html += `<span style="padding: 0 12px; line-height: 32px;">Page ${currentPage} of ${totalPages} (${totalItems} total)</span>`;
+    
+    // Next button
+    html += `<button class="btn btn-sm ${currentPage === totalPages ? 'btn-secondary disabled' : 'btn-secondary'}" 
+        onclick="loadAbacAuditTrail(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+    
+    pagination.innerHTML = html;
+}
+
+// ============ Batch Operations with Celery/Redis ============
+
+/**
+ * Export ABAC audit logs using Celery batch processing
+ */
+async function exportAbacAuditLogs() {
+    // Get current filter values
+    const actionType = document.getElementById('auditActionFilter')?.value || null;
+    const dateFrom = document.getElementById('auditDateFrom')?.value || null;
+    const dateTo = document.getElementById('auditDateTo')?.value || null;
+    
+    // Show export format dialog
+    const format = await showExportFormatDialog();
+    if (!format) return; // User cancelled
+    
+    try {
+        showToast('Submitting export task...', 'info');
+        
+        const exportRequest = {
+            export_format: format
+        };
+        
+        if (actionType) exportRequest.action_type = actionType;
+        if (dateFrom) exportRequest.from_date = dateFrom + 'T00:00:00';
+        if (dateTo) exportRequest.to_date = dateTo + 'T23:59:59';
+        
+        const response = await apiRequest('/abac/audit-trail/batch-export', {
+            method: 'POST',
+            body: JSON.stringify(exportRequest)
+        });
+        
+        if (response && response.task_id) {
+            showToast(`Export task submitted! Task ID: ${response.task_id}`, 'success');
+            
+            // Poll for result
+            pollBatchTaskStatus(response.task_id, 'export');
+        }
+    } catch (error) {
+        console.error('Error submitting export task:', error);
+        showToast('Failed to submit export task: ' + (error.message || 'Unknown error'), 'error');
+    }
+}
+
+/**
+ * Show export format selection dialog
+ */
+async function showExportFormatDialog() {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10002;';
+        modal.innerHTML = `
+            <div style="background:white;border-radius:8px;padding:24px;max-width:300px;width:90%;">
+                <h3 style="margin:0 0 16px 0;">Export Format</h3>
+                <p style="color:#666;margin-bottom:16px;">Choose export format:</p>
+                <div style="display:flex;gap:12px;justify-content:flex-end;">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove();">Cancel</button>
+                    <button class="btn btn-primary" id="exportJsonBtn">JSON</button>
+                    <button class="btn btn-primary" id="exportCsvBtn">CSV</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        modal.querySelector('#exportJsonBtn').onclick = () => { modal.remove(); resolve('json'); };
+        modal.querySelector('#exportCsvBtn').onclick = () => { modal.remove(); resolve('csv'); };
+        modal.onclick = (e) => { if (e.target === modal) { modal.remove(); resolve(null); } };
+    });
+}
+
+/**
+ * Show ABAC audit statistics using Celery batch processing
+ */
+async function showAbacAuditStatistics() {
+    try {
+        showToast('Loading statistics...', 'info');
+        
+        const response = await apiRequest('/abac/audit-trail/statistics');
+        
+        if (response) {
+            showStatisticsModal(response);
+        }
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+        showToast('Failed to load statistics: ' + (error.message || 'Unknown error'), 'error');
+    }
+}
+
+/**
+ * Display statistics in a modal
+ */
+function showStatisticsModal(stats) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10002;';
+    
+    const formatNumber = (num) => (num || 0).toLocaleString();
+    
+    modal.innerHTML = `
+        <div style="background:white;border-radius:8px;padding:24px;max-width:500px;width:90%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="margin:0;">ABAC Audit Statistics</h3>
+                <button style="background:none;border:none;font-size:20px;cursor:pointer;" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+                <div style="background:#e3f2fd;padding:16px;border-radius:8px;text-align:center;">
+                    <div style="font-size:24px;font-weight:bold;color:#1976d2;">${formatNumber(stats.total_logs)}</div>
+                    <div style="color:#666;font-size:0.9em;">Total Logs</div>
+                </div>
+                <div style="background:#e8f5e9;padding:16px;border-radius:8px;text-align:center;">
+                    <div style="font-size:24px;font-weight:bold;color:#388e3c;">${formatNumber(stats.logs_last_24h)}</div>
+                    <div style="color:#666;font-size:0.9em;">Last 24 Hours</div>
+                </div>
+                <div style="background:#fff3e0;padding:16px;border-radius:8px;text-align:center;">
+                    <div style="font-size:24px;font-weight:bold;color:#f57c00;">${formatNumber(stats.logs_last_7d)}</div>
+                    <div style="color:#666;font-size:0.9em;">Last 7 Days</div>
+                </div>
+                <div style="background:#fce4ec;padding:16px;border-radius:8px;text-align:center;">
+                    <div style="font-size:24px;font-weight:bold;color:#c2185b;">${formatNumber(stats.logs_last_30d)}</div>
+                    <div style="color:#666;font-size:0.9em;">Last 30 Days</div>
+                </div>
+            </div>
+            
+            ${stats.logs_by_action ? `
+            <h4 style="margin:16px 0 8px 0;font-size:0.95em;">Logs by Action</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                ${Object.entries(stats.logs_by_action).map(([action, count]) => `
+                    <span style="background:#f0f0f0;padding:4px 12px;border-radius:16px;font-size:0.85em;">
+                        ${escapeHtml(action)}: <strong>${formatNumber(count)}</strong>
+                    </span>
+                `).join('')}
+            </div>
+            ` : ''}
+            
+            <div style="text-align:right;margin-top:20px;">
+                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+}
+
+/**
+ * Archive old ABAC audit logs using Celery batch processing
+ */
+async function archiveAbacAuditLogs() {
+    // Show confirmation dialog with days input
+    const days = await showArchiveConfirmDialog();
+    if (!days) return; // User cancelled
+    
+    try {
+        showToast('Submitting archive task...', 'info');
+        
+        const response = await apiRequest('/abac/audit-trail/batch-archive', {
+            method: 'POST',
+            body: JSON.stringify({ older_than_days: parseInt(days) })
+        });
+        
+        if (response && response.task_id) {
+            showToast(`Archive task submitted! Task ID: ${response.task_id}`, 'success');
+            
+            // Poll for result
+            pollBatchTaskStatus(response.task_id, 'archive');
+        }
+    } catch (error) {
+        console.error('Error submitting archive task:', error);
+        showToast('Failed to submit archive task: ' + (error.message || 'Unknown error'), 'error');
+    }
+}
+
+/**
+ * Show archive confirmation dialog
+ */
+async function showArchiveConfirmDialog() {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10002;';
+        modal.innerHTML = `
+            <div style="background:white;border-radius:8px;padding:24px;max-width:350px;width:90%;">
+                <h3 style="margin:0 0 16px 0;">📦 Archive Old Logs</h3>
+                <p style="color:#666;margin-bottom:16px;">Archive audit logs older than a specified number of days.</p>
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;margin-bottom:4px;font-weight:500;">Days old:</label>
+                    <input type="number" id="archiveDaysInput" value="90" min="1" max="365" 
+                           style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+                </div>
+                <div style="display:flex;gap:12px;justify-content:flex-end;">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove();">Cancel</button>
+                    <button class="btn btn-warning" id="archiveConfirmBtn">Archive</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        modal.querySelector('#archiveConfirmBtn').onclick = () => {
+            const days = modal.querySelector('#archiveDaysInput').value;
+            modal.remove();
+            resolve(days);
+        };
+        modal.onclick = (e) => { if (e.target === modal) { modal.remove(); resolve(null); } };
+    });
+}
+
+/**
+ * Poll for batch task status
+ */
+async function pollBatchTaskStatus(taskId, taskType) {
+    let attempts = 0;
+    const maxAttempts = 30;
+    
+    const poll = async () => {
+        attempts++;
+        try {
+            const status = await apiRequest(`/abac/audit-trail/batch-status/${taskId}`);
+            
+            if (status.status === 'SUCCESS') {
+                showToast(`${taskType.charAt(0).toUpperCase() + taskType.slice(1)} completed successfully!`, 'success');
+                
+                // For export, try to download the result
+                if (taskType === 'export') {
+                    const result = await apiRequest(`/abac/audit-trail/batch-result/${taskId}`);
+                    if (result && result.result) {
+                        downloadExportResult(result.result);
+                    }
+                }
+                return;
+            }
+            
+            if (status.status === 'FAILURE') {
+                showToast(`${taskType.charAt(0).toUpperCase() + taskType.slice(1)} failed: ${status.error || 'Unknown error'}`, 'error');
+                return;
+            }
+            
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 2000); // Poll every 2 seconds
+            } else {
+                showToast(`Task is taking longer than expected. Task ID: ${taskId}`, 'warning');
+            }
+        } catch (error) {
+            console.error('Error polling task status:', error);
+            if (attempts < maxAttempts) {
+                setTimeout(poll, 2000);
+            }
+        }
+    };
+    
+    poll();
+}
+
+/**
+ * Download export result
+ */
+function downloadExportResult(result) {
+    if (!result || !result.data) return;
+    
+    const format = result.format || 'json';
+    const data = result.data;
+    const blob = new Blob([format === 'json' ? JSON.stringify(data, null, 2) : data], {
+        type: format === 'json' ? 'application/json' : 'text/csv'
+    });
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `abac_audit_export_${new Date().toISOString().slice(0,10)}.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Export downloaded successfully!', 'success');
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('auditTrailModal');
+    if (e.target === modal) {
+        closeAuditTrailModal();
+    }
+});
