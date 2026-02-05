@@ -1,13 +1,14 @@
-"""MinIO client utilities for file storage"""
+"""S3-compatible client utilities for file storage (MinIO/AWS S3)"""
 import io
 from typing import Optional, BinaryIO
-from minio import Minio
-from minio.error import S3Error
+import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
+from botocore.client import Config
 from app.core.config import settings
 
 
 class MinIOClient:
-    """MinIO client wrapper for file operations"""
+    """S3-compatible client wrapper for file operations (MinIO/AWS S3)"""
 
     def __init__(self):
         self._client = None
@@ -15,13 +16,28 @@ class MinIOClient:
 
     @property
     def client(self):
-        """Lazy initialization of MinIO client"""
+        """Lazy initialization of S3 client"""
         if self._client is None:
-            self._client = Minio(
-                endpoint=settings.MINIO_ENDPOINT,
-                access_key=settings.MINIO_ACCESS_KEY,
-                secret_key=settings.MINIO_SECRET_KEY,
-                secure=settings.MINIO_SECURE
+            # Configure endpoint URL for MinIO compatibility
+            endpoint_url = None
+            if settings.MINIO_ENDPOINT:
+                protocol = "https" if settings.MINIO_SECURE else "http"
+                endpoint_url = f"{protocol}://{settings.MINIO_ENDPOINT}"
+            
+            # Configure boto3 client
+            config = Config(
+                signature_version='s3v4',
+                s3={
+                    'addressing_style': 'path'  # Required for MinIO compatibility
+                }
+            )
+            
+            self._client = boto3.client(
+                's3',
+                endpoint_url=endpoint_url,
+                aws_access_key_id=settings.MINIO_ACCESS_KEY,
+                aws_secret_access_key=settings.MINIO_SECRET_KEY,
+                config=config
             )
         return self._client
 
@@ -32,65 +48,74 @@ class MinIOClient:
     def _ensure_bucket(self):
         """Ensure the bucket exists"""
         try:
-            if not self.client.bucket_exists(self.bucket):
-                self.client.make_bucket(self.bucket)
-        except S3Error as e:
-            raise Exception(f"Failed to create/access MinIO bucket: {e}")
+            self.client.head_bucket(Bucket=self.bucket)
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
+                try:
+                    self.client.create_bucket(Bucket=self.bucket)
+                except ClientError as create_error:
+                    raise Exception(f"Failed to create S3 bucket: {create_error}")
+            else:
+                raise Exception(f"Failed to access S3 bucket: {e}")
 
     def upload_file(self, object_name: str, file_data: bytes, content_type: str = "application/octet-stream") -> str:
-        """Upload file data to MinIO"""
+        """Upload file data to S3-compatible storage"""
         self._ensure_bucket()
         try:
             data_stream = io.BytesIO(file_data)
             self.client.put_object(
-                bucket_name=self.bucket,
-                object_name=object_name,
-                data=data_stream,
-                length=len(file_data),
-                content_type=content_type
+                Bucket=self.bucket,
+                Key=object_name,
+                Body=data_stream,
+                ContentType=content_type
             )
             return object_name
-        except S3Error as e:
-            raise Exception(f"Failed to upload file to MinIO: {e}")
+        except ClientError as e:
+            raise Exception(f"Failed to upload file to S3 storage: {e}")
 
     def download_file(self, object_name: str) -> tuple[bytes, str]:
-        """Download file from MinIO"""
+        """Download file from S3-compatible storage"""
         try:
-            response = self.client.get_object(self.bucket, object_name)
-            data = response.read()
-            content_type = response.headers.get('content-type', 'application/octet-stream')
-            response.close()
-            response.release_conn()
+            response = self.client.get_object(Bucket=self.bucket, Key=object_name)
+            data = response['Body'].read()
+            content_type = response.get('ContentType', 'application/octet-stream')
             return data, content_type
-        except S3Error as e:
-            raise Exception(f"Failed to download file from MinIO: {e}")
+        except ClientError as e:
+            raise Exception(f"Failed to download file from S3 storage: {e}")
 
     def delete_file(self, object_name: str) -> bool:
-        """Delete file from MinIO"""
+        """Delete file from S3-compatible storage"""
         try:
-            self.client.remove_object(self.bucket, object_name)
+            self.client.delete_object(Bucket=self.bucket, Key=object_name)
             return True
-        except S3Error as e:
-            raise Exception(f"Failed to delete file from MinIO: {e}")
+        except ClientError as e:
+            raise Exception(f"Failed to delete file from S3 storage: {e}")
 
     def copy_file(self, source_object: str, destination_object: str) -> str:
-        """Copy a file within the MinIO bucket."""
+        """Copy a file within the S3-compatible bucket."""
         try:
-            from minio.commonconfig import CopySource
-            copy_source = CopySource(self.bucket, source_object)
-            self.client.copy_object(self.bucket, destination_object, copy_source)
+            copy_source = {
+                'Bucket': self.bucket,
+                'Key': source_object
+            }
+            self.client.copy_object(
+                CopySource=copy_source,
+                Bucket=self.bucket,
+                Key=destination_object
+            )
             return destination_object
-        except S3Error as e:
-            raise Exception(f"Failed to copy file in MinIO: {e}")
+        except ClientError as e:
+            raise Exception(f"Failed to copy file in S3 storage: {e}")
 
     def file_exists(self, object_name: str) -> bool:
-        """Check if file exists in MinIO"""
+        """Check if file exists in S3-compatible storage"""
         try:
-            self.client.stat_object(self.bucket, object_name)
+            self.client.head_object(Bucket=self.bucket, Key=object_name)
             return True
-        except S3Error:
+        except ClientError:
             return False
 
 
-# Global instance - now lazy
+# Global instance - now lazy and S3-compatible
 minio_client = MinIOClient()
