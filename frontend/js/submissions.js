@@ -48,6 +48,23 @@ async function loadUserInfo() {
             document.getElementById('userName').textContent = fullName;
             document.getElementById('userRole').textContent = user.user_role || 'User';
         }
+
+        // Update permissions in session storage
+        let permissions = [];
+        try {
+            const permData = await apiGetUserPermissions();
+            permissions = permData.permissions || [];
+        } catch (err) {
+            console.warn('Could not fetch permissions during loadUserInfo:', err);
+        }
+
+        // Update the session data with fresh permissions
+        const session = getCurrentUser();
+        if (session) {
+            session.permissions = permissions;
+            session.is_admin = user.is_superuser || user.user_role === 'admin';
+            localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        }
     } catch (error) {
         console.error('Failed to load user info:', error);
     }

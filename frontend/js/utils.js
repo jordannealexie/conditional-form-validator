@@ -84,6 +84,20 @@ function enforceUIPermissions() {
                     return false;
                 };
             }
+        } else {
+            // If permission is granted, show and enable the element
+            el.style.display = '';
+            el.classList.remove('permission-hidden');
+
+            // If it's a link or button, enable it
+            if (el.tagName === 'A' || el.tagName === 'BUTTON') {
+                el.disabled = false;
+                el.removeAttribute('disabled');
+                // Remove the override onclick if it was set
+                if (el.onclick && el.onclick.toString().includes('preventDefault')) {
+                    el.onclick = null;
+                }
+            }
         }
     });
 
