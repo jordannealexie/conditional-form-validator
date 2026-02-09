@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management - Form Submission</title>
+    <title>Banks - Form Submission</title>
     <link rel="stylesheet" href="css/index.css">
 </head>
 
 <body>
     <div class="app-container">
-        <!-- Sidebar Navigation (same as dashboard) -->
+        <!-- Sidebar Navigation -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2>Form Submission</h2>
@@ -23,7 +23,7 @@
                         <span>Dashboard</span>
                     </a>
                 </li>
-                <li class="nav-item active" data-permission="users" data-action="read">
+                <li class="nav-item" data-permission="users" data-action="read">
                     <a href="users.html">
                         <span>User Management</span>
                     </a>
@@ -38,7 +38,7 @@
                         <span>Submissions</span>
                     </a>
                 </li>
-                <li class="nav-item" data-permission="banks" data-action="read">
+                <li class="nav-item active" data-permission="banks" data-action="read">
                     <a href="banks.html">
                         <span>Banks</span>
                     </a>
@@ -62,7 +62,9 @@
 
             <div class="sidebar-footer">
                 <div class="user-info" id="userInfo">
-                    <div class="user-avatar" id="userAvatar">U</div>
+                    <div class="user-avatar" id="userAvatar"
+                        style="background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        U</div>
                     <div class="user-details">
                         <span class="user-name" id="userName">Loading...</span>
                         <span class="user-role" id="userRole">User</span>
@@ -77,46 +79,45 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="content-header">
-                <h1>User Management</h1>
-                <p class="page-subtitle">Manage users, roles, and permissions</p>
+                <h1>Banks</h1>
+                <p class="page-subtitle">Manage bank configurations and settings</p>
             </header>
 
-            <!-- Users Table -->
+            <!-- Banks Table -->
             <div class="table-container">
                 <div class="table-header">
                     <div class="search-box">
-                        <input type="text" id="searchUsers" placeholder="Search users..."
-                            onkeyup="debounce(() => filterTable('usersTable', this.value), 300)()">
+                        <input type="text" id="searchBanks" placeholder="Search banks..."
+                            onkeyup="debounce(() => filterTable('banksTable', this.value), 300)()">
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-info" onclick="showAuditTrail({ resourceType: 'user' })" data-permission="users"
+                        <button class="btn btn-info" onclick="showAuditTrail({ resourceType: 'banks' })" data-permission="banks"
                             data-action="read">
-                            📋 Audit Trail
+                            📋 Audit Logs
                         </button>
-                        <button class="btn btn-primary" onclick="showAddUserModal()" data-permission="users"
+                        <button class="btn btn-primary" onclick="showAddBankModal()" data-permission="banks"
                             data-action="create">
-                            + Add User
+                            + Add Bank
                         </button>
                     </div>
                 </div>
 
                 <div class="table-wrapper">
-                    <table id="usersTable" class="audit-table">
+                    <table id="banksTable" class="audit-table">
                         <thead>
                             <tr>
-                                <th class="sticky-col">Username</th>
-                                <th>ID</th>
-                                <th>Email</th>
-                                <th>Department</th>
-                                <th>Location</th>
-                                <th>Role</th>
+                                <th class="sticky-col">Name</th>
+                                <th>Code</th>
+                                <th>Description</th>
+                                <th>Logo</th>
+                                <th>Primary Color</th>
                                 <th>Status</th>
                                 <th>Created At</th>
                                 <th>Updated At</th>
                                 <th class="actions-col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="usersTableBody">
+                        <tbody id="banksTableBody">
                             <!-- Populated by JavaScript -->
                         </tbody>
                     </table>
@@ -128,11 +129,56 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
+    <!-- Add/Edit Bank Modal -->
+    <div id="bankModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="bankModalTitle">Add Bank</h3>
+                <span class="modal-close" onclick="closeBankModal()">&times;</span>
+            </div>
+            <form id="bankForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="bankName">Name *</label>
+                        <input type="text" id="bankName" name="name" required maxlength="255">
+                    </div>
+                    <div class="form-group">
+                        <label for="bankCode">Code *</label>
+                        <input type="text" id="bankCode" name="code" required maxlength="50">
+                    </div>
+                    <div class="form-group">
+                        <label for="bankDescription">Description</label>
+                        <textarea id="bankDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="bankLogoUrl">Logo URL</label>
+                        <input type="url" id="bankLogoUrl" name="logo_url">
+                    </div>
+                    <div class="form-group">
+                        <label for="bankPrimaryColor">Primary Color (HEX)</label>
+                        <input type="color" id="bankPrimaryColor" name="primary_color" value="#007bff">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="bankActive" name="active" checked>
+                            Active
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeBankModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="js/utils.js?v=10"></script>
-    <script src="js/api.js?v=10"></script>
+    <script src="js/api.js?v=11"></script>
     <script src="js/auth.js?v=10"></script>
-    <script src="js/dropdown-loader.js?v=5"></script>
+    <script src="js/dropdown-loader.js?v=10"></script>
     <script src="js/users.js?v=11"></script>
+    <script src="js/banks.js?v=11"></script>
 </body>
 
 </html>

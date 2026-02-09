@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="js/utils.js"></script>
+</head>
+<body>
+    <script>
+        setTimeout(() => {
+            if (typeof showAuditTrail === 'function') {
+                console.log('✅ showAuditTrail function is defined');
+            } else {
+                console.log('❌ showAuditTrail function is not defined');
+            }
+        }, 100);
+    </script>
+</body>
+</html>

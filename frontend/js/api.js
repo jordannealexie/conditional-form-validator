@@ -101,7 +101,32 @@ async function apiRequest(endpoint, options = {}) {
                 throw new Error('ACCESS_DENIED');
             }
 
-            const errorMessage = (errorPayload && (errorPayload.detail || errorPayload.message)) || `HTTP ${response.status}: ${response.statusText}`;
+            // Extract error message from various possible formats
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+            if (errorPayload) {
+                // Check for errors array first (contains detailed validation errors)
+                if (errorPayload.errors && Array.isArray(errorPayload.errors) && errorPayload.errors.length > 0) {
+                    // Use the first error message from the errors array
+                    const firstError = errorPayload.errors[0];
+                    if (typeof firstError === 'string') {
+                        errorMessage = firstError;
+                    } else if (firstError && typeof firstError === 'object' && firstError.message) {
+                        errorMessage = firstError.message;
+                    } else if (firstError && typeof firstError === 'object' && firstError.detail) {
+                        errorMessage = firstError.detail;
+                    }
+                }
+                // Fallback to message field
+                else if (errorPayload.message) {
+                    errorMessage = errorPayload.message;
+                }
+                // Fallback to detail field
+                else if (errorPayload.detail) {
+                    errorMessage = errorPayload.detail;
+                }
+            }
+
             console.error('API Error Response:', errorPayload || response.statusText);
             throw new Error(errorMessage);
         }
@@ -449,6 +474,66 @@ async function apiCheckPermission(username, resource, action) {
  */
 async function apiGetUserPermissions() {
     return await apiRequest('/authorization/permissions');
+}
+
+// ============ Bank Endpoints ============
+
+/**
+ * Get all banks
+ * Backend endpoint: GET /banks/
+ * @returns {Promise<Array>}
+ */
+async function apiGetBanks() {
+    return await apiRequest('/banks/');
+}
+
+/**
+ * Get bank by ID
+ * Backend endpoint: GET /banks/{bank_id}
+ * @param {number} bankId 
+ * @returns {Promise<object>}
+ */
+async function apiGetBank(bankId) {
+    return await apiRequest(`/banks/${bankId}`);
+}
+
+/**
+ * Create new bank
+ * Backend endpoint: POST /banks/
+ * @param {object} bankData 
+ * @returns {Promise<object>}
+ */
+async function apiCreateBank(bankData) {
+    return await apiRequest('/banks/', {
+        method: 'POST',
+        body: bankData
+    });
+}
+
+/**
+ * Update bank
+ * Backend endpoint: PUT /banks/{bank_id}
+ * @param {number} bankId 
+ * @param {object} bankData 
+ * @returns {Promise<object>}
+ */
+async function apiUpdateBank(bankId, bankData) {
+    return await apiRequest(`/banks/${bankId}`, {
+        method: 'PUT',
+        body: bankData
+    });
+}
+
+/**
+ * Delete bank
+ * Backend endpoint: DELETE /banks/{bank_id}
+ * @param {number} bankId 
+ * @returns {Promise<void>}
+ */
+async function apiDeleteBank(bankId) {
+    return await apiRequest(`/banks/${bankId}`, {
+        method: 'DELETE'
+    });
 }
 
 // ============ ABAC Endpoints ============

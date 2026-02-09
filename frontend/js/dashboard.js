@@ -68,11 +68,13 @@ async function loadApplications() {
     if (!grid) return;
 
     try {
-        const banks = await apiGetBanks();
+        const banksResponse = await apiGetBanks();
+        const banks = Array.isArray(banksResponse) ? banksResponse : (banksResponse && banksResponse.data ? banksResponse.data : []);
         grid.innerHTML = '';
 
         for (const bank of banks) {
-            const templates = await apiGetTemplates(bank.id);
+            const templatesResponse = await apiGetTemplates(bank.id);
+            const templates = Array.isArray(templatesResponse) ? templatesResponse : (templatesResponse && templatesResponse.data ? templatesResponse.data : []);
             templates.forEach(template => {
                 const card = createApplicationCard(template, bank);
                 grid.appendChild(card);

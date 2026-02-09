@@ -46,32 +46,40 @@ class BankRepository:
     @staticmethod
     async def get_by_id(db: AsyncSession, bank_id: int) -> Optional[dict]:
         """Get bank by ID with fresh data"""
-        # Expire all to ensure fresh data
-        db.expire_all()
-        
+        try:
+            result = await db.execute(
+                select(Bank).where(and_(Bank.id == bank_id, Bank.deleted_at.is_(None)))
+            )
+            bank = result.scalar_one_or_none()
+            
+            if bank:
+                # Extract data while in session context
+                bank_data = {
+                    "id": bank.id,
+                    "name": bank.name,
+                    "code": bank.code,
+                    "logo_url": bank.logo_url,
+                    "primary_color": bank.primary_color,
+                    "description": bank.description,
+                    "active": bank.active,
+                    "created_at": bank.created_at,
+                    "updated_at": bank.updated_at,
+                    "deleted_at": bank.deleted_at
+                }
+                return bank_data
+                
+            return None
+        except Exception as e:
+            print(f"Error in get_by_id: {e}")
+            raise
+    
+    @staticmethod
+    async def get_bank_object_by_id(db: AsyncSession, bank_id: int) -> Optional[Bank]:
+        """Get bank object by ID for operations that need the model instance"""
         result = await db.execute(
             select(Bank).where(and_(Bank.id == bank_id, Bank.deleted_at.is_(None)))
         )
-        bank = result.scalar_one_or_none()
-        
-        if bank:
-            await db.refresh(bank)
-            # Extract data while in session context
-            bank_data = {
-                "id": bank.id,
-                "name": bank.name,
-                "code": bank.code,
-                "logo_url": bank.logo_url,
-                "primary_color": bank.primary_color,
-                "description": bank.description,
-                "active": bank.active,
-                "created_at": bank.created_at,
-                "updated_at": bank.updated_at,
-                "deleted_at": bank.deleted_at
-            }
-            return bank_data
-            
-        return None
+        return result.scalar_one_or_none()
     
     @staticmethod
     async def get_by_code(db: AsyncSession, code: str) -> Optional[Bank]:
@@ -169,15 +177,14 @@ class BankRepository:
         return bank_data
     
     @staticmethod
-    async def soft_delete(db: AsyncSession, bank: Bank) -> Bank:
-        """Soft delete bank"""
-        from datetime import datetime, timezone
-        
-        bank.deleted_at = datetime.now(timezone.utc)
-        bank.active = False
-        await db.commit()
-        await db.refresh(bank)
-        return bank
+    async def hard_delete(db: AsyncSession, bank: Bank) -> None:
+        """Hard delete bank and all associated data"""
+        try:
+            await db.delete(bank)
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise e
 
 
 class FormTemplateRepository:

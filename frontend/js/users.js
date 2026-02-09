@@ -413,11 +413,13 @@ async function showAuditTrail(options) {
     window.__auditCurrentPage = 1;
     window.__auditPageSize = 20;
     
-    const subjectLabel = opts.subjectLabel || (resourceType === 'role' ? 'Role' : resourceType === 'template' ? 'Template' : 'User');
+    const subjectLabel = opts.subjectLabel || (resourceType === 'role' ? 'Role' : resourceType === 'template' ? 'Template' : resourceType === 'banks' ? 'Bank' : 'User');
     const title = opts.title || (resourceType === 'role'
         ? 'Roles & Permissions Audit Trail'
         : resourceType === 'template'
             ? 'Form Templates Audit Trail'
+        : resourceType === 'banks'
+            ? 'Banks Audit Trail'
             : 'User Management Audit Trail');
     
     // Store subject label for row rendering

@@ -11,7 +11,7 @@ class AuditRepository:
     async def create(self, **kwargs) -> AuditLog:
         audit_log = AuditLog(**kwargs)
         self.db.add(audit_log)
-        await self.db.flush()  # Use flush instead of commit to stay in transaction
+        await self.db.commit()  # Commit the audit log
         await self.db.refresh(audit_log)
         return audit_log
     

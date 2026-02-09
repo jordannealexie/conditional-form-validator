@@ -70,7 +70,13 @@ function enforceUIPermissions() {
         const resource = el.getAttribute('data-permission');
         const action = el.getAttribute('data-action') || 'read'; // Default action is read
 
-        if (!hasPermission(resource, action)) {
+        // Special case: delete actions require admin privileges
+        let hasAccess = hasPermission(resource, action);
+        if (action === 'delete' && typeof isAdmin === 'function') {
+            hasAccess = hasAccess && isAdmin();
+        }
+
+        if (!hasAccess) {
             el.style.display = 'none';
             el.classList.add('permission-hidden');
 
@@ -119,7 +125,8 @@ function protectCurrentPage() {
         'roles.html': { resource: 'roles', action: 'read' },
         'admin-templates.html': { resource: 'templates', action: 'read' },
         'submissions.html': { resource: 'submissions', action: 'read' },
-        'abac.html': { resource: 'policies', action: 'read' }
+        'abac.html': { resource: 'policies', action: 'read' },
+        'banks.html': { resource: 'banks', action: 'read' }
     };
 
     for (const [page, perm] of Object.entries(routePermissions)) {
@@ -164,9 +171,9 @@ function getToastIcon(type) {
 /**
  * Show confirmation dialog
  * @param {string} message 
- * @returns {Promise<boolean>}
+ * @returns {boolean}
  */
-async function confirm(message) {
+function confirm(message) {
     return window.confirm(message);
 }
 

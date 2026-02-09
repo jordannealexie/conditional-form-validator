@@ -1,7 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, status
 from app.dependencies.audit import get_audit_service, get_bulk_audit_service
-from app.dependencies.auth import authorize
+from app.dependencies.auth import authorize, get_current_user
 from app.services.audit import AuditService
 from app.services.bulk_audit import BulkAuditService
 from app.schemas.audit_trail import (
@@ -310,7 +310,7 @@ async def get_all_audit_logs(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
     resource_type: Optional[str] = Query(None, description="Filter by resource type (e.g., user, role, template)"),
     audit_service: AuditService = Depends(get_audit_service),
-    current_user: User = Depends(authorize(resource="users", action="read"))
+    current_user: User = Depends(get_current_user)
 ):
     """Get all audit logs with pagination"""
     if resource_type:
