@@ -168,14 +168,10 @@ function getToastIcon(type) {
     return icons[type] || icons.info;
 }
 
-/**
- * Show confirmation dialog
- * @param {string} message 
- * @returns {boolean}
- */
-function confirm(message) {
-    return window.confirm(message);
-}
+// NOTE: Do NOT define a custom `confirm()` function here.
+// Doing so shadows `window.confirm` and causes infinite recursion
+// since top-level function declarations become window properties.
+// All code should use the native `confirm()` / `window.confirm()` directly.
 
 /**
  * Format date to readable string
